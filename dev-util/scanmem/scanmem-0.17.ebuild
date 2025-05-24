@@ -1,10 +1,9 @@
-# Copyright 1999-2020 Gentoo Authors
+# Copyright 1999-2025 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
-EAPI=7
+EAPI=8
 
-PYTHON_COMPAT=( python3_{6,7,8,9} )
-
+PYTHON_COMPAT=( python3_{10..13} )
 inherit autotools python-single-r1
 
 DESCRIPTION="Locate and modify variables in executing processes"
@@ -13,18 +12,26 @@ SRC_URI="https://github.com/scanmem/scanmem/archive/v${PV}.tar.gz -> ${P}.tar.gz
 
 LICENSE="GPL-3"
 SLOT="0"
-KEYWORDS="~amd64 ~x86"
+KEYWORDS="~amd64 ~riscv ~x86"
 IUSE="gui static-libs"
 
-DEPEND="sys-libs/readline:0="
-RDEPEND="${DEPEND}
+DEPEND="sys-libs/readline:="
+RDEPEND="
+	${DEPEND}
 	gui? (
 		${PYTHON_DEPS}
 		dev-python/pygobject:3
 		sys-auth/polkit
-	)"
+	)
+"
+BDEPEND="dev-util/intltool"
 
 REQUIRED_USE="gui? ( ${PYTHON_REQUIRED_USE} )"
+
+PATCHES=(
+	"${FILESDIR}"/${P}-musl-tests.patch
+	"${FILESDIR}"/${PN}-0.17-musl.patch
+)
 
 pkg_setup() {
 	use gui && python-single-r1_pkg_setup
@@ -44,6 +51,7 @@ src_configure() {
 		$(use_enable gui)
 		$(use_enable static-libs static)
 	)
+
 	econf "${myeconfargs[@]}"
 }
 

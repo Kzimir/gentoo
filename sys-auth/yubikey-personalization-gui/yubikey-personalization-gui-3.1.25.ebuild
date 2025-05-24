@@ -1,9 +1,9 @@
-# Copyright 1999-2020 Gentoo Authors
+# Copyright 1999-2023 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
 EAPI=7
 
-inherit desktop flag-o-matic qmake-utils xdg-utils
+inherit desktop qmake-utils xdg-utils
 
 DESCRIPTION="GUI for personalization of Yubico's YubiKey"
 HOMEPAGE="https://github.com/Yubico/yubikey-personalization-gui"
@@ -11,7 +11,7 @@ SRC_URI="https://github.com/Yubico/yubikey-personalization-gui/archive/${P}.tar.
 
 LICENSE="BSD-2"
 SLOT="0"
-KEYWORDS="amd64"
+KEYWORDS="amd64 ~arm64"
 IUSE="debug test"
 
 RESTRICT="!test? ( test )"
@@ -41,8 +41,6 @@ src_prepare() {
 }
 
 src_configure() {
-	append-cxxflags -std=c++11
-
 	eqmake5 "CONFIG+=nosilent" YKPersonalization.pro
 }
 

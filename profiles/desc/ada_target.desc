@@ -1,8 +1,7 @@
-# Copyright 1999-2019 Gentoo Authors
+# Copyright 1999-2025 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
-gnat_2016 - Compile with dev-lang/gnat-gpl-2016
-gnat_2017 - Compile with dev-lang/gnat-gpl-2017
-gnat_2018 - Compile with dev-lang/gnat-gpl-2018
-gnat_2019 - Compile with dev-lang/gnat-gpl-2019
-
+gcc_12 - Compile with sys-devel/gcc:12
+gcc_13 - Compile with sys-devel/gcc:13
+gcc_14 - Compile with sys-devel/gcc:14
+gcc_15 - Compile with sys-devel/gcc:15

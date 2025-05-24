@@ -1,10 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE pkgmetadata SYSTEM "http://www.gentoo.org/dtd/metadata.dtd">
+<!DOCTYPE pkgmetadata SYSTEM "https://www.gentoo.org/dtd/metadata.dtd">
 <pkgmetadata>
 	<maintainer type="project">
 		<email>sci-mathematics@gentoo.org</email>
 		<name>Gentoo Mathematics Project</name>
 	</maintainer>
+	<stabilize-allarches/>
 	<longdescription lang="en">
 		g-octave is a tool that generates and installs ebuilds for Octave-Forge
 		packages "on-the-fly" to Gentoo Linux, using Portage. It's capable to
@@ -14,6 +15,7 @@
 		tries to be very similar to the interface of the emerge tool.
 	</longdescription>
 	<upstream>
+		<remote-id type="gentoo">proj/g-octave</remote-id>
 		<remote-id type="github">rafaelmartins/g-octave</remote-id>
 	</upstream>
 </pkgmetadata>

@@ -1,17 +1,17 @@
-# Copyright 1999-2020 Gentoo Authors
+# Copyright 1999-2024 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
 # @ECLASS: apache-module.eclass
 # @MAINTAINER:
-# apache-devs@gentoo.org
+# apache-bugs@gentoo.org
+# @SUPPORTED_EAPIS: 7 8
 # @BLURB: Provides a common set of functions for apache modules
 # @DESCRIPTION:
 # This eclass handles apache modules in a sane way.
 #
 # To make use of this eclass simply call one of the need/want_apache functions
 # described in depend.apache.eclass. Make sure you use the need/want_apache call
-# after you have defined DEPEND and RDEPEND. Also note that you can not rely on
-# the automatic RDEPEND=DEPEND that portage does if you use this eclass.
+# after you have defined DEPEND and RDEPEND.
 #
 # See Bug 107127 for more information.
 #
@@ -43,6 +43,14 @@
 # LoadModule foo_module modules/mod_foo.so
 # </IfDefine>
 # @CODE
+
+if [[ -z ${_APACHE_MODULE_ECLASS} ]]; then
+_APACHE_MODULE_ECLASS=1
+
+case ${EAPI} in
+	7|8) ;;
+	*) die "${ECLASS}: EAPI ${EAPI:-0} not supported" ;;
+esac
 
 inherit depend.apache
 
@@ -97,7 +105,7 @@ inherit depend.apache
 
 # Internal function to construct the default ${APXS2_S} path if required.
 apache_cd_dir() {
-	debug-print-function $FUNCNAME $*
+	debug-print-function ${FUNCNAME} "$@"
 
 	local CD_DIR="${APXS2_S}"
 
@@ -115,7 +123,7 @@ apache_cd_dir() {
 
 # Internal function to construct the default ${APACHE2_MOD_FILE} if required.
 apache_mod_file() {
-	debug-print-function $FUNCNAME $*
+	debug-print-function ${FUNCNAME} "$@"
 
 	local MOD_FILE="${APACHE2_MOD_FILE:-$(apache_cd_dir)/.libs/${PN}.so}"
 
@@ -127,7 +135,7 @@ apache_mod_file() {
 # optional first argument `html'; if the first argument is equals `html', only
 # html files are returned, otherwise normal (non-html) docs are returned.
 apache_doc_magic() {
-	debug-print-function $FUNCNAME $*
+	debug-print-function ${FUNCNAME} "$@"
 
 	local DOCS=
 
@@ -153,7 +161,7 @@ apache_doc_magic() {
 # module requires a different build setup than this, use ${APXS} in your own
 # src_compile routine.
 apache-module_src_compile() {
-	debug-print-function $FUNCNAME $*
+	debug-print-function ${FUNCNAME} "$@"
 
 	local CD_DIR=$(apache_cd_dir)
 	cd "${CD_DIR}" || die "cd ${CD_DIR} failed"
@@ -172,7 +180,7 @@ apache-module_src_compile() {
 # 55_mod_foo.conf, APACHE2_MOD_CONF would be 55_mod_foo. ${DOCFILES} contains
 # the list of files you want filed as documentation.
 apache-module_src_install() {
-	debug-print-function $FUNCNAME $*
+	debug-print-function ${FUNCNAME} "$@"
 
 	local CD_DIR=$(apache_cd_dir)
 	pushd "${CD_DIR}" >/dev/null || die "cd ${CD_DIR} failed"
@@ -214,7 +222,7 @@ apache-module_src_install() {
 # @DESCRIPTION:
 # This prints out information about the installed module and how to enable it.
 apache-module_pkg_postinst() {
-	debug-print-function $FUNCNAME $*
+	debug-print-function ${FUNCNAME} "$@"
 
 	if [[ -n "${APACHE2_MOD_DEFINE}" ]] ; then
 		local my_opts="-D ${APACHE2_MOD_DEFINE// / -D }"
@@ -234,5 +242,7 @@ apache-module_pkg_postinst() {
 		einfo
 	fi
 }
+
+fi
 
 EXPORT_FUNCTIONS src_compile src_install pkg_postinst

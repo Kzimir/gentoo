@@ -1,69 +1,93 @@
-# Copyright 1999-2021 Gentoo Authors
+# Copyright 1999-2025 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
-EAPI=7
+EAPI=8
 
-inherit autotools flag-o-matic linux-mod toolchain-funcs
+MODULES_INITRAMFS_IUSE=+initramfs
+inherit autotools flag-o-matic linux-mod-r1 multiprocessing
 
 DESCRIPTION="Linux ZFS kernel module for sys-fs/zfs"
 HOMEPAGE="https://github.com/openzfs/zfs"
 
-if [[ ${PV} == "9999" ]]; then
-	inherit git-r3
+MODULES_KERNEL_MAX=6.14
+MODULES_KERNEL_MIN=4.18
+
+if [[ ${PV} == 9999 ]] ; then
 	EGIT_REPO_URI="https://github.com/openzfs/zfs.git"
+	inherit git-r3
+	unset MODULES_KERNEL_MAX
 else
-	MY_PV="${PV/_rc/-rc}"
+	VERIFY_SIG_OPENPGP_KEY_PATH=/usr/share/openpgp-keys/openzfs.asc
+	inherit verify-sig
+
+	MY_PV=${PV/_rc/-rc}
 	SRC_URI="https://github.com/openzfs/zfs/releases/download/zfs-${MY_PV}/zfs-${MY_PV}.tar.gz"
-	KEYWORDS="~amd64 ~arm64 ~ppc64"
-	S="${WORKDIR}/zfs-${PV%_rc?}"
-	ZFS_KERNEL_COMPAT="5.10"
+	SRC_URI+=" verify-sig? ( https://github.com/openzfs/zfs/releases/download/zfs-${MY_PV}/zfs-${MY_PV}.tar.gz.asc )"
+	S="${WORKDIR}/zfs-${MY_PV}"
+
+	ZFS_KERNEL_COMPAT="${MODULES_KERNEL_MAX}"
+	# Increments minor eg 5.14 -> 5.15, and still supports override.
+	ZFS_KERNEL_DEP="${ZFS_KERNEL_COMPAT_OVERRIDE:-${ZFS_KERNEL_COMPAT}}"
+	ZFS_KERNEL_DEP="${ZFS_KERNEL_DEP%%.*}.$(( ${ZFS_KERNEL_DEP##*.} + 1))"
+
+	if [[ ${PV} != *_rc* ]] ; then
+		KEYWORDS="~amd64 ~arm64 ~loong ~ppc64 ~riscv ~sparc"
+	fi
 fi
 
 LICENSE="CDDL MIT debug? ( GPL-2+ )"
-SLOT="0"
+SLOT="0/${PVR}"
 IUSE="custom-cflags debug +rootfs"
-
-DEPEND=""
-
-RDEPEND="${DEPEND}
-	!sys-kernel/spl
-"
+RESTRICT="test"
 
 BDEPEND="
+	app-alternatives/awk
 	dev-lang/perl
-	virtual/awk
 "
 
-RESTRICT="debug? ( strip ) test"
+if [[ ${PV} != 9999 ]] ; then
+	BDEPEND+=" verify-sig? ( sec-keys/openpgp-keys-openzfs )"
 
-DOCS=( AUTHORS COPYRIGHT META README.md )
+	IUSE+=" +dist-kernel-cap"
+	RDEPEND="
+		dist-kernel-cap? ( dist-kernel? (
+			<virtual/dist-kernel-${ZFS_KERNEL_DEP}
+		) )
+	"
+fi
+
+# Used to suggest matching USE, but without suggesting to disable
+PDEPEND="dist-kernel? ( ~sys-fs/zfs-${PV}[dist-kernel] )"
+
+PATCHES=(
+	"${FILESDIR}"/${PN}-2.1.11-gentoo.patch
+)
+
+pkg_pretend() {
+	use rootfs || return 0
+}
 
 pkg_setup() {
-	CONFIG_CHECK="
-		!DEBUG_LOCK_ALLOC
+	local CONFIG_CHECK="
 		EFI_PARTITION
-		MODULES
-		!PAX_KERNEXEC_PLUGIN_METHOD_OR
-		!TRIM_UNUSED_KSYMS
 		ZLIB_DEFLATE
 		ZLIB_INFLATE
+		!DEBUG_LOCK_ALLOC
+		!PAX_KERNEXEC_PLUGIN_METHOD_OR
 	"
-
-	use debug && CONFIG_CHECK="${CONFIG_CHECK}
-		FRAME_POINTER
+	use debug && CONFIG_CHECK+="
 		DEBUG_INFO
+		FRAME_POINTER
 		!DEBUG_INFO_REDUCED
 	"
-
-	use rootfs && \
-		CONFIG_CHECK="${CONFIG_CHECK}
-			BLK_DEV_INITRD
-			DEVTMPFS
+	use rootfs && CONFIG_CHECK+="
+		BLK_DEV_INITRD
+		DEVTMPFS
 	"
 
-	kernel_is -lt 5 && CONFIG_CHECK="${CONFIG_CHECK} IOSCHED_NOOP"
+	kernel_is -lt 5 && CONFIG_CHECK+=" IOSCHED_NOOP"
 
-	if [[ ${PV} != "9999" ]]; then
+	if [[ ${PV} != 9999 ]] ; then
 		local kv_major_max kv_minor_max zcompat
 		zcompat="${ZFS_KERNEL_COMPAT_OVERRIDE:-${ZFS_KERNEL_COMPAT}}"
 		kv_major_max="${zcompat%%.*}"
@@ -71,105 +95,113 @@ pkg_setup() {
 		kv_minor_max="${zcompat%%.*}"
 		kernel_is -le "${kv_major_max}" "${kv_minor_max}" || die \
 			"Linux ${kv_major_max}.${kv_minor_max} is the latest supported version"
-
 	fi
 
-	kernel_is -ge 3 10 || die "Linux 3.10 or newer required"
-
-	linux-mod_pkg_setup
+	linux-mod-r1_pkg_setup
 }
 
 src_prepare() {
 	default
 
-	if [[ ${PV} == "9999" ]]; then
-		eautoreconf
-	else
+	# Run unconditionally (bug #792627)
+	eautoreconf
+
+	if [[ ${PV} != 9999 ]] ; then
 		# Set module revision number
-		sed -i "s/\(Release:\)\(.*\)1/\1\2${PR}-gentoo/" META || die "Could not set Gentoo release"
+		sed -Ei "s/(Release:.*)1/\1${PR}-gentoo/" META || die
 	fi
 }
 
 src_configure() {
-	set_arch_to_kernel
-
 	use custom-cflags || strip-flags
-
 	filter-ldflags -Wl,*
 
 	local myconf=(
-		CROSS_COMPILE="${CHOST}-"
-		HOSTCC="$(tc-getBUILD_CC)"
-		--bindir="${EPREFIX}/bin"
-		--sbindir="${EPREFIX}/sbin"
+		--bindir="${EPREFIX}"/bin
+		--sbindir="${EPREFIX}"/sbin
 		--with-config=kernel
 		--with-linux="${KV_DIR}"
 		--with-linux-obj="${KV_OUT_DIR}"
 		$(use_enable debug)
+
+		# See gentoo.patch
+		GENTOO_MAKEARGS_EVAL="${MODULES_MAKEARGS[*]@Q}"
+		TEST_JOBS="$(makeopts_jobs)"
 	)
 
 	econf "${myconf[@]}"
 }
 
 src_compile() {
-	set_arch_to_kernel
-
-	myemakeargs=(
-		CROSS_COMPILE="${CHOST}-"
-		HOSTCC="$(tc-getBUILD_CC)"
-		V=1
-	)
-
-	emake "${myemakeargs[@]}"
+	emake "${MODULES_MAKEARGS[@]}"
 }
 
 src_install() {
-	set_arch_to_kernel
+	emake "${MODULES_MAKEARGS[@]}" DESTDIR="${ED}" install
+	modules_post_process
 
-	myemakeargs+=(
-		DEPMOD="/bin/true"
-		DESTDIR="${D}"
-		INSTALL_MOD_PATH="${INSTALL_MOD_PATH:-$EROOT}"
+	dodoc AUTHORS COPYRIGHT META README.md
+}
+
+_old_layout_cleanup() {
+	# new files are just extra/{spl,zfs}.ko with no subdirs.
+	local olddir=(
+		avl/zavl
+		icp/icp
+		lua/zlua
+		nvpair/znvpair
+		spl/spl
+		unicode/zunicode
+		zcommon/zcommon
+		zfs/zfs
+		zstd/zzstd
 	)
 
-	emake "${myemakeargs[@]}" install
+	# kernel/module/Kconfig contains possible compressed extentions.
+	local kext kextfiles
+		for kext in .ko{,.{gz,xz,zst}}; do
+		kextfiles+=( "${olddir[@]/%/${kext}}" )
+	done
 
-	einstalldocs
+	local oldfile oldpath
+	for oldfile in "${kextfiles[@]}"; do
+		oldpath="${EROOT}/lib/modules/${KV_FULL}/extra/${oldfile}"
+		if [[ -f "${oldpath}" ]]; then
+			ewarn "Found obsolete zfs module ${oldfile} for current kernel ${KV_FULL}, removing."
+			rm -rv "${oldpath}" || die
+			# we do not remove non-empty directories just for safety in case there's something else.
+			# also it may fail if there are both compressed and uncompressed modules installed.
+			rmdir -v --ignore-fail-on-non-empty "${oldpath%/*.*}" || die
+		fi
+	done
 }
 
 pkg_postinst() {
-	linux-mod_pkg_postinst
+	# Check for old module layout before doing anything else.
+	# only attempt layout cleanup if new .ko location is used.
+	local newko=( "${EROOT}/lib/modules/${KV_FULL}/extra"/{zfs,spl}.ko* )
+	# We check first array member, if glob above did not exand, it will be "zfs.ko*" and -f will return false.
+	# if glob expanded -f will do correct file precense check.
+	[[ -f ${newko[0]} ]] && _old_layout_cleanup
 
-	# Remove old modules
-	if [[ -d "${EROOT}/lib/modules/${KV_FULL}/addon/zfs" ]]; then
-		ewarn "${PN} now installs modules in ${EROOT}/lib/modules/${KV_FULL}/extra/zfs"
-		ewarn "Old modules were detected in ${EROOT}/lib/modules/${KV_FULL}/addon/zfs"
-		ewarn "Automatically removing old modules to avoid problems."
-		rm -r "${EROOT}/lib/modules/${KV_FULL}/addon/zfs" || die "Cannot remove modules"
-		rmdir --ignore-fail-on-non-empty "${EROOT}/lib/modules/${KV_FULL}/addon"
-	fi
+	linux-mod-r1_pkg_postinst
 
-	if use x86 || use arm; then
+	if use x86 || use arm ; then
 		ewarn "32-bit kernels will likely require increasing vmalloc to"
 		ewarn "at least 256M and decreasing zfs_arc_max to some value less than that."
 	fi
 
-	ewarn "This version of OpenZFS includes support for new feature flags"
-	ewarn "that are incompatible with previous versions. GRUB2 support for"
-	ewarn "/boot with the new feature flags is not yet available."
-	ewarn "Do *NOT* upgrade root pools to use the new feature flags."
-	ewarn "Any new pools will be created with the new feature flags by default"
-	ewarn "and will not be compatible with older versions of ZFSOnLinux. To"
-	ewarn "create a newpool that is backward compatible wih GRUB2, use "
-	ewarn
-	ewarn "zpool create -d -o feature@async_destroy=enabled "
-	ewarn "	-o feature@empty_bpobj=enabled -o feature@lz4_compress=enabled"
-	ewarn "	-o feature@spacemap_histogram=enabled"
-	ewarn "	-o feature@enabled_txg=enabled "
-	ewarn "	-o feature@extensible_dataset=enabled -o feature@bookmarks=enabled"
-	ewarn "	..."
-	ewarn
-	ewarn "GRUB2 support will be updated as soon as either the GRUB2"
-	ewarn "developers do a tag or the Gentoo developers find time to backport"
-	ewarn "support from GRUB2 HEAD."
+	if has_version sys-boot/grub ; then
+		ewarn "This version of OpenZFS includes support for new feature flags"
+		ewarn "that are incompatible with previous versions. GRUB2 support for"
+		ewarn "/boot with the new feature flags is not yet available."
+		ewarn "Do *NOT* upgrade root pools to use the new feature flags."
+		ewarn "Any new pools will be created with the new feature flags by default"
+		ewarn "and will not be compatible with older versions of OpenZFS. To"
+		ewarn "create a new pool that is backward compatible wih GRUB2, use "
+		ewarn
+		ewarn "zpool create -o compatibility=grub2 ..."
+		ewarn
+		ewarn "Refer to /usr/share/zfs/compatibility.d/grub2 for list of features."
+	fi
 }

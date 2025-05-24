@@ -1,9 +1,12 @@
-# Copyright 1999-2020 Gentoo Authors
+# Copyright 1999-2024 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
 # @ECLASS: alternatives.eclass
+# @MAINTAINER:
+# maintainer-needed@gentoo.org
 # @AUTHOR:
-# Original author: Alastair Tse <liquidx@gentoo.org> (03 Oct 2003)
+# Alastair Tse <liquidx@gentoo.org> (03 Oct 2003)
+# @SUPPORTED_EAPIS: 7 8
 # @BLURB: Creates symlink to the latest version of multiple slotted packages.
 # @DESCRIPTION:
 # When a package is SLOT'ed, very often we need to have a symlink to the
@@ -38,21 +41,28 @@
 # link to. It is probably more robust against version upgrades. You should
 # consider using this unless you are want to do something special.
 
-# @ECLASS-VARIABLE: SOURCE
+case ${EAPI} in
+	7|8) ;;
+	*) die "${ECLASS}: EAPI ${EAPI:-0} not supported" ;;
+esac
+
+if [[ -z ${_ALTERNATIVES_ECLASS} ]]; then
+_ALTERNATIVES_ECLASS=1
+
+# @ECLASS_VARIABLE: SOURCE
 # @DEFAULT_UNSET
 # @DESCRIPTION:
 # The symlink to be created
 
-# @ECLASS-VARIABLE: ALTERNATIVES
+# @ECLASS_VARIABLE: ALTERNATIVES
 # @DEFAULT_UNSET
 # @DESCRIPTION:
 # The list of alternatives
 
 # @FUNCTION: alternatives_auto_makesym
 # @DESCRIPTION:
-# automatic deduction based on a symlink and a regex mask
+# Automatic deduction (Bash pathname expansion) based on a symlink and a regex mask
 alternatives_auto_makesym() {
-	has "${EAPI:-0}" 0 1 2 && ! use prefix && EROOT="${ROOT}"
 	local SYMLINK REGEX ALT myregex
 	SYMLINK=$1
 	REGEX=$2
@@ -72,8 +82,10 @@ alternatives_auto_makesym() {
 	alternatives_makesym ${SYMLINK} ${ALT}
 }
 
+# @FUNCTION: alternatives_makesym
+# @DESCRIPTION:
+# Creates symlink based on a symlink and regex mask literally
 alternatives_makesym() {
-	has "${EAPI:-0}" 0 1 2 && ! use prefix && EPREFIX=
 	local ALTERNATIVES=""
 	local SYMLINK=""
 	local alt pref
@@ -81,8 +93,7 @@ alternatives_makesym() {
 	# usage: alternatives_makesym <resulting symlink> [alternative targets..]
 	# make sure it is in the prefix, allow it already to be in the prefix
 	SYMLINK=${EPREFIX}/${1#${EPREFIX}}
-	# this trick removes the trailing / from ${ROOT}
-	pref=${ROOT%/}
+	pref=${ROOT}
 	shift
 	ALTERNATIVES=$@
 
@@ -121,7 +132,7 @@ alternatives_makesym() {
 	fi
 }
 
-# @FUNCTION: alernatives-pkg_postinst
+# @FUNCTION: alternatives_pkg_postinst
 # @DESCRIPTION:
 # The alternatives pkg_postinst, this function will be exported
 alternatives_pkg_postinst() {
@@ -138,5 +149,7 @@ alternatives_pkg_postrm() {
 		alternatives_makesym ${SOURCE} ${ALTERNATIVES}
 	fi
 }
+
+fi
 
 EXPORT_FUNCTIONS pkg_postinst pkg_postrm

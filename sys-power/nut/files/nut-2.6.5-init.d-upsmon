@@ -4,11 +4,15 @@
 
 extra_started_commands="reload"
 
-pidfile=/var/run/upsmon.pid
+pidfile=/run/nut/upsmon.pid
 bin=/usr/sbin/upsmon
 
 depend() {
 	use net
+}
+
+start_pre() {
+	checkpath -q -d -m 0700 -o nut:nut /run/nut
 }
 
 start() {

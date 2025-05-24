@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE pkgmetadata SYSTEM "http://www.gentoo.org/dtd/metadata.dtd">
+<!DOCTYPE pkgmetadata SYSTEM "https://www.gentoo.org/dtd/metadata.dtd">
 <pkgmetadata>
 	<maintainer type="project">
 		<email>pgsql-bugs@gentoo.org</email>
@@ -9,17 +9,25 @@
 		<flag name="llvm">
 			Add support for llvm JIT engine
 		</flag>
-		<flag name="pg-legacytimestamp">
-			Use double precision floating-point numbers instead of
-			64-bit integers for timestamp storage.
+		<flag name="numa">
+			Add support for NUMA
+		</flag>
+		<flag name="oauth">
+			Enable OAuth2 authentication support
 		</flag>
 		<flag name="server">
 			Disable to build and install the clients and libraries
 			only.
+		</flag>
+		<flag name="uring">
+			Build with support for <pkg>sys-libs/liburing</pkg> AIO backend
 		</flag>
 		<flag name="uuid">
 			Enable server side UUID generation (via
 			<pkg>dev-libs/ossp-uuid</pkg>).
 		</flag>
 	</use>
+	<upstream>
+		<remote-id type="github">postgres/postgres</remote-id>
+	</upstream>
 </pkgmetadata>

@@ -1,27 +1,26 @@
-# Copyright 1999-2020 Gentoo Authors
+# Copyright 1999-2024 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
 EAPI=7
 
-inherit autotools
+inherit autotools flag-o-matic
 
 MY_PV="${PV/_beta/b}"
 
 DESCRIPTION="HTTP/HTML indexing and searching system"
-HOMEPAGE="http://www.htdig.org"
-SRC_URI="http://www.htdig.org/files/${PN}-${MY_PV}.tar.gz"
+HOMEPAGE="https://htdig.sourceforge.net/"
+SRC_URI="https://downloads.sourceforge.net/${PN}/${PN}-${MY_PV}.tar.gz"
 
 LICENSE="GPL-2"
 SLOT="0"
-KEYWORDS="~alpha amd64 ~arm ~arm64 ~hppa ~ia64 ~mips ppc ppc64 sparc x86 ~amd64-linux ~x86-linux"
-IUSE="libressl ssl"
+KEYWORDS="~alpha amd64 ~arm ~arm64 ~hppa ~mips ppc ppc64 sparc x86 ~amd64-linux ~x86-linux"
+IUSE="ssl"
 
 DEPEND="
 	sys-libs/zlib
 	app-arch/unzip
 	ssl? (
-		!libressl? ( dev-libs/openssl:0= )
-		libressl? ( dev-libs/libressl:0= )
+		dev-libs/openssl:0=
 	)"
 RDEPEND="${DEPEND}"
 
@@ -44,6 +43,10 @@ src_prepare() {
 }
 
 src_configure() {
+	# "WordDBPage.h:309:76: error: reference to 'byte' is ambiguous"
+	# bug #787716
+	append-cxxflags -std=c++14
+
 	local myeconfargs=(
 		--disable-static
 		--with-config-dir="${EPREFIX}"/etc/${PN}

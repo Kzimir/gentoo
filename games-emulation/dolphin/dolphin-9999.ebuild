@@ -1,162 +1,259 @@
-# Copyright 1999-2020 Gentoo Authors
+# Copyright 1999-2025 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
-EAPI=7
+EAPI=8
 
-PLOCALES="ar ca cs da de el en es fa fr hr hu it ja ko ms nb nl pl pt pt_BR ro ru sr sv tr zh_CN zh_TW"
-PLOCALE_BACKUP="en"
+LLVM_COMPAT=( 18 )
+LLVM_OPTIONAL=1
 
-inherit cmake desktop xdg-utils l10n pax-utils
+inherit cmake llvm-r1 pax-utils xdg-utils
 
-if [[ ${PV} == *9999 ]]
-then
-	EGIT_REPO_URI="https://github.com/dolphin-emu/dolphin"
+if [[ ${PV} == *9999 ]]; then
 	inherit git-r3
+	EGIT_REPO_URI="https://github.com/dolphin-emu/dolphin"
+	EGIT_SUBMODULES=(
+		Externals/mGBA/mgba
+		Externals/implot/implot
+		Externals/tinygltf/tinygltf
+		Externals/Vulkan-Headers
+		Externals/VulkanMemoryAllocator
+		Externals/zlib-ng/zlib-ng
+		Externals/minizip-ng/minizip-ng
+	)
 else
-	inherit vcs-snapshot
-	commit=0dbe8fb2eaa608a6540df3d269648a596c29cf4b
-	SRC_URI="https://github.com/dolphin-emu/dolphin/archive/${commit}.tar.gz -> ${P}.tar.gz"
-	KEYWORDS="~amd64"
+	MGBA_COMMIT=8739b22fbc90fdf0b4f6612ef9c0520f0ba44a51
+	IMPLOT_COMMIT=18c72431f8265e2b0b5378a3a73d8a883b2175ff
+	TINYGLTF_COMMIT=c5641f2c22d117da7971504591a8f6a41ece488b
+	VULKAN_HEADERS_COMMIT=39f924b810e561fd86b2558b6711ca68d4363f68
+	VULKANMEMORYALLOCATOR_COMMIT=3bab6924988e5f19bf36586a496156cf72f70d9f
+	ZLIB_NG_COMMIT=ce01b1e41da298334f8214389cc9369540a7560f
+	MINIZIP_NG_COMMIT=55db144e03027b43263e5ebcb599bf0878ba58de
+	SRC_URI="
+		https://github.com/dolphin-emu/dolphin/archive/${PV}.tar.gz
+			-> ${P}.tar.gz
+		https://github.com/epezent/implot/archive/${IMPLOT_COMMIT}.tar.gz
+			-> implot-${IMPLOT_COMMIT}.tar.gz
+		https://github.com/syoyo/tinygltf/archive/${TINYGLTF_COMMIT}.tar.gz
+			-> tinygltf-${TINYGLTF_COMMIT}.tar.gz
+		https://github.com/KhronosGroup/Vulkan-Headers/archive/${VULKAN_HEADERS_COMMIT}.tar.gz
+			-> Vulkan-Headers-${VULKAN_HEADERS_COMMIT}.tar.gz
+		https://github.com/GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator/archive/${VULKANMEMORYALLOCATOR_COMMIT}.tar.gz
+			-> VulkanMemoryAllocator-${VULKANMEMORYALLOCATOR_COMMIT}.tar.gz
+		https://github.com/zlib-ng/zlib-ng/archive/${ZLIB_NG_COMMIT}.tar.gz
+			-> zlib-ng-${ZLIB_NG_COMMIT}.tar.gz
+		https://github.com/zlib-ng/minizip-ng/archive/${MINIZIP_NG_COMMIT}.tar.gz
+			-> minizip-ng-${MINIZIP_NG_COMMIT}.tar.gz
+		mgba? (
+			https://github.com/mgba-emu/mgba/archive/${MGBA_COMMIT}.tar.gz
+				-> mgba-${MGBA_COMMIT}.tar.gz
+		)
+	"
+	KEYWORDS="~amd64 ~arm64"
 fi
 
 DESCRIPTION="Gamecube and Wii game emulator"
-HOMEPAGE="https://www.dolphin-emu.org/"
+HOMEPAGE="https://dolphin-emu.org/"
 
-LICENSE="GPL-2"
+LICENSE="GPL-2+ BSD BSD-2 LGPL-2.1+ MIT ZLIB"
 SLOT="0"
-IUSE="alsa bluetooth discord-presence doc +evdev ffmpeg log lto profile pulseaudio +qt5 systemd upnp vulkan"
+IUSE="
+	alsa bluetooth discord-presence doc egl +evdev ffmpeg +gui llvm log mgba
+	profile pulseaudio sdl systemd telemetry test upnp vulkan
+"
+REQUIRED_USE="
+	mgba? ( gui )
+	llvm? ( ${LLVM_REQUIRED_USE} )
+"
+RESTRICT="!test? ( test )"
 
 RDEPEND="
-	dev-libs/hidapi:0=
-	>=dev-libs/libfmt-7.1:0=
-	dev-libs/lzo:2=
-	dev-libs/pugixml:0=
-	media-libs/libpng:0=
-	media-libs/libsfml
-	media-libs/mesa[egl]
-	net-libs/enet:1.3
+	app-arch/bzip2:=
+	>=app-arch/lz4-1.8:=
+	app-arch/xz-utils
+	>=app-arch/zstd-1.4.0:=
+	dev-libs/hidapi
+	>=dev-libs/libfmt-10.1:=
+	dev-libs/lzo:2
+	dev-libs/pugixml
+	dev-libs/xxhash
+	media-libs/cubeb
+	>=media-libs/libsfml-3.0:=
+	media-libs/libspng
+	>=net-libs/enet-1.3.18:1.3=
 	net-libs/mbedtls:0=
-	net-misc/curl:0=
-	sys-libs/readline:0=
-	sys-libs/zlib:0=
-	x11-libs/libXext
+	net-misc/curl
+	x11-libs/libX11
 	x11-libs/libXi
 	x11-libs/libXrandr
 	virtual/libusb:1
 	virtual/opengl
 	alsa? ( media-libs/alsa-lib )
-	bluetooth? ( net-wireless/bluez )
+	bluetooth? ( net-wireless/bluez:= )
 	evdev? (
 		dev-libs/libevdev
 		virtual/udev
 	)
 	ffmpeg? ( media-video/ffmpeg:= )
-	profile? ( dev-util/oprofile )
-	pulseaudio? ( media-sound/pulseaudio )
-	qt5? (
-		dev-qt/qtcore:5
-		dev-qt/qtgui:5
-		dev-qt/qtwidgets:5
+	gui? (
+		dev-qt/qtbase:6[X,gui,widgets]
+		dev-qt/qtsvg:6
 	)
+	llvm? ( $(llvm_gen_dep 'llvm-core/llvm:${LLVM_SLOT}=') )
+	profile? ( dev-util/oprofile )
+	pulseaudio? ( media-libs/libpulse )
+	sdl? ( >=media-libs/libsdl2-2.30.9 )
 	systemd? ( sys-apps/systemd:0= )
-	upnp? ( net-libs/miniupnpc )
+	upnp? ( net-libs/miniupnpc:= )
 "
-DEPEND="${RDEPEND}"
+DEPEND="
+	${RDEPEND}
+	egl? ( media-libs/libglvnd )
+	test? ( dev-cpp/gtest )
+"
 BDEPEND="
 	sys-devel/gettext
-	virtual/pkgconfig"
+	virtual/pkgconfig
+"
 
 # vulkan-loader required for vulkan backend which can be selected
 # at runtime.
-RDEPEND="${RDEPEND}
-	media-libs/vulkan-loader"
+RDEPEND+="
+	vulkan? ( media-libs/vulkan-loader )
+"
+
+# [directory]=license
+declare -A KEEP_BUNDLED=(
+	# please keep this list in CMakeLists.txt order
+
+	# TODO: use system libraries
+	# bug #873952
+	# https://github.com/dolphin-emu/dolphin/pull/13089
+	[zlib-ng]=ZLIB
+	[minizip-ng]=ZLIB
+
+	[Bochs_disasm]=LGPL-2.1+
+	[cpp-optparse]=MIT
+	[imgui]=MIT
+	[implot]=MIT
+	[glslang]=BSD
+
+	[tinygltf]=MIT
+
+	[FreeSurround]=GPL-2+
+	[soundtouch]=LGPL-2.1+
+
+	# FIXME: discord-rpc not packaged
+	[discord-rpc]=MIT
+
+	[mGBA]=MPL-2.0
+
+	[picojson]=BSD-2
+	[expr]=MIT
+	[rangeset]=ZLIB
+	[FatFs]=FatFs
+	[Vulkan-Headers]="|| ( Apache-2.0 MIT )"
+	[VulkanMemoryAllocator]=MIT
+)
+
+PATCHES=(
+	"${FILESDIR}"/dolphin-2407-minizip.patch
+)
+
+add_bundled_licenses() {
+	for license in ${KEEP_BUNDLED[@]}; do
+		LICENSE+=" ${license}"
+	done
+}
+add_bundled_licenses
+
+pkg_setup() {
+	use llvm && llvm-r1_pkg_setup
+}
 
 src_prepare() {
+	if [[ ${PV} != *9999 ]]; then
+		mv -T "${WORKDIR}/implot-${IMPLOT_COMMIT}" Externals/implot/implot || die
+		mv -T "${WORKDIR}/tinygltf-${TINYGLTF_COMMIT}" Externals/tinygltf/tinygltf || die
+		mv -T "${WORKDIR}/Vulkan-Headers-${VULKAN_HEADERS_COMMIT}" Externals/Vulkan-Headers || die
+		mv -T "${WORKDIR}/VulkanMemoryAllocator-${VULKANMEMORYALLOCATOR_COMMIT}" Externals/VulkanMemoryAllocator || die
+		mv -T "${WORKDIR}/zlib-ng-${ZLIB_NG_COMMIT}" Externals/zlib-ng/zlib-ng || die
+		mv -T "${WORKDIR}/minizip-ng-${MINIZIP_NG_COMMIT}" Externals/minizip-ng/minizip-ng || die
+		if use mgba; then
+			mv -T "${WORKDIR}/mgba-${MGBA_COMMIT}" Externals/mGBA/mgba || die
+		fi
+	fi
+
 	cmake_src_prepare
 
-	# Remove all the bundled libraries that support system-installed
-	# preference. See CMakeLists.txt for conditional 'add_subdirectory' calls.
-	local KEEP_SOURCES=(
-		Bochs_disasm
-		FreeSurround
-
-		# vulkan's API is not backwards-compatible:
-		# new release dropped VK_PRESENT_MODE_RANGE_SIZE_KHR
-		# but dolphin still relies on it, bug #729832
-		Vulkan
-
-		cpp-optparse
-		# no support for for using system library
-		glslang
-		imgui
-
-		# not packaged, tiny header library
-		rangeset
-
-		# FIXME: xxhash can't be found by cmake
-		xxhash
-		# no support for for using system library
-		minizip
-		# soundtouch uses shorts, not floats
-		soundtouch
-		cubeb
-		discord-rpc
-		# Their build set up solely relies on the build in gtest.
-		gtest
-		# gentoo's version requires exception support.
-		# dolphin disables exceptions and fails the build.
-		picojson
-		# No code to detect shared library.
-		zstd
-	)
-	local s
-	for s in "${KEEP_SOURCES[@]}"; do
-		mv -v "Externals/${s}" . || die
-	done
-	einfo "removing sources: $(echo Externals/*)"
-	rm -r Externals/* || die "Failed to delete Externals dir."
-	for s in "${KEEP_SOURCES[@]}"; do
-		mv -v "${s}" "Externals/" || die
-	done
-
-	remove_locale() {
-		# Ensure preservation of the backup locale when no valid LINGUA is set
-		if [[ "${PLOCALE_BACKUP}" == "${1}" ]] && [[ "${PLOCALE_BACKUP}" == "$(l10n_get_locales)" ]]; then
-			return
-		else
-			rm "Languages/po/${1}.po" || die
+	local s remove=()
+	for s in Externals/*; do
+		[[ -f ${s} ]] && continue
+		if ! has "${s#Externals/}" "${!KEEP_BUNDLED[@]}"; then
+			remove+=( "${s}" )
 		fi
-	}
+	done
 
-	l10n_find_plocales_changes "Languages/po/" "" '.po'
-	l10n_for_each_disabled_locale_do remove_locale
+	einfo "removing sources: ${remove[*]}"
+	rm -r "${remove[@]}" || die
 
-	 # About 50% compile-time speedup
-	use vulkan || sed -i -e '/Externals\/glslang/d' CMakeLists.txt
+	# Remove dirty suffix: needed for netplay
+	sed -i -e 's/--dirty/&=""/' CMake/ScmRevGen.cmake || die
 }
 
 src_configure() {
 	local mycmakeargs=(
-		# Use ccache only when user did set FEATURES=ccache (or similar)
-		# not when ccache binary is present in system (automagic).
-		-DCCACHE_BIN=CCACHE_BIN-NOTFOUND
+		-DDSPTOOL=ON
 		-DENABLE_ALSA=$(usex alsa)
+		-DENABLE_ANALYTICS=$(usex telemetry)
+		-DENABLE_AUTOUPDATE=OFF
 		-DENABLE_BLUEZ=$(usex bluetooth)
+		-DENABLE_CLI_TOOL=ON
+		-DENABLE_CUBEB=ON
+		-DENABLE_EGL=$(usex egl)
 		-DENABLE_EVDEV=$(usex evdev)
-		-DENCODE_FRAMEDUMPS=$(usex ffmpeg)
-		-DENABLE_LLVM=OFF
-		-DENABLE_LTO=$(usex lto)
+		-DENABLE_LLVM=$(usex llvm)
+		-DENABLE_LTO=OFF # just adds -flto, user can do that via flags
+		-DENABLE_NOGUI=$(usex !gui)
 		-DENABLE_PULSEAUDIO=$(usex pulseaudio)
-		-DENABLE_QT=$(usex qt5)
-		-DENABLE_SDL=OFF # not supported: #666558
+		-DENABLE_QT=$(usex gui)
+		-DENABLE_SDL=$(usex sdl)
+		-DENABLE_TESTS=$(usex test)
 		-DENABLE_VULKAN=$(usex vulkan)
+		-DENCODE_FRAMEDUMPS=$(usex ffmpeg)
 		-DFASTLOG=$(usex log)
 		-DOPROFILING=$(usex profile)
 		-DUSE_DISCORD_PRESENCE=$(usex discord-presence)
-		-DUSE_SHARED_ENET=ON
+		-DUSE_MGBA=$(usex mgba)
+		-DUSE_RETRO_ACHIEVEMENTS=OFF
 		-DUSE_UPNP=$(usex upnp)
 
-		# Undo cmake-utils.eclass's defaults.
+		-DCMAKE_DISABLE_FIND_PACKAGE_SYSTEMD=$(usex !systemd)
+
+		# Use system libraries
+		-DUSE_SYSTEM_FMT=ON
+		-DUSE_SYSTEM_PUGIXML=ON
+		-DUSE_SYSTEM_ENET=ON
+		-DUSE_SYSTEM_XXHASH=ON
+		-DUSE_SYSTEM_BZIP2=ON
+		-DUSE_SYSTEM_LIBLZMA=ON
+		-DUSE_SYSTEM_ZSTD=ON
+		-DUSE_SYSTEM_MINIZIP=OFF
+		-DUSE_SYSTEM_LZO=ON
+		-DUSE_SYSTEM_LZ4=ON
+		-DUSE_SYSTEM_SPNG=ON
+		-DUSE_SYSTEM_CUBEB=ON
+		-DUSE_SYSTEM_LIBUSB=ON
+		-DUSE_SYSTEM_SFML=ON
+		-DUSE_SYSTEM_MBEDTLS=ON
+		-DUSE_SYSTEM_CURL=ON
+		-DUSE_SYSTEM_ICONV=ON
+		-DUSE_SYSTEM_HIDAPI=ON
+
+		# Use ccache only when user did set FEATURES=ccache (or similar)
+		# not when ccache binary is present in system (automagic).
+		-DCCACHE_BIN=CCACHE_BIN-NOTFOUND
+
+		# Undo cmake.eclass's defaults.
 		# All dolphin's libraries are private
 		# and rely on circular dependency resolution.
 		-DBUILD_SHARED_LIBS=OFF
@@ -165,7 +262,19 @@ src_configure() {
 		-Wno-dev
 	)
 
+	# System installed git shouldnt affect non live builds
+	[[ ${PV} != *9999 ]] && mycmakeargs+=( -DCMAKE_DISABLE_FIND_PACKAGE_Git=ON )
+
+	use test && mycmakeargs+=( -DUSE_SYSTEM_GTEST=ON )
+	use mgba && mycmakeargs+=( -DUSE_SYSTEM_LIBMGBA=OFF )
+	use sdl && mycmakeargs+=( -DUSE_SYSTEM_SDL2=ON )
+	use upnp && mycmakeargs+=( -DUSE_SYSTEM_MINIUPNPC=ON )
+
 	cmake_src_configure
+}
+
+src_test() {
+	cmake_build unittests
 }
 
 src_install() {
@@ -176,17 +285,16 @@ src_install() {
 		dodoc -r docs/ActionReplay docs/DSP docs/WiiMote
 	fi
 
-	doicon -s 48 Data/dolphin-emu.png
-	doicon -s scalable Data/dolphin-emu.svg
-	doicon Data/dolphin-emu.svg
+	# Add pax markings for hardened systems
+	pax-mark -m "${ED}"/usr/bin/"${PN}"{-emu{,-nogui},-tool}
 }
 
 pkg_postinst() {
-	# Add pax markings for hardened systems
-	pax-mark -m "${EPREFIX}"/usr/games/bin/"${PN}"-emu
+	xdg_desktop_database_update
 	xdg_icon_cache_update
 }
 
 pkg_postrm() {
+	xdg_desktop_database_update
 	xdg_icon_cache_update
 }

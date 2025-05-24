@@ -1,47 +1,42 @@
-# Copyright 1999-2020 Gentoo Authors
+# Copyright 1999-2025 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
 EAPI=7
 
 EGIT_REPO_URI="https://git.postgresql.org/git/pgpool2.git"
 
-POSTGRES_COMPAT=( 9.{5..6} {10..13} )
+POSTGRES_COMPAT=( 9.6 {10..15} )
 
-inherit autotools git-r3 postgres-multi
+inherit autotools flag-o-matic git-r3 postgres-multi
 
 DESCRIPTION="Connection pool server for PostgreSQL"
 HOMEPAGE="https://www.pgpool.net/"
-SRC_URI=""
+
 LICENSE="BSD"
 SLOT="0"
-
-KEYWORDS=""
-
-IUSE="doc libressl memcached pam ssl static-libs"
+IUSE="doc memcached pam ssl static-libs"
 
 RDEPEND="
 	${POSTGRES_DEP}
+	acct-group/postgres
+	acct-user/pgpool
 	net-libs/libnsl:0=
+	virtual/libcrypt:=
 	memcached? ( dev-libs/libmemcached )
 	pam? ( sys-auth/pambase )
-	ssl? (
-		!libressl? ( dev-libs/openssl:0= )
-		libressl? ( dev-libs/libressl:= )
-	)
+	ssl? ( dev-libs/openssl:= )
 "
 DEPEND="${RDEPEND}
 	sys-devel/bison
 	virtual/pkgconfig
 	doc? (
-		 app-text/openjade
-		 dev-libs/libxml2
-		 dev-libs/libxslt
-	 )
+		app-text/openjade
+		dev-libs/libxml2
+		dev-libs/libxslt
+	)
 "
 
 pkg_setup() {
-	postgres_new_user pgpool
-
 	postgres-multi_pkg_setup
 }
 
@@ -50,7 +45,7 @@ src_prepare() {
 		"${FILESDIR}/pgpool-4.2.0-configure-memcached.patch" \
 		"${FILESDIR}/pgpool-configure-pam.patch" \
 		"${FILESDIR}/pgpool-4.2.0-configure-pthread.patch" \
-		"${FILESDIR}/pgpool-4.2.0-run_paths.patch"
+		"${FILESDIR}/pgpool-9999-run_paths.patch"
 
 	eautoreconf
 
@@ -58,9 +53,14 @@ src_prepare() {
 }
 
 src_configure() {
+	# bug #946410
+	append-cflags -std=gnu17
+	# Usual always_inline problem
+	filter-flags -fno-semantic-interposition
+
 	postgres-multi_foreach econf \
 		--disable-rpath \
-		--sysconfdir="${EROOT}/etc/${PN}" \
+		--sysconfdir="${EPREFIX}/etc/${PN}" \
 		--with-pgsql-includedir='/usr/include/postgresql-@PG_SLOT@' \
 		--with-pgsql-libdir="/usr/$(get_libdir)/postgresql-@PG_SLOT@/$(get_libdir)" \
 		$(use_enable static-libs static) \
@@ -75,7 +75,7 @@ src_compile() {
 	# of that directory built, too.
 	postgres-multi_foreach emake
 	postgres-multi_foreach emake -C src/sql
-	use doc && postgres-multi_forbest emake DESTDIR="${D}" -C doc
+	use doc && postgres-multi_forbest emake -C doc
 }
 
 src_install() {

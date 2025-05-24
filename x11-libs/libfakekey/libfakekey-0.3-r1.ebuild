@@ -1,20 +1,23 @@
-# Copyright 1999-2020 Gentoo Authors
+# Copyright 1999-2025 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
-EAPI=7
+EAPI=8
 
 inherit autotools
 
 DESCRIPTION="Helper library for the x11-misc/matchbox-keyboard package"
-HOMEPAGE="https://www.yoctoproject.org/tools-resources/projects/matchbox"
+HOMEPAGE="https://git.yoctoproject.org/cgit/cgit.cgi/libfakekey"
 SRC_URI="https://git.yoctoproject.org/cgit/cgit.cgi/${PN}/snapshot/${P}.tar.bz2"
 
 LICENSE="GPL-2"
 SLOT="0"
-KEYWORDS="amd64 ~arm arm64 ~hppa ppc ppc64 x86"
+KEYWORDS="amd64 ~arm arm64 ~hppa ~loong ppc ppc64 ~riscv x86"
 IUSE="debug doc"
 
-BDEPEND="doc? ( app-doc/doxygen )"
+BDEPEND="
+	x11-base/xorg-proto
+	doc? ( app-text/doxygen )
+"
 DEPEND="x11-libs/libXtst"
 RDEPEND="${DEPEND}"
 
@@ -34,7 +37,6 @@ src_configure() {
 	local myeconfargs=(
 		# --with/without-x is ignored by configure script and X is used.
 		--with-x
-		--disable-static
 		$(use_enable debug)
 		$(use_enable doc doxygen-docs)
 	)

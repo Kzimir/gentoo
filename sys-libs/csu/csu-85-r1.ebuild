@@ -1,9 +1,9 @@
-# Copyright 1999-2021 Gentoo Authors
+# Copyright 1999-2024 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
 EAPI=7
 
-inherit toolchain-funcs
+inherit flag-o-matic
 
 DESCRIPTION="Darwin Csu (crt1.o) - Mac OS X 10.10 version"
 HOMEPAGE="http://www.opensource.apple.com/"
@@ -13,17 +13,20 @@ LICENSE="APSL-2"
 
 SLOT="0"
 KEYWORDS="~ppc-macos ~x64-macos"
-IUSE=""
 S=${WORKDIR}/Csu-${PV}
 
 # for now it seems FSF GCC can't compile this thing, so we need
 # gcc-apple or clang (which is also sort of "-apple")
 DEPEND="|| (
-		sys-devel/clang
+		llvm-core/clang
 		=sys-devel/gcc-apple-4.2.1*
 	)"
 
 src_prepare() {
+	# apart from gcc-4.2.1 possibly not understanding, this better not
+	# be aggressively optimised
+	filter-flags -march=* -mtune=*
+
 	# since we don't have crt0, we can't build it either
 	sed -i \
 		-e 's:$(SYMROOT)/crt0.o::' \

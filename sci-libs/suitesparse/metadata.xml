@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE pkgmetadata SYSTEM "http://www.gentoo.org/dtd/metadata.dtd">
+<!DOCTYPE pkgmetadata SYSTEM "https://www.gentoo.org/dtd/metadata.dtd">
 <pkgmetadata>
 <maintainer type="project">
   <email>sci@gentoo.org</email>
@@ -29,9 +29,6 @@
     * SSMULT: sparse matrix times sparse matrix
 </longdescription>
 <use>
-  <flag name="cuda">
-    Enable nvidia cuda toolkit for speeding up computations
-  </flag>
   <flag name="partition">
     Enable graph partitioning and graph-partition-based orderings
     through <pkg>sci-libs/metis</pkg> or <pkg>sci-libs/parmetis</pkg>

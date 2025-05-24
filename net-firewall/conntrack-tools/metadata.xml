@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE pkgmetadata SYSTEM "http://www.gentoo.org/dtd/metadata.dtd">
+<!DOCTYPE pkgmetadata SYSTEM "https://www.gentoo.org/dtd/metadata.dtd">
 <pkgmetadata>
 <maintainer type="project">
 <email>netmon@gentoo.org</email>
@@ -16,7 +16,6 @@ interface conntrack.
 <remote-id type="cpe">cpe:/a:netfilter:conntrack-tools</remote-id>
 </upstream>
 <use>
-<flag name="libtirpc">Use <pkg>net-libs/libtirpc</pkg> for RPC support</flag>
 <flag name="cthelper">Use <pkg>net-libs/libnetfilter_cthelper</pkg> for userspace conntrack helper support</flag>
 <flag name="cttimeout">Use <pkg>net-libs/libnetfilter_cttimeout</pkg> for conntrack timeout support</flag>
 </use>

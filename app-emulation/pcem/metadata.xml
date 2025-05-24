@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE pkgmetadata SYSTEM "http://www.gentoo.org/dtd/metadata.dtd">
+<!DOCTYPE pkgmetadata SYSTEM "https://www.gentoo.org/dtd/metadata.dtd">
 <pkgmetadata>
 	<maintainer type="person">
 		<email>conikost@gentoo.org</email>
@@ -14,7 +14,9 @@
 		which can then be used to launch programs.
 	</longdescription>
 	<use>
+		<flag name="experimental">Enable experimental devices like printers.</flag>
 		<flag name="networking">Enable support for emulation of network cards.</flag>
+		<flag name="plugins">Enable support for dynamic plugins, which can add additional features.</flag>
 	</use>
 	<upstream>
 		<bugs-to>https://pcem-emulator.co.uk/phpBB3/viewforum.php?f=2</bugs-to>

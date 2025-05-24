@@ -1,41 +1,65 @@
-# Copyright 1999-2020 Gentoo Authors
+# Copyright 1999-2025 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
-EAPI=7
+EAPI=8
 
-PYTHON_COMPAT=( python3_{6,7,8,9} )
-LUA_COMPAT=( lua5-{1,2} )
+GUILE_REQ_USE="deprecated"
+GUILE_COMPAT=( 2-2 3-0 )
+PYTHON_COMPAT=( python3_{10..13} )
+LUA_COMPAT=( lua5-{1,2,3,4} luajit )
 
-inherit autotools git-r3 lua-single python-any-r1
-
-EGIT_REPO_URI="https://github.com/rkd77/felinks"
+inherit flag-o-matic guile-single meson lua-single python-single-r1
 
 DESCRIPTION="Advanced and well-established text-mode web browser"
 HOMEPAGE="http://elinks.or.cz/"
 
+if [[ ${PV} == *9999 ]] ; then
+	EGIT_REPO_URI="https://github.com/rkd77/felinks"
+	inherit git-r3
+else
+	SRC_URI="https://github.com/rkd77/elinks/releases/download/v${PV}/${P}.tar.xz"
+
+	KEYWORDS="~alpha ~amd64 ~arm ~arm64 ~hppa ~mips ~ppc ~ppc64 ~riscv ~sparc ~x86 ~amd64-linux ~x86-linux ~ppc-macos ~x64-macos ~x64-solaris"
+fi
+
 LICENSE="GPL-2"
 SLOT="0"
-KEYWORDS=""
-IUSE="bittorrent brotli bzip2 debug finger ftp gopher gpm gnutls guile idn ipv6
-	libressl lua +mouse nls nntp perl ruby samba ssl tre unicode X xml zlib zstd"
+IUSE="bittorrent brotli bzip2 curl debug +doc finger ftp gemini gopher gpm gnutls guile idn"
+IUSE+=" javascript libcss lua lzma +mouse nls nntp perl python samba sftp ssl test tre unicode X xml zlib zstd"
+RESTRICT="!test? ( test )"
+REQUIRED_USE="
+	guile? ( ${GUILE_REQUIRED_USE} )
+	javascript? ( curl libcss )
+	lua? ( ${LUA_REQUIRED_USE} )
+	python? ( ${PYTHON_REQUIRED_USE} )
+	sftp? ( curl )
+"
 
-REQUIRED_USE="lua? ( ${LUA_REQUIRED_USE} )"
-BDEPEND="virtual/pkgconfig"
 RDEPEND="
+	>=sys-libs/ncurses-5.2:=[unicode(+)]
 	brotli? ( app-arch/brotli:= )
 	bzip2? ( >=app-arch/bzip2-1.0.2 )
-	gpm? ( >=sys-libs/ncurses-5.2:0= >=sys-libs/gpm-1.20.0-r5 )
-	guile? ( >=dev-scheme/guile-1.6.4-r1[deprecated] )
-	idn? ( net-dns/libidn:= )
+	curl? ( net-misc/curl[ssl] )
+	gpm? (
+		>=sys-libs/gpm-1.20.0-r5
+	)
+	guile? ( ${GUILE_DEPS} )
+	idn? ( net-dns/libidn2:= )
+	javascript? (
+		dev-cpp/libxmlpp:5.0
+		dev-lang/mujs:=
+	)
+	libcss? (
+		>=dev-libs/libcss-0.9.2
+		>=net-libs/libdom-0.4.2
+	)
 	lua? ( ${LUA_DEPS} )
+	lzma? ( app-arch/xz-utils )
 	perl? ( dev-lang/perl:= )
-	ruby? ( dev-lang/ruby:* dev-ruby/rubygems:* )
+	python? ( ${PYTHON_DEPS} )
 	samba? ( net-fs/samba )
 	ssl? (
-		!gnutls? (
-			!libressl? ( dev-libs/openssl:0= )
-			libressl? ( dev-libs/libressl:0= )
-		)
+		!gnutls? ( dev-libs/openssl:= )
 		gnutls? ( net-libs/gnutls:= )
 	)
 	tre? ( dev-libs/tre )
@@ -45,91 +69,118 @@ RDEPEND="
 	)
 	xml? ( >=dev-libs/expat-1.95.4 )
 	zlib? ( >=sys-libs/zlib-1.1.4 )
-	zstd? ( app-arch/zstd:= )"
+	zstd? ( app-arch/zstd:= )
+"
 DEPEND="${RDEPEND}
-	${PYTHON_DEPS}"
+	X? ( x11-base/xorg-proto )"
+BDEPEND="
+	virtual/pkgconfig
+	doc? ( dev-lang/perl )
+	nls? ( sys-devel/gettext )
+	test? (
+		net-dns/libidn
+	)
+"
 
-PATCHES=(
-	"${FILESDIR}"/${P}-parallel-make.patch
-)
-
-src_unpack() {
-	default
-	git-r3_src_unpack
+pkg_setup() {
+	use guile && guile-single_pkg_setup
+	use lua && lua-single_pkg_setup
+	python-single-r1_pkg_setup
 }
 
 src_prepare() {
 	default
-
-	sed -i -e 's/-Werror//' configure* || die
-
-	eautoreconf
+	use guile && guile_bump_sources
+	python_fix_shebang .
 }
 
 src_configure() {
-	local myconf=(
-		--sysconfdir="${EPREFIX}"/etc/elinks
-		--enable-leds
-		--enable-88-colors
-		--enable-256-colors
-		--enable-true-color
-		--enable-html-highlight
-		--without-spidermonkey
-		$(use_with gpm)
-		$(use_with brotli)
-		$(use_with bzip2 bzlib)
-		$(use_with guile)
-		$(use_with idn)
-		$(use_with lua luapkg lua)
-		$(use_with perl)
-		$(use_with ruby)
-		$(use_with tre)
-		$(use_with X x)
-		$(use_with zlib)
-		$(use_with zstd)
-		$(use_enable bittorrent)
-		$(use_enable finger)
-		$(use_enable ftp)
-		$(use_enable gopher)
-		$(use_enable ipv6)
-		$(use_enable mouse)
-		$(use_enable nls)
-		$(use_enable nntp)
-		$(use_enable samba smb)
-		$(use_enable xml xbel)
-	)
+	# This file is severely broken w.r.t. strict-aliasing and upstream acknowledges it:
+	# https://github.com/rkd77/elinks/blob/d05ce90b35d82109aab320b490e3ca54aa6df057/src/util/lists.h#L14
+	# https://github.com/rkd77/elinks/blob/d05ce90b35d82109aab320b490e3ca54aa6df057/src/meson.build#L44
+	#
+	# Although they force fno-strict-aliasing, they do so inconsistently and not for the testsuite (!!!).
+	# Just add it again.
+	#
+	# DO not trust the LTO either.
+	append-flags -fno-strict-aliasing
+	filter-lto
 
-	if use debug ; then
-		myconf+=( --enable-debug )
-	else
-		myconf+=( --enable-fastmem )
-	fi
+	local emesonargs=(
+		-Ddocdir="${EPREFIX}"/usr/share/doc/${PF}
+		-Dhtmldoc=false
+		-Dpdfdoc=false
+		-Dapidoc=false
+		-D88-colors=true
+		-D256-colors=true
+		-Dbacktrace=$(usex elibc_musl false true)
+		$(meson_use bittorrent)
+		$(meson_use brotli)
+		$(meson_use bzip2 bzlib)
+		$(meson_use curl libcurl)
+		$(usex debug '-Ddebug=true' '-Dfastmem=true')
+		$(meson_use doc)
+		$(meson_use finger)
+		$(meson_use ftp)
+		-Dfsp=false
+		$(meson_use gemini)
+		$(meson_use nls gettext)
+		$(meson_use gopher)
+		$(meson_use gpm)
+		$(meson_use guile)
+		-Dgssapi=false
+		-Dhtml-highlight=true
+		$(meson_use idn)
+		$(meson_use javascript mujs)
+		-Dipv6=true
+		-Dleds=true
+		$(meson_use libcss)
+		-Dlibev=false
+		-Dlibevent=false
+		-Dluapkg=$(usex lua ${ELUA:-0} '')
+		$(meson_use lzma)
+		$(meson_use mouse)
+		$(meson_use nls)
+		$(meson_use nntp)
+		$(meson_use perl)
+		$(meson_use python)
+		-Dquickjs=false
+		-Druby=false
+		$(meson_use samba smb)
+		$(meson_use sftp)
+		-Dsm-scripting=false
+		-Dspidermonkey=false
+		-Dterminfo=true
+		$(meson_use test)
+		$(meson_use tre)
+		-Dtrue-color=true
+		$(meson_use xml xbel)
+		$(meson_use X x)
+		$(meson_use zlib)
+		$(meson_use zstd)
+	)
 
 	if use ssl ; then
 		if use gnutls ; then
-			myconf+=( --with-gnutls )
+			emesonargs+=( -Dgnutls=true )
 		else
-			myconf+=( --with-openssl="${EPREFIX}"/usr )
+			emesonargs+=( -Dopenssl=true)
 		fi
 	else
-		myconf+=( --without-openssl --without-gnutls )
+		emesonargs+=( -Dgnutls=false -Dopenssl=false )
 	fi
 
-	econf "${myconf[@]}"
-}
-
-src_compile() {
-	emake V=1
+	meson_src_configure
 }
 
 src_install() {
-	emake V=1 DESTDIR="${D}" install
+	meson_src_install
 
 	insinto /etc/elinks
 	newins contrib/keybind-full.conf keybind-full.sample
 	newins contrib/keybind.conf keybind.conf.sample
 
-	dodoc AUTHORS BUGS ChangeLog INSTALL NEWS README SITES THANKS TODO doc/*.*
+	dodoc AUTHORS BUGS ChangeLog INSTALL NEWS README.md SITES THANKS TODO doc/*.*
 	docinto contrib ; dodoc contrib/{README,colws.diff,elinks[-.]vim*}
 	docinto contrib/lua ; dodoc contrib/lua/{*.lua,elinks-remote}
 	docinto contrib/conv ; dodoc contrib/conv/*.*
@@ -138,15 +189,20 @@ src_install() {
 	# elinks uses an internal copy of gettext which ships files that may
 	# collide with the system's gettext (https://bugs.gentoo.org/635090)
 	rm -f "${ED}"/usr/{share/locale/locale,lib/charset}.alias || die
+
+	use guile && guile_unstrip_ccache
 }
 
 pkg_postinst() {
+	elog "If upgrading from a version prior to 0.17.0, you will need to move"
+	elog "your configuration from ~/.elinks to \${XDG_CONFIG_HOME}/elinks"
+	elog
 	elog "You may want to convert your html.cfg and links.cfg of"
 	elog "Links or older ELinks versions to the new ELinks elinks.conf"
-	elog "using /usr/share/doc/${PF}/contrib/conv/conf-links2elinks.pl"
+	elog "using ${EROOT}/usr/share/doc/${PF}/contrib/conv/conf-links2elinks.pl"
 	elog
-	elog "Please have a look at /etc/elinks/keybind-full.sample and"
-	elog "/etc/elinks/keybind.conf.sample for some bindings examples."
+	elog "Please have a look at ${EROOT}/etc/elinks/keybind-full.sample and"
+	elog "${EROOT}/etc/elinks/keybind.conf.sample for some bindings examples."
 	elog
 	elog "You will have to set your TERM variable to 'xterm-256color'"
 	elog "to be able to use 256 colors in elinks."

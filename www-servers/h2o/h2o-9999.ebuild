@@ -1,12 +1,11 @@
-# Copyright 1999-2020 Gentoo Authors
+# Copyright 1999-2024 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
-EAPI="6"
-CMAKE_MAKEFILE_GENERATOR="emake"
+EAPI="8"
 SSL_DEPS_SKIP=1
-USE_RUBY="ruby24 ruby25 ruby26"
+USE_RUBY="ruby31 ruby32 ruby33"
 
-inherit cmake-utils git-r3 ruby-single ssl-cert systemd toolchain-funcs user
+inherit cmake git-r3 ruby-single ssl-cert systemd toolchain-funcs
 
 DESCRIPTION="H2O - the optimized HTTP/1, HTTP/2 server"
 HOMEPAGE="https://h2o.examp1e.net/"
@@ -15,36 +14,34 @@ EGIT_REPO_URI="https://github.com/${PN}/${PN}.git"
 LICENSE="MIT"
 SLOT="0"
 KEYWORDS=""
-IUSE="libh2o libressl +mruby"
+IUSE="libh2o +mruby"
 
-RDEPEND="dev-lang/perl
+RDEPEND="acct-group/h2o
+	acct-user/h2o
+	dev-lang/perl
+	dev-libs/openssl:0=
+	!sci-libs/libh2o
+	sys-libs/libcap
 	sys-libs/zlib
-	libh2o? ( dev-libs/libuv )
-	!libressl? ( dev-libs/openssl:0= )
-	libressl? ( dev-libs/libressl:0= )"
+	libh2o? (
+		app-arch/brotli
+		dev-libs/libuv
+	)"
 DEPEND="${RDEPEND}
-	libh2o? ( virtual/pkgconfig )
 	mruby? (
 		${RUBY_DEPS}
 		|| (
 			dev-libs/onigmo
 			dev-libs/oniguruma
 		)
-		sys-devel/bison
-		virtual/pkgconfig
 	)"
-RDEPEND+="
-	!sci-libs/libh2o"
+BDEPEND="virtual/pkgconfig
+	mruby? ( app-alternatives/yacc )"
 
 PATCHES=( "${FILESDIR}"/${PN}-2.3-mruby.patch )
 
-pkg_setup() {
-	enewgroup ${PN}
-	enewuser ${PN} -1 -1 -1 ${PN}
-}
-
 src_prepare() {
-	cmake-utils_src_prepare
+	cmake_src_prepare
 
 	local ruby="ruby"
 	if use mruby; then
@@ -71,15 +68,16 @@ src_prepare() {
 src_configure() {
 	local mycmakeargs=(
 		-DCMAKE_INSTALL_SYSCONFDIR="${EPREFIX}"/etc/${PN}
+		-DWITH_CCACHE=OFF
 		-DWITH_MRUBY=$(usex mruby)
 		-DWITHOUT_LIBS=$(usex !libh2o)
 		-DBUILD_SHARED_LIBS=$(usex libh2o)
 	)
-	cmake-utils_src_configure
+	cmake_src_configure
 }
 
 src_install() {
-	cmake-utils_src_install
+	cmake_src_install
 
 	keepdir /var/www/localhost/htdocs
 
@@ -98,8 +96,8 @@ src_install() {
 }
 
 pkg_postinst() {
-	if [[ ! -f "${EROOT}"etc/ssl/${PN}/server.key ]]; then
+	if [[ ! -f "${EROOT}"/etc/ssl/${PN}/server.key ]]; then
 		install_cert /etc/ssl/${PN}/server
-		chown ${PN}:${PN} "${EROOT}"etc/ssl/${PN}/server.*
+		chown ${PN}:${PN} "${EROOT}"/etc/ssl/${PN}/server.*
 	fi
 }

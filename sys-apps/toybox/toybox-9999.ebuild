@@ -1,7 +1,7 @@
-# Copyright 1999-2018 Gentoo Authors
+# Copyright 1999-2023 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
-EAPI="7"
+EAPI=8
 
 inherit multiprocessing savedconfig toolchain-funcs
 
@@ -10,19 +10,17 @@ if [[ ${PV} == 9999 ]]; then
 	EGIT_REPO_URI="https://github.com/landley/toybox.git"
 else
 	SRC_URI="https://landley.net/code/toybox/downloads/${P}.tar.gz"
-	KEYWORDS="~amd64 ~x86"
+	KEYWORDS="~amd64 ~arm64 ~x86"
 fi
-
-# makefile is stupid
-RESTRICT="test"
 
 DESCRIPTION="Common linux commands in a multicall binary"
 HOMEPAGE="https://landley.net/code/toybox/"
 
-# The source code does not explicitly say that it's BSD, but the author has repeatedly said it
-LICENSE="BSD-2"
+LICENSE="0BSD"
 SLOT="0"
-IUSE=""
+
+DEPEND="virtual/libcrypt:="
+RDEPEND="${DEPEND}"
 
 src_prepare() {
 	default
@@ -32,7 +30,10 @@ src_prepare() {
 src_configure() {
 	tc-export CC STRIP
 	export HOSTCC="$(tc-getBUILD_CC)"
-	if [ -f .config ]; then
+	# Respect CFLAGS
+	export OPTIMIZE="${CFLAGS}"
+
+	if [[ -f .config ]]; then
 		yes "" | emake -j1 oldconfig > /dev/null
 		return 0
 	else
@@ -44,14 +45,14 @@ src_configure() {
 src_compile() {
 	unset CROSS_COMPILE
 	export CPUS=$(makeopts_jobs)
-	emake V=1
+	emake V=1 NOSTRIP=1
 }
 
 src_test() {
-	emake test
+	emake V=1 tests
 }
 
 src_install() {
 	save_config .config
-	newbin generated/unstripped/toybox toybox
+	dobin toybox
 }

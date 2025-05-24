@@ -1,16 +1,13 @@
-# Copyright 1999-2021 Gentoo Authors
+# Copyright 1999-2025 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
-EAPI=7
-PYTHON_COMPAT=( python3_{6..9} )
+EAPI="8"
+PYTHON_COMPAT=( python3_{10..13} )
 
-inherit multilib python-r1 toolchain-funcs multilib-minimal
+inherit python-r1 toolchain-funcs multilib-minimal
 
-MY_P="${P//_/-}"
-MY_RELEASEDATE="20200710"
-
-SEPOL_VER="${PV}"
-SELNX_VER="${PV}"
+MY_PV="${PV//_/-}"
+MY_P="${PN}-${MY_PV}"
 
 DESCRIPTION="SELinux kernel and policy management library"
 HOMEPAGE="https://github.com/SELinuxProject/selinux/wiki"
@@ -18,25 +15,26 @@ HOMEPAGE="https://github.com/SELinuxProject/selinux/wiki"
 if [[ ${PV} == 9999 ]]; then
 	inherit git-r3
 	EGIT_REPO_URI="https://github.com/SELinuxProject/selinux.git"
-	S="${WORKDIR}/${MY_P}/${PN}"
+	S="${WORKDIR}/${P}/${PN}"
 else
-	SRC_URI="https://github.com/SELinuxProject/selinux/releases/download/${MY_RELEASEDATE}/${MY_P}.tar.gz"
-	KEYWORDS="~amd64 ~arm ~arm64 ~mips ~x86"
+	SRC_URI="https://github.com/SELinuxProject/selinux/releases/download/${MY_PV}/${MY_P}.tar.gz"
+	KEYWORDS="~amd64 ~arm ~arm64 ~mips ~riscv ~x86"
 	S="${WORKDIR}/${MY_P}"
 fi
 
 LICENSE="GPL-2"
-SLOT="0"
+SLOT="0/2"
 REQUIRED_USE="${PYTHON_REQUIRED_USE}"
 
-RDEPEND=">=sys-libs/libsepol-${SEPOL_VER}[${MULTILIB_USEDEP}]
-	>=sys-libs/libselinux-${SELNX_VER}[${MULTILIB_USEDEP}]
+RDEPEND="app-arch/bzip2[${MULTILIB_USEDEP}]
+	>=sys-libs/libsepol-${PV}:=[${MULTILIB_USEDEP}]
+	>=sys-libs/libselinux-${PV}:=[${MULTILIB_USEDEP}]
 	>=sys-process/audit-2.2.2[${MULTILIB_USEDEP}]
 	${PYTHON_DEPS}"
 DEPEND="${RDEPEND}"
 BDEPEND=">=dev-lang/swig-2.0.4-r1
-	sys-devel/bison
-	sys-devel/flex
+	app-alternatives/yacc
+	app-alternatives/lex
 	virtual/pkgconfig"
 
 # tests are not meant to be run outside of the
@@ -74,6 +72,8 @@ src_prepare() {
 }
 
 multilib_src_compile() {
+	local -x CFLAGS="${CFLAGS} -fno-semantic-interposition"
+
 	emake \
 		AR="$(tc-getAR)" \
 		CC="$(tc-getCC)" \
@@ -85,6 +85,7 @@ multilib_src_compile() {
 			emake \
 				AR="$(tc-getAR)" \
 				CC="$(tc-getCC)" \
+				PKG_CONFIG="$(tc-getPKG_CONFIG)" \
 				LIBDIR="${EPREFIX}/usr/$(get_libdir)" \
 				"$@"
 		}
@@ -102,6 +103,7 @@ multilib_src_install() {
 		installation_py() {
 			emake DESTDIR="${ED}" \
 				LIBDIR="${EPREFIX}/usr/$(get_libdir)" \
+				PKG_CONFIG="$(tc-getPKG_CONFIG)" \
 				install-pywrap
 			python_optimize # bug 531638
 		}
@@ -112,17 +114,4 @@ multilib_src_install() {
 multiib_src_install_all() {
 	python_setup
 	python_fix_shebang "${ED}"/usr/libexec/selinux/semanage_migrate_store
-}
-
-pkg_postinst() {
-	# Migrate the SELinux semanage configuration store if not done already
-	local selinuxtype=$(awk -F'=' '/SELINUXTYPE=/ {print $2}' "${EROOT}"/etc/selinux/config 2>/dev/null)
-	if [ -n "${selinuxtype}" ] && [ ! -d "${EROOT}"/var/lib/selinux/${selinuxtype}/active ] ; then
-		ewarn "Since the 2.4 SELinux userspace, the policy module store is moved"
-		ewarn "from /etc/selinux to /var/lib/selinux. The migration will be run now."
-		ewarn "If there are any issues, it can be done manually by running:"
-		ewarn "/usr/libexec/selinux/semanage_migrate_store"
-		ewarn "For more information, please see"
-		ewarn "- https://github.com/SELinuxProject/selinux/wiki/Policy-Store-Migration"
-	fi
 }

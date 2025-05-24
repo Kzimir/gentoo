@@ -1,98 +1,122 @@
-# Copyright 1999-2021 Gentoo Authors
+# Copyright 1999-2025 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
-EAPI=6
+EAPI=8
 
-PYTHON_COMPAT=( python3_{7,8,9} )
-DISTUTILS_SINGLE_IMPL=1
+PYTHON_COMPAT=( python3_{10..13} )
+inherit gnome2 python-single-r1 optfeature meson verify-sig
 
-DISTUTILS_USE_SETUPTOOLS=no
-inherit gnome2 distutils-r1
+DESCRIPTION="Desktop tool for managing libvirt virtual machines"
+HOMEPAGE="https://virt-manager.org https://github.com/virt-manager/virt-manager"
 
-DESCRIPTION="A graphical tool for administering virtual machines"
-HOMEPAGE="http://virt-manager.org"
-
-if [[ ${PV} = *9999* ]]; then
-	inherit git-r3
-	SRC_URI=""
-	KEYWORDS=""
+if [[ ${PV} == *9999* ]]; then
 	EGIT_REPO_URI="https://github.com/virt-manager/virt-manager.git"
+	EGIT_BRANCH="main"
+	SRC_URI=""
+	inherit git-r3
 else
-	SRC_URI="http://virt-manager.org/download/sources/${PN}/${P}.tar.gz"
-	KEYWORDS="~amd64 ~ppc64 ~x86"
+	SRC_URI="
+		https://releases.pagure.org/${PN}/${P}.tar.xz
+		verify-sig? ( https://releases.pagure.org/${PN}/${P}.tar.xz.asc	)
+	"
+	KEYWORDS="~amd64 ~arm64 ~ppc64 ~x86"
 fi
 
-LICENSE="GPL-2"
+LICENSE="CC0-1.0 GPL-2+" # appdata & source code
 SLOT="0"
-IUSE="gtk policykit sasl"
+IUSE="gui policykit sasl verify-sig"
 
-RDEPEND="${PYTHON_DEPS}
-	app-cdr/cdrtools
-	>=app-emulation/libvirt-glib-1.0.0[introspection]
-	$(python_gen_cond_dep '
-		dev-libs/libxml2[python,${PYTHON_MULTI_USEDEP}]
-		dev-python/argcomplete[${PYTHON_MULTI_USEDEP}]
-		>=dev-python/libvirt-python-6.10.0[${PYTHON_MULTI_USEDEP}]
-		dev-python/pygobject:3[${PYTHON_MULTI_USEDEP}]
-		dev-python/requests[${PYTHON_MULTI_USEDEP}]
-	')
+REQUIRED_USE="${PYTHON_REQUIRED_USE}"
+
+# https://github.com/virt-manager/virt-manager/blob/main/virt-manager.spec.in
+RDEPEND="
+	${PYTHON_DEPS}
+	|| ( dev-libs/libisoburn app-cdr/cdrtools )
+	>=app-emulation/libvirt-glib-0.0.9[introspection]
 	>=sys-libs/libosinfo-0.2.10[introspection]
-	gtk? (
+	$(python_gen_cond_dep '
+		dev-libs/libxml2[python,${PYTHON_USEDEP}]
+		dev-python/argcomplete[${PYTHON_USEDEP}]
+		>=dev-python/libvirt-python-6.10.0[${PYTHON_USEDEP}]
+		dev-python/pygobject:3[${PYTHON_USEDEP}]
+		dev-python/requests[${PYTHON_USEDEP}]
+	')
+	gui? (
 		gnome-base/dconf
 		>=net-libs/gtk-vnc-0.3.8[gtk3(+),introspection]
 		net-misc/spice-gtk[usbredir,gtk3,introspection,sasl?]
-		net-misc/x11-ssh-askpass
+		sys-apps/dbus
 		x11-libs/gtk+:3[introspection]
-		x11-libs/gtksourceview:4[introspection]
+		|| (
+			x11-libs/gtksourceview:4[introspection]
+			x11-libs/gtksourceview:3.0[introspection]
+		)
 		x11-libs/vte:2.91[introspection]
 		policykit? ( sys-auth/polkit[introspection] )
 	)
 "
-DEPEND="${RDEPEND}
+DEPEND="${RDEPEND}"
+BDEPEND="
 	dev-python/docutils
-	dev-util/intltool
+	sys-devel/gettext
+	verify-sig? ( >=sec-keys/openpgp-keys-virt-manager-20250106 )
 "
 
-DOCS=( README.md NEWS.md )
+VERIFY_SIG_OPENPGP_KEY_PATH=/usr/share/openpgp-keys/virt-manager.asc
 
-src_prepare() {
-	distutils-r1_src_prepare
-}
+DOCS=( {DESIGN,NEWS,README}.md )
 
-python_configure() {
-	esetup.py configure \
-		--default-graphics=spice
-}
+src_configure() {
+	local emesonargs=( # in upstream's order
+		-Dupdate-icon-cache=false
+		-Dcompile-schemas=false
 
-python_install() {
-	esetup.py install
+		# -Ddefault-graphics=spice # default
+		# we do not ship OpenVZ and bhyve does not work on linux
+		-Ddefault-hvs="['qemu','xen','lxc']"
+
+		# While in the past we did allow test suite to run, any errors from
+		# test_cli.py were ignored. Since that's where like 90% of tests actually
+		# lives, just disable tests (and do not drag additional dependencies).
+		-Dtests=disabled
+	)
+
+	meson_src_configure
 }
 
 src_install() {
-	local mydistutilsargs=( --no-update-icon-cache --no-compile-schemas )
-	distutils-r1_src_install
+	meson_src_install
 
-	python_fix_shebang "${ED}"/usr/share/virt-manager
-}
-
-pkg_preinst() {
-	if use gtk; then
-		gnome2_pkg_preinst
-
-		cd "${ED}"
-		export GNOME2_ECLASS_ICONS=$(find 'usr/share/virt-manager/icons' -maxdepth 1 -mindepth 1 -type d 2> /dev/null)
-	else
-		rm -rf "${ED}/usr/share/virt-manager/virtManager"
-		rm -f "${ED}/usr/share/virt-manager/virt-manager"
-		rm -rf "${ED}/usr/share/virt-manager/ui/"
-		rm -rf "${ED}/usr/share/virt-manager/icons/"
-		rm -rf "${ED}/usr/share/man/man1/virt-manager.1*"
-		rm -rf "${ED}/usr/share/icons/"
-		rm -rf "${ED}/usr/share/applications/virt-manager.desktop"
-		rm -rf "${ED}/usr/bin/virt-manager"
+	if ! use gui; then
+		rm -r "${ED}/usr/share/applications/${PN}.desktop" || die
+		rm -r "${ED}/usr/share/${PN}/icons/" || die
+		rm -r "${ED}/usr/share/${PN}/ui/" || die
+		rm -r "${ED}/usr/share/icons/" || die
+		rm -r "${ED}/usr/bin/${PN}" || die
 	fi
+
+	python_fix_shebang "${ED}"
+	python_optimize "${ED}"/usr/share/virt-manager/virt{inst,Manager}
 }
 
 pkg_postinst() {
-	use gtk && gnome2_pkg_postinst
+	use gui && gnome2_pkg_postinst
+
+	# OPTFEATURE SECTION
+	# keep app-emulation/* optfeatures on top and multiline on the bottom
+	if has_version app-emulation/qemu; then
+		optfeature "Full QEMU host support" app-emulation/qemu[usbredir,spice]
+	fi
+	if use policykit && has_version app-emulation/libvirt[-policykit]; then
+		optfeature "PolicyKit integration with local libvirt instance" \
+			app-emulation/libvirt[policykit]
+	fi
+	# it's possible this also requires libguestfs-appliance but it's a RDEPEND of libguestfs
+	optfeature "Inspection of guest filesystems" app-emulation/libguestfs[libvirt,python]
+
+	optfeature "SSH_ASKPASS program implementation" \
+		kde-plasma/ksshaskpass \
+		lxqt-base/lxqt-openssh-askpass \
+		net-misc/ssh-askpass-fullscreen \
+		net-misc/x11-ssh-askpass
 }

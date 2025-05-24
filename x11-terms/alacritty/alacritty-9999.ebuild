@@ -1,41 +1,50 @@
-# Copyright 2017-2020 Gentoo Authors
+# Copyright 2017-2024 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
-EAPI=7
+EAPI=8
 
 CRATES="
 "
 
 MY_PV="${PV//_rc/-rc}"
-# https://bugs.gentoo.org/725962
-PYTHON_COMPAT=( python3_{7,8,9} )
 
-inherit bash-completion-r1 cargo desktop python-any-r1
+RUST_MIN_VER="1.74.1"
+
+inherit bash-completion-r1 cargo desktop
 
 DESCRIPTION="GPU-accelerated terminal emulator"
-HOMEPAGE="https://github.com/alacritty/alacritty"
+HOMEPAGE="https://alacritty.org"
 
 if [ ${PV} == "9999" ] ; then
 	inherit git-r3
 	EGIT_REPO_URI="https://github.com/alacritty/alacritty"
 else
-	SRC_URI="https://github.com/alacritty/${PN}/archive/v${MY_PV}.tar.gz -> ${P}.tar.gz
-	$(cargo_crate_uris ${CRATES})"
-	KEYWORDS="~amd64 ~arm64 ~ppc64"
+	SRC_URI="https://github.com/${PN}/${PN}/archive/refs/tags/v${MY_PV}.tar.gz -> ${P}.tar.gz
+		${CARGO_CRATE_URIS}"
+	KEYWORDS="~amd64 ~arm64 ~ppc64 ~riscv ~x86"
 fi
+S="${WORKDIR}/${PN}-${MY_PV}"
 
-LICENSE="Apache-2.0 Apache-2.0-with-LLVM-exceptions Boost-1.0 BSD BSD-2 CC0-1.0 FTL ISC MIT MPL-2.0 Unlicense WTFPL-2 ZLIB"
+LICENSE="Apache-2.0"
+# Dependent crate licenses
+LICENSE+="
+	Apache-2.0 BSD-2 BSD Boost-1.0 CC0-1.0 ISC MIT MPL-2.0
+	Unicode-DFS-2016
+"
 SLOT="0"
 IUSE="wayland +X"
 
 REQUIRED_USE="|| ( wayland X )"
 
-DEPEND="${PYTHON_DEPS}"
-
 COMMON_DEPEND="
 	media-libs/fontconfig:=
 	media-libs/freetype:2
-	X? ( x11-libs/libxcb:=[xkb] )
+	x11-libs/libxkbcommon[X?,wayland?]
+	X? ( x11-libs/libxcb:= )
+"
+
+DEPEND="
+	${COMMON_DEPEND}
 "
 
 RDEPEND="${COMMON_DEPEND}
@@ -50,11 +59,12 @@ RDEPEND="${COMMON_DEPEND}
 	)
 "
 
-BDEPEND="dev-util/cmake"
+BDEPEND="
+	dev-build/cmake
+	app-text/scdoc
+"
 
 QA_FLAGS_IGNORED="usr/bin/alacritty"
-
-S="${WORKDIR}/${PN}-${MY_PV}"
 
 src_unpack() {
 	if [[ "${PV}" == *9999* ]]; then
@@ -74,14 +84,19 @@ src_configure() {
 }
 
 src_compile() {
+	scdoc < ./extra/man/alacritty.1.scd > ./alacritty.1 || die
+	scdoc < ./extra/man/alacritty.5.scd > ./alacritty.5 || die
+	scdoc < ./extra/man/alacritty-msg.1.scd > ./alacritty-msg.1 || die
+	scdoc < ./extra/man/alacritty-bindings.5.scd > ./alacritty-bindings.5 || die
+
 	cd alacritty || die
 	cargo_src_compile
 }
 
 src_install() {
-	cargo_src_install --path alacritty
+	cargo_src_install --locked --path alacritty
 
-	newman extra/alacritty.man alacritty.1
+	doman alacritty.1 alacritty.5 alacritty-msg.1 alacritty-bindings.5
 
 	newbashcomp extra/completions/alacritty.bash alacritty
 
@@ -94,18 +109,14 @@ src_install() {
 	domenu extra/linux/Alacritty.desktop
 	newicon extra/logo/compat/alacritty-term.svg Alacritty.svg
 
-	newman extra/alacritty.man alacritty.1
-
 	insinto /usr/share/metainfo
-	doins extra/linux/io.alacritty.Alacritty.appdata.xml
+	doins extra/linux/org.alacritty.Alacritty.appdata.xml
 
 	insinto /usr/share/alacritty/scripts
 	doins -r scripts/*
 
 	local DOCS=(
-		alacritty.yml
-		CHANGELOG.md INSTALL.md README.md
-		docs/{ansicode.txt,escape_support.md,features.md}
+		CHANGELOG.md README.md
 	)
 	einstalldocs
 }
@@ -113,4 +124,14 @@ src_install() {
 src_test() {
 	cd alacritty || die
 	cargo_src_test
+}
+
+pkg_postinst() {
+	if [[ -z ${REPLACING_VERSIONS} ]]; then
+		einfo "Configuration files for ${CATEGORY}/${PN}"
+		einfo "in \$HOME often need to be updated after a version change"
+		einfo ""
+		einfo "For information on how to configure alacritty, see the manpage:"
+		einfo "man 5 alacritty"
+	fi
 }

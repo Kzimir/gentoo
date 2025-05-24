@@ -1,9 +1,9 @@
-# Copyright 1999-2020 Gentoo Authors
+# Copyright 1999-2024 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
 EAPI=7
 
-inherit eutils libtool flag-o-matic gnuconfig multilib toolchain-funcs
+inherit libtool flag-o-matic gnuconfig strip-linguas toolchain-funcs
 
 DESCRIPTION="Tools necessary to build programs"
 HOMEPAGE="https://sourceware.org/binutils/"
@@ -33,7 +33,7 @@ case ${PV} in
 	*)
 		SRC_URI="mirror://gnu/binutils/binutils-${PV}.tar.xz"
 		SLOT=$(ver_cut 1-2)
-		KEYWORDS="~alpha ~amd64 ~arm ~arm64 ~hppa ~ia64 ~m68k ~mips ~ppc ~ppc64 ~riscv ~s390 ~sparc ~x86"
+		KEYWORDS="~alpha ~amd64 ~arm ~arm64 ~hppa ~m68k ~mips ~ppc ~ppc64 ~riscv ~s390 ~sparc ~x86"
 		;;
 esac
 
@@ -76,8 +76,8 @@ DEPEND="${RDEPEND}
 	doc? ( sys-apps/texinfo )
 	test? ( dev-util/dejagnu )
 	nls? ( sys-devel/gettext )
-	sys-devel/flex
-	virtual/yacc
+	app-alternatives/lex
+	app-alternatives/yacc
 "
 
 RESTRICT="!test? ( test )"
@@ -97,7 +97,7 @@ src_unpack() {
 }
 
 src_prepare() {
-	if [[ ! -z ${PATCH_VER} ]] ; then
+	if [[ -n ${PATCH_VER} ]] ; then
 		# Use upstream patch to enable development mode
 		rm -v "${WORKDIR}/patch"/0000-Gentoo-Git-is-development.patch || die
 
@@ -105,29 +105,11 @@ src_prepare() {
 		eapply "${WORKDIR}/patch"/*.patch
 	fi
 
-	# This check should probably go somewhere else, like pkg_pretend.
-	if [[ ${CTARGET} == *-uclibc* ]] ; then
-		if grep -qs 'linux-gnu' "${S}"/ltconfig ; then
-			die "sorry, but this binutils doesn't yet support uClibc :("
-		fi
-	fi
-
 	# Make sure our explicit libdir paths don't get clobbered. #562460
 	sed -i \
 		-e 's:@bfdlibdir@:@libdir@:g' \
 		-e 's:@bfdincludedir@:@includedir@:g' \
 		{bfd,opcodes}/Makefile.in || die
-
-	# Fix locale issues if possible #122216
-	if [[ -e ${FILESDIR}/binutils-configure-LANG.patch ]] ; then
-		einfo "Fixing misc issues in configure files"
-		for f in $(find "${S}" -name configure -exec grep -l 'autoconf version 2.13' {} +) ; do
-			ebegin "  Updating ${f/${S}\/}"
-			patch "${f}" "${FILESDIR}"/binutils-configure-LANG.patch >& "${T}"/configure-patch.log \
-				|| eerror "Please file a bug about this"
-			eend $?
-		done
-	fi
 
 	# Fix conflicts with newer glibc #272594
 	if [[ -e libiberty/testsuite/test-demangle.c ]] ; then
@@ -168,6 +150,10 @@ src_configure() {
 
 	# Keep things sane
 	strip-flags
+
+	# https://sourceware.org/PR32372
+	append-cflags $(test-flags-CC -std=gnu17)
+	append-ldflags $(test-flags-CCLD -Wl,--undefined-version)
 
 	local x
 	echo
@@ -285,6 +271,10 @@ src_compile() {
 
 src_test() {
 	cd "${MY_BUILDDIR}"
+
+	# https://sourceware.org/PR31327
+	local -x XZ_OPT="-T1"
+	local -x XZ_DEFAULTS="-T1"
 
 	# bug 637066
 	filter-flags -Wall -Wreturn-type

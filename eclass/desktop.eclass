@@ -1,13 +1,19 @@
-# Copyright 1999-2020 Gentoo Authors
+# Copyright 1999-2024 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
 # @ECLASS: desktop.eclass
 # @MAINTAINER:
 # base-system@gentoo.org
+# @SUPPORTED_EAPIS: 7 8
 # @BLURB: support for desktop files, menus, and icons
 
 if [[ -z ${_DESKTOP_ECLASS} ]]; then
 _DESKTOP_ECLASS=1
+
+case ${EAPI} in
+	7|8) ;;
+	*) die "${ECLASS}: EAPI ${EAPI:-0} not supported" ;;
+esac
 
 # @FUNCTION: make_desktop_entry
 # @USAGE: <command> [name] [icon] [type] [fields]
@@ -156,14 +162,20 @@ make_desktop_entry() {
 				;;
 		esac
 	fi
-	local slot=${SLOT%/*}
-	if [[ ${slot} == "0" ]] ; then
-		local desktop_name="${PN}"
-	else
-		local desktop_name="${PN}-${slot}"
-	fi
-	local desktop="${exec%%[[:space:]]*}"
-	desktop="${T}/${desktop##*/}-${desktop_name}.desktop"
+
+	local desktop_exec="${exec%%[[:space:]]*}"
+	desktop_exec="${desktop_exec##*/}"
+	local desktop_suffix="-${PN}"
+	[[ ${SLOT%/*} != 0 ]] && desktop_suffix+="-${SLOT%/*}"
+	# Replace foo-foo.desktop by foo.desktop
+	[[ ${desktop_suffix#-} == "${desktop_exec}" ]] && desktop_suffix=""
+
+	# Prevent collisions if a file with the same name already exists #771708
+	local desktop="${desktop_exec}${desktop_suffix}" count=0
+	while [[ -e ${ED}/usr/share/applications/${desktop}.desktop ]]; do
+		desktop="${desktop_exec}-$((++count))${desktop_suffix}"
+	done
+	desktop="${T}/${desktop}.desktop"
 
 	# Don't append another ";" when a valid category value is provided.
 	type=${type%;}${type:+;}
@@ -200,7 +212,7 @@ make_desktop_entry() {
 		insopts -m 0644
 		insinto /usr/share/applications
 		doins "${desktop}"
-	) || die "installing desktop file failed"
+	)
 }
 
 # @FUNCTION: make_session_desktop
@@ -299,9 +311,9 @@ _iconins() {
 				size=${2}
 			fi
 			case ${size} in
-			16|22|24|32|36|48|64|72|96|128|192|256|512)
+			16|22|24|32|36|48|64|72|96|128|192|256|512|1024)
 				size=${size}x${size};;
-			scalable)
+			symbolic|scalable)
 				;;
 			*)
 				eerror "${size} is an unsupported icon size!"
@@ -341,7 +353,7 @@ _iconins() {
 	if [[ ${funcname} == newicon ]] ; then
 		newins "$@"
 	fi
-	) || die
+	)
 }
 
 # @FUNCTION: doicon
@@ -357,7 +369,7 @@ _iconins() {
 #    !!! must specify to install into /usr/share/icons/... !!!
 #    size of the icon, like 48 or 48x48
 #    supported icon sizes are:
-#    16 22 24 32 36 48 64 72 96 128 192 256 512 scalable
+#    16 22 24 32 36 48 64 72 96 128 192 256 512 1024 scalable
 #  -c, --context
 #    defaults to "apps"
 #  -t, --theme

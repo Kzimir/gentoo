@@ -1,4 +1,4 @@
-# Copyright 1999-2019 Gentoo Authors
+# Copyright 1999-2024 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
 EAPI=7
@@ -7,7 +7,7 @@ MY_PV=${PV/_}
 MY_P="${PN}-${MY_PV}"
 DESCRIPTION="GNU make replacement"
 HOMEPAGE="http://makepp.sourceforge.net/"
-SRC_URI="mirror://sourceforge/${PN}/2.1/${MY_P}.txz"
+SRC_URI="https://downloads.sourceforge.net/${PN}/2.1/${MY_P}.txz"
 
 LICENSE="GPL-2"
 SLOT="0"
@@ -39,5 +39,5 @@ src_configure() {
 src_test() {
 	# work around https://bugzilla.samba.org/show_bug.cgi?id=8728
 	export CCACHE_UNIFY=1
-	ROOT= default
+	default
 }

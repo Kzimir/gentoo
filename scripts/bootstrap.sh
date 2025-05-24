@@ -1,6 +1,10 @@
 #!/bin/bash
-# Copyright 1999-2020 Gentoo Authors
+# Copyright 1999-2024 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
+
+# Maintainer: releng@gentoo.org
+
+file_version="2024.0"		# update manually: <year>.<counter>
 
 # people who were here:
 # (drobbins, 06 Jun 2003)
@@ -55,9 +59,6 @@ v_echo() {
 	env "$@"
 }
 
-cvsver="$Id$" # TODO: FIXME for Git era
-cvsver=${cvsver##*,v }
-cvsver=${cvsver%%Exp*}
 file_copyright=$(sed -n '/Copyright/!b;s/^# *//;p;q' $0)
 
 usage() {
@@ -94,7 +95,7 @@ for opt in "$@" ; do
 		--resume|-r)  STRAP_EMERGE_OPTS="${STRAP_EMERGE_OPTS} --usepkg --buildpkg";;
 		--verbose|-v) STRAP_EMERGE_OPTS="${STRAP_EMERGE_OPTS} -v"     ; V_ECHO=v_echo;;
 		--version|-V)
-			einfo "Gentoo Linux bootstrap ${cvsver}"
+			einfo "Gentoo Linux bootstrap ${file_version}"
 			exit 0
 			;;
 		*)
@@ -136,7 +137,7 @@ if [[ ! -d ${MYPROFILEDIR} ]] ; then
 	exit 1
 fi
 
-echo -e "\n${GOOD}Gentoo Linux; ${BRACKET}http://www.gentoo.org/${NORMAL}"
+echo -e "\n${GOOD}Gentoo Linux; ${BRACKET}https://www.gentoo.org/${NORMAL}"
 echo -e "${file_copyright}; Distributed under the GPLv2"
 if [[ " ${STRAP_EMERGE_OPTS} " == *" -f "* ]] ; then
 	echo "Fetching all bootstrap-related archives ..."
@@ -173,7 +174,7 @@ pycmd() {
 }
 
 # TSTP messes ^Z of bootstrap up, so we don't trap it anymore.
-trap "cleanup" TERM KILL INT QUIT ABRT
+trap "cleanup" TERM INT QUIT ABRT
 
 # Bug #50158 (don't use `which` in a bootstrap).
 if ! type -path portageq &>/dev/null ; then
@@ -226,23 +227,8 @@ for opt in ${ORIGUSE} ; do
 			USE_NLS=1
 			ALLOWED_USE="${ALLOWED_USE} nls"
 			;;
-		nptl)
-			export MYARCH=$(portageq envvar ARCH)
- 			if [[ -z $(portageq best_visible / '>=sys-kernel/linux-headers-2.6.0') ]] ; then
-				eerror "You need to have >=sys-kernel/linux-headers-2.6.0 unmasked!"
-				eerror "Please edit the latest >=sys-kernel/linux-headers-2.6.0 package,"
-				eerror "and add your ARCH to KEYWORDS or change your make.profile link"
-				eerror "to a profile which does not have 2.6 headers masked."
-				echo
-				cleanup 1
-			fi
-			USE_NPTL=1
-			;;
 		multilib)
 			ALLOWED_USE="${ALLOWED_USE} multilib"
-			;;
-		userlocales)
-			ALLOWED_USE="${ALLOWED_USE} userlocales"
 			;;
 	esac
 done
@@ -276,16 +262,10 @@ for atom in portage.settings.packages:
 [[ -z ${myTEXINFO}    ]] && myTEXINFO="sys-apps/texinfo"
 [[ -z ${myZLIB}       ]] && myZLIB="sys-libs/zlib"
 [[ -z ${myNCURSES}    ]] && myNCURSES="sys-libs/ncurses"
+[[ -z ${myOS_HEADERS} ]] && myOS_HEADERS="$(portageq expand_virtual / virtual/os-headers)"
 
 # Do we really want gettext/nls?
 [[ ${USE_NLS} != 1 ]] && myGETTEXT=
-
-if [[ ${USE_NPTL} = "1" ]] ; then
-	myOS_HEADERS="$(portageq best_visible / '>=sys-kernel/linux-headers-2.6.0')"
-	[[ -n ${myOS_HEADERS} ]] && myOS_HEADERS=">=${myOS_HEADERS}"
-	ALLOWED_USE="${ALLOWED_USE} nptl"
-fi
-[[ -z ${myOS_HEADERS} ]] && myOS_HEADERS="$(portageq expand_virtual / virtual/os-headers)"
 
 einfo "Using baselayout : ${myBASELAYOUT}"
 einfo "Using portage    : ${myPORTAGE}"
@@ -321,9 +301,6 @@ if [ ${BOOTSTRAP_STAGE} -le 1 ] ; then
 fi
 export USE="-* bootstrap ${ALLOWED_USE} ${BOOTSTRAP_USE}"
 
-# We can't unmerge headers which may or may not exist yet. If your
-# trying to use nptl, it may be needed to flush out any old headers
-# before fully bootstrapping.
 if [ ${BOOTSTRAP_STAGE} -le 2 ] ; then
 	show_status 3 Emerging packages
 	if [[ ${RESUME} -eq 1 ]] ; then
@@ -344,10 +321,16 @@ fi
 if [[ -n ${STRAP_RUN} ]] ; then
 	if [[ -x ${GCC_CONFIG} ]] && ${GCC_CONFIG} --get-current-profile &>/dev/null
 	then
-		# Make sure we get the old gcc unmerged ...
-		${V_ECHO} emerge ${STRAP_EMERGE_OPTS} --prune sys-devel/gcc || cleanup 1
-		# Make sure the profile and /lib/cpp and /usr/bin/cc are valid ...
-		${GCC_CONFIG} "$(${GCC_CONFIG} --get-current-profile)" &>/dev/null
+		output=$(${V_ECHO} emerge ${STRAP_EMERGE_OPTS} --prune --pretend --quiet sys-devel/gcc 2>/dev/null)
+		if [[ ${DEBUG} = "1" ]] ; then
+			echo "${output}"
+		fi
+		if [[ "${output}" = *'All selected packages:'* ]] ; then
+			# Make sure we get the old gcc unmerged ...
+			${V_ECHO} emerge ${STRAP_EMERGE_OPTS} --prune sys-devel/gcc
+			# Make sure the profile and /lib/cpp and /usr/bin/cc are valid ...
+			${GCC_CONFIG} "$(${GCC_CONFIG} --get-current-profile)" &>/dev/null
+		fi
 	fi
 fi
 

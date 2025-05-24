@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE pkgmetadata SYSTEM "http://www.gentoo.org/dtd/metadata.dtd">
+<!DOCTYPE pkgmetadata SYSTEM "https://www.gentoo.org/dtd/metadata.dtd">
 <pkgmetadata>
 	<maintainer type="person">
 		<email>prometheanfire@gentoo.org</email>
@@ -20,8 +20,10 @@
 	dependency injection (provide tests with dependencies externally to the
 	test code itself, allowing easy testing in different situations).
 	</longdescription>
+	<stabilize-allarches/>
 	<upstream>
-		<remote-id type="pypi">testscenarios</remote-id>
+		<remote-id type="github">testing-cabal/testscenarios</remote-id>
 		<remote-id type="launchpad">testscenarios</remote-id>
+		<remote-id type="pypi">testscenarios</remote-id>
 	</upstream>
 </pkgmetadata>

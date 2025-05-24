@@ -1,10 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE pkgmetadata SYSTEM "http://www.gentoo.org/dtd/metadata.dtd">
+<!DOCTYPE pkgmetadata SYSTEM "https://www.gentoo.org/dtd/metadata.dtd">
 <pkgmetadata>
-	<maintainer type="person">
-		<email>blueness@gentoo.org</email>
-		<name>Anthony G. Basile</name>
-	</maintainer>
+	<!-- maintainer-needed -->
 	<use>
 		<flag name="stubby">Add Stubby DNS Privacy Deamon</flag>
 		<flag name="getdns-query">Add getdns_query tool</flag>
@@ -13,6 +10,6 @@
 		<flag name="libevent">Enable <pkg>dev-libs/libevent</pkg> support</flag>
 		<flag name="libev">Enable <pkg>dev-libs/libev</pkg> support</flag>
 		<flag name="libuv">Enable <pkg>dev-libs/libuv</pkg> support</flag>
-		<flag name="nettle">Use <pkg>dev-libs/nettle</pkg> as crypto backend</flag>
+		<flag name="minimal">Only build stub resolution mode</flag>
 	</use>
 </pkgmetadata>

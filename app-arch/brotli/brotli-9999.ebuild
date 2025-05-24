@@ -1,79 +1,93 @@
-# Copyright 1999-2021 Gentoo Authors
+# Copyright 1999-2025 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
-EAPI=7
+EAPI=8
 
-PYTHON_COMPAT=( python3_{6,7,8,9} )
+DISTUTILS_EXT=1
 DISTUTILS_OPTIONAL="1"
-DISTUTILS_IN_SOURCE_BUILD="1"
+DISTUTILS_USE_PEP517=setuptools
+PYTHON_COMPAT=( python3_{10..13} )
 
-inherit cmake-multilib distutils-r1
+inherit cmake-multilib distutils-r1 flag-o-matic
 
-DESCRIPTION="Generic-purpose lossless compression algorithm"
-HOMEPAGE="https://github.com/google/brotli"
-
-SLOT="0/$(ver_cut 1)"
-
-RDEPEND="python? ( ${PYTHON_DEPS} )"
-DEPEND="${RDEPEND}"
-
-IUSE="python test"
-REQUIRED_USE="python? ( ${PYTHON_REQUIRED_USE} )"
-
-LICENSE="MIT python? ( Apache-2.0 )"
-
-DOCS=( README.md CONTRIBUTING.md )
-
-if [[ ${PV} == "9999" ]] ; then
-	SRC_URI=""
+if [[ ${PV} == *9999* ]] ; then
 	EGIT_REPO_URI="https://github.com/google/${PN}.git"
 	inherit git-r3
 else
-	KEYWORDS="~alpha ~amd64 ~arm ~arm64 ~hppa ~ia64 ~mips ~ppc ~ppc64 ~sparc ~x86 ~amd64-linux ~x86-linux ~x64-macos ~x64-solaris"
-	SRC_URI="https://github.com/google/${PN}/archive/v${PV}.tar.gz -> ${P}.tar.gz"
+	KEYWORDS="~alpha ~amd64 ~arm ~arm64 ~hppa ~loong ~m68k ~mips ~ppc ~ppc64 ~riscv ~s390 ~sparc ~x86 ~amd64-linux ~x86-linux ~x64-macos ~x64-solaris"
+	SRC_URI="
+		https://github.com/google/${PN}/archive/v${PV}.tar.gz
+			-> ${P}.tar.gz
+	"
 fi
 
+DESCRIPTION="Generic-purpose lossless compression algorithm"
+HOMEPAGE="https://github.com/google/brotli/"
+
+LICENSE="MIT python? ( Apache-2.0 )"
+SLOT="0/$(ver_cut 1)"
+IUSE="python test"
+REQUIRED_USE="python? ( ${PYTHON_REQUIRED_USE} )"
 RESTRICT="!test? ( test )"
 
+RDEPEND="
+	python? ( ${PYTHON_DEPS} )
+"
+DEPEND="
+	${RDEPEND}
+"
+BDEPEND="
+	python? (
+		${DISTUTILS_DEPS}
+	)
+"
+
+DOCS=( README.md CONTRIBUTING.md )
+
 src_prepare() {
+	cmake_src_prepare
 	use python && distutils-r1_src_prepare
-	cmake-utils_src_prepare
 }
 
 multilib_src_configure() {
 	local mycmakeargs=(
 		-DBUILD_TESTING="$(usex test)"
 	)
-	cmake-utils_src_configure
+	cmake_src_configure
 }
+
 src_configure() {
+	append-lfs-flags
+
 	cmake-multilib_src_configure
 	use python && distutils-r1_src_configure
 }
 
-multilib_src_compile() {
-	cmake-utils_src_compile
-}
 src_compile() {
 	cmake-multilib_src_compile
 	use python && distutils-r1_src_compile
 }
 
 python_test() {
-	esetup.py test || die
+	eunittest -s python -p "*_test.py"
 }
 
-multilib_src_test() {
-	cmake-utils_src_test
-}
 src_test() {
 	cmake-multilib_src_test
 	use python && distutils-r1_src_test
 }
 
 multilib_src_install() {
-	cmake-utils_src_install
+	cmake_src_install
 }
+
 multilib_src_install_all() {
 	use python && distutils-r1_src_install
+
+	doman docs/brotli.1
+
+	local page
+	for page in constants decode encode types ; do
+		newman docs/${page}.h.3 ${PN}_${page}.h.3
+	done
 }

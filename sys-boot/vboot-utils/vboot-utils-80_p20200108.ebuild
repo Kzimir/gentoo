@@ -1,9 +1,9 @@
-# Copyright 1999-2020 Gentoo Authors
+# Copyright 1999-2024 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
 EAPI=7
 
-inherit toolchain-funcs
+inherit flag-o-matic toolchain-funcs
 
 # Can't use gitiles directly until b/19710536 is fixed.
 # This is the name of the latest release branch.
@@ -22,15 +22,14 @@ SRC_URI="mirror://gentoo/${P}.tar.xz
 LICENSE="BSD"
 SLOT="0"
 KEYWORDS="~amd64 ~arm ~arm64 ~mips ~x86"
-IUSE="libressl +libzip minimal static"
+IUSE="+libzip minimal static"
 
 LIB_DEPEND="
 	dev-libs/libyaml:=[static-libs(+)]
 	app-arch/xz-utils:=[static-libs(+)]"
 LIB_DEPEND_MINIMAL="
 	elibc_musl? ( sys-libs/fts-standalone:=[static-libs(+)] )
-	!libressl? ( dev-libs/openssl:0=[static-libs(+)] )
-	libressl? ( dev-libs/libressl:0=[static-libs(+)] )
+	dev-libs/openssl:0=[static-libs(+)]
 	libzip? ( dev-libs/libzip:=[static-libs(+)] )
 	sys-apps/util-linux:=[static-libs(+)]"
 RDEPEND="!static? (
@@ -70,6 +69,7 @@ src_prepare() {
 }
 
 _emake() {
+
 	local arch=$(tc-arch)
 	emake \
 		V=1 \
@@ -86,6 +86,10 @@ _emake() {
 }
 
 src_compile() {
+	# -Werror=lto-type-mismatch in tests
+	# https://bugs.gentoo.org/880175
+	filter-lto
+
 	tc-export CC AR CXX PKG_CONFIG
 	_emake FUZZ_TEST_BINS= TEST_BINS= all
 }

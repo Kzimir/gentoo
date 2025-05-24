@@ -1,29 +1,32 @@
-# Copyright 1999-2020 Gentoo Authors
+# Copyright 1999-2025 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
 # @ECLASS: dotnet.eclass
-# @MAINTAINER: dotnet@gentoo.org
-# @SUPPORTED_EAPIS: 1 2 3 4 5 6 7
+# @MAINTAINER:
+# maintainer-needed@gentoo.org
+# @SUPPORTED_EAPIS: 7
 # @BLURB: common settings and functions for mono and dotnet related packages
+# @DEPRECATED: none
 # @DESCRIPTION:
 # The dotnet eclass contains common environment settings that are useful for
 # dotnet packages.  Currently, it provides no functions, just exports
 # MONO_SHARED_DIR and sets LC_ALL in order to prevent errors during compilation
 # of dotnet packages.
 
-case ${EAPI:-0} in
-	0)
-		die "this eclass doesn't support EAPI 0" ;;
-	[1-6])
-		inherit eapi7-ver multilib
-		DEPEND="dev-lang/mono" ;;
-	*)
-		BDEPEND="dev-lang/mono" ;;
+case ${EAPI} in
+	7) ;;
+	*) die "${ECLASS}: EAPI ${EAPI:-0} not supported" ;;
 esac
+
+if [[ -z ${_DOTNET_ECLASS} ]]; then
+_DOTNET_ECLASS=1
+
+BDEPEND="dev-lang/mono"
 
 inherit mono-env
 
-# @ECLASS-VARIABLE: USE_DOTNET
+# @ECLASS_VARIABLE: USE_DOTNET
+# @PRE_INHERIT
 # @DESCRIPTION:
 # Use flags added to IUSE
 
@@ -93,7 +96,6 @@ exbuild() {
 # @DESCRIPTION:
 # Install package to GAC.
 egacinstall() {
-	use !prefix && has "${EAPI:-0}" 0 1 2 && ED="${D}"
 	gacutil -i "${1}" \
 		-root "${ED}"/usr/$(get_libdir) \
 		-gacdir /usr/$(get_libdir) \
@@ -105,7 +107,6 @@ egacinstall() {
 # @DESCRIPTION:
 # multilib comply
 dotnet_multilib_comply() {
-	use !prefix && has "${EAPI:-0}" 0 1 2 && ED="${D}"
 	local dir finddirs=() mv_command=${mv_command:-mv}
 	if [[ -d "${ED}/usr/lib" && "$(get_libdir)" != "lib" ]]
 	then
@@ -131,7 +132,7 @@ dotnet_multilib_comply() {
 		then
 			for exe in "${ED}/usr/bin"/*
 			do
-				if [[ "$(file "${exe}")" == *"shell script text"* ]]
+				if [[ "$(file -S "${exe}")" == *"shell script text"* ]]
 				then
 					sed -r -i -e ":/lib(/|$): s:/lib(/|$):/$(get_libdir)\1:" \
 						"${exe}" || die "Sedding some sense into ${exe} failed"
@@ -141,5 +142,7 @@ dotnet_multilib_comply() {
 
 	fi
 }
+
+fi
 
 EXPORT_FUNCTIONS pkg_setup

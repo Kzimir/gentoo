@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE pkgmetadata SYSTEM "http://www.gentoo.org/dtd/metadata.dtd">
+<!DOCTYPE pkgmetadata SYSTEM "https://www.gentoo.org/dtd/metadata.dtd">
 <pkgmetadata>
   <maintainer type="project">
     <email>python@gentoo.org</email>
@@ -10,8 +10,9 @@
   visualization package.
   With Pygraphviz you can create, edit, read, write, and draw graphs using
   Python to access the Graphviz graph data structure and layout algorithms.
-</longdescription>
+  </longdescription>
   <upstream>
     <remote-id type="pypi">pygraphviz</remote-id>
+    <remote-id type="github">pygraphviz/pygraphviz</remote-id>
   </upstream>
 </pkgmetadata>

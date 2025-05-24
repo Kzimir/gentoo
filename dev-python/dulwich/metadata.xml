@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE pkgmetadata SYSTEM "http://www.gentoo.org/dtd/metadata.dtd">
+<!DOCTYPE pkgmetadata SYSTEM "https://www.gentoo.org/dtd/metadata.dtd">
 <pkgmetadata>
   <maintainer type="person">
     <email>grobian@gentoo.org</email>
@@ -11,7 +11,7 @@
   </maintainer>
   <upstream>
     <remote-id type="pypi">dulwich</remote-id>
-    <remote-id type="github">dulwich/dulwich</remote-id>
-    <bugs-to>https://github.com/dulwich/dulwich/issues</bugs-to>
+    <remote-id type="github">jelmer/dulwich</remote-id>
+    <bugs-to>https://github.com/jelmer/dulwich/issues</bugs-to>
   </upstream>
 </pkgmetadata>

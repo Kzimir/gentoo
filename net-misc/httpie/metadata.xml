@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE pkgmetadata SYSTEM "http://www.gentoo.org/dtd/metadata.dtd">
+<!DOCTYPE pkgmetadata SYSTEM "https://www.gentoo.org/dtd/metadata.dtd">
 <pkgmetadata>
 	<!-- maintainer-needed -->
 	<longdescription lang="en">
@@ -12,7 +12,10 @@
 		servers.
 	</longdescription>
 	<upstream>
-		<remote-id type="github">jakubroztocil/httpie</remote-id>
+		<bugs-to>https://github.com/httpie/cli/issues</bugs-to>
+		<changelog>https://raw.githubusercontent.com/httpie/httpie/master/CHANGELOG.md</changelog>
+		<doc>https://httpie.io/docs</doc>
+		<remote-id type="github">httpie/cli</remote-id>
 		<remote-id type="pypi">httpie</remote-id>
 	</upstream>
 </pkgmetadata>

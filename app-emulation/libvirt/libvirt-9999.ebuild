@@ -1,89 +1,99 @@
-# Copyright 1999-2020 Gentoo Authors
+# Copyright 1999-2025 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
-EAPI=7
+EAPI=8
 
-PYTHON_COMPAT=( python3_{7,8,9} )
+# Packages which get releases together:
+# app-emacs/nxml-libvirt-schemas
+# dev-python/libvirt-python
+# dev-perl/Sys-Virt
+# app-emulation/libvirt
+# Please bump them together!
 
-inherit meson bash-completion-r1 eutils linux-info python-any-r1 readme.gentoo-r1 systemd
+PYTHON_COMPAT=( python3_{10..13} )
+VERIFY_SIG_OPENPGP_KEY_PATH=/usr/share/openpgp-keys/libvirt.org.asc
+inherit meson linux-info python-any-r1 readme.gentoo-r1 tmpfiles verify-sig
 
 if [[ ${PV} = *9999* ]]; then
 	inherit git-r3
 	EGIT_REPO_URI="https://gitlab.com/libvirt/libvirt.git"
-	SRC_URI=""
-	SLOT="0"
+	EGIT_BRANCH="master"
 else
-	SRC_URI="https://libvirt.org/sources/${P}.tar.xz"
-	KEYWORDS="~amd64 ~arm64 ~ppc64 ~x86"
-	SLOT="0/${PV}"
+	SRC_URI="https://download.libvirt.org/${P}.tar.xz
+		verify-sig? ( https://download.libvirt.org/${P}.tar.xz.asc )"
+	KEYWORDS="~amd64 ~arm ~arm64 ~ppc64 ~x86"
 fi
 
 DESCRIPTION="C toolkit to manipulate virtual machines"
-HOMEPAGE="https://www.libvirt.org/"
+HOMEPAGE="https://www.libvirt.org/ https://gitlab.com/libvirt/libvirt/"
 LICENSE="LGPL-2.1"
+SLOT="0/${PV}"
 IUSE="
-	apparmor audit +caps +dbus dtrace firewalld fuse glusterfs iscsi
-	iscsi-direct +libvirtd lvm libssh lxc +macvtap nfs nls numa openvz
-	parted pcap policykit +qemu rbd sasl selinux +udev +vepa
-	virtualbox +virt-network wireshark-plugins xen zfs
+	apparmor audit bash-completion +caps dtrace firewalld fuse glusterfs
+	iscsi iscsi-direct +libvirtd lvm libssh libssh2 lxc nbd nfs nls numa
+	openvz parted pcap policykit +qemu rbd sasl selinux test +udev
+	virtiofsd virtualbox +virt-network wireshark-plugins xen zfs
 "
+RESTRICT="!test? ( test )"
 
 REQUIRED_USE="
 	firewalld? ( virt-network )
 	libvirtd? ( || ( lxc openvz qemu virtualbox xen ) )
 	lxc? ( caps libvirtd )
 	openvz? ( libvirtd )
-	policykit? ( dbus )
 	qemu? ( libvirtd )
-	vepa? ( macvtap )
 	virt-network? ( libvirtd )
 	virtualbox? ( libvirtd )
 	xen? ( libvirtd )"
 
 BDEPEND="
-	acct-user/qemu
-	policykit? ( acct-group/libvirt )
 	app-text/xhtml1
 	dev-lang/perl
 	dev-libs/libxslt
 	dev-perl/XML-XPath
 	dev-python/docutils
-	virtual/pkgconfig"
+	virtual/pkgconfig
+	bash-completion? ( >=app-shells/bash-completion-2.0 )
+	verify-sig? ( sec-keys/openpgp-keys-libvirt )"
 
 # gettext.sh command is used by the libvirt command wrappers, and it's
 # non-optional, so put it into RDEPEND.
 # We can use both libnl:1.1 and libnl:3, but if you have both installed, the
 # package will use 3 by default. Since we don't have slot pinning in an API,
-# we must go with the most recent
+# we must go with the most recent.
 RDEPEND="
+	acct-user/qemu
 	app-misc/scrub
-	>=dev-libs/glib-2.48.0
-	dev-libs/libgcrypt:0
+	>=dev-libs/glib-2.66.0
+	dev-libs/libgcrypt
 	dev-libs/libnl:3
-	>=dev-libs/libxml2-2.7.6
+	>=dev-libs/libxml2-2.9.1:=
 	>=net-analyzer/openbsd-netcat-1.105-r1
-	>=net-libs/gnutls-1.0.25:0=
-	net-libs/libssh2
-	net-libs/libtirpc
-	net-libs/rpcsvc-proto
+	>=net-libs/gnutls-3.2.0:=
+	net-libs/libtirpc:=
 	>=net-misc/curl-7.18.0
+	sys-apps/dbus
 	sys-apps/dmidecode
 	sys-devel/gettext
-	sys-libs/ncurses:0=
-	sys-libs/readline:=
+	>=sys-libs/readline-7.0:=
+	virtual/acl
 	apparmor? ( sys-libs/libapparmor )
 	audit? ( sys-process/audit )
 	caps? ( sys-libs/libcap-ng )
-	dbus? ( sys-apps/dbus )
-	dtrace? ( dev-util/systemtap )
+	dtrace? ( dev-debug/systemtap )
 	firewalld? ( >=net-firewall/firewalld-0.6.3 )
-	fuse? ( sys-fs/fuse:0= )
+	fuse? ( sys-fs/fuse:= )
 	glusterfs? ( >=sys-cluster/glusterfs-3.4.1 )
-	iscsi? ( sys-block/open-iscsi )
+	iscsi? ( >=sys-block/open-iscsi-1.18.0 )
 	iscsi-direct? ( >=net-libs/libiscsi-1.18.0 )
-	libssh? ( net-libs/libssh )
-	lvm? ( >=sys-fs/lvm2-2.02.48-r2[-device-mapper-only(-)] )
+	libssh? ( >=net-libs/libssh-0.8.1:= )
+	libssh2? ( >=net-libs/libssh2-1.3 )
+	lvm? ( >=sys-fs/lvm2-2.02.48-r2[lvm] )
 	lxc? ( !sys-apps/systemd[cgroup-hybrid(-)] )
+	nbd? (
+		sys-block/nbdkit
+		sys-libs/libnbd
+	)
 	nfs? ( net-fs/nfs-utils )
 	numa? (
 		>sys-process/numactl-2.0.2
@@ -91,42 +101,71 @@ RDEPEND="
 	)
 	parted? (
 		>=sys-block/parted-1.8[device-mapper]
-		sys-fs/lvm2[-device-mapper-only(-)]
+		sys-fs/lvm2[lvm]
 	)
-	pcap? ( >=net-libs/libpcap-1.0.0 )
-	policykit? ( >=sys-auth/polkit-0.9 )
+	pcap? ( >=net-libs/libpcap-1.8.0 )
+	policykit? (
+		acct-group/libvirt
+		>=sys-auth/polkit-0.9
+	)
 	qemu? (
-		>=app-emulation/qemu-1.5.0
-		dev-libs/yajl
+		>=app-emulation/qemu-4.2
+		app-crypt/swtpm
+		dev-libs/json-c:=
 	)
 	rbd? ( sys-cluster/ceph )
-	sasl? ( dev-libs/cyrus-sasl )
+	sasl? ( >=dev-libs/cyrus-sasl-2.1.26 )
 	selinux? ( >=sys-libs/libselinux-2.0.85 )
 	virt-network? (
-		net-dns/dnsmasq[script]
+		net-dns/dnsmasq[dhcp,ipv6(+),script]
 		net-firewall/ebtables
-		>=net-firewall/iptables-1.4.10[ipv6]
+		|| (
+			>=net-firewall/iptables-1.4.10[ipv6(+)]
+			net-firewall/nftables
+		)
 		net-misc/radvd
 		sys-apps/iproute2[-minimal]
 	)
-	wireshark-plugins? ( net-analyzer/wireshark:= )
+	virtiofsd? ( app-emulation/virtiofsd )
+	virtualbox? ( <app-emulation/virtualbox-7.1.0 )
+	wireshark-plugins? ( >=net-analyzer/wireshark-2.6.0:= )
 	xen? (
-		>=app-emulation/xen-4.6.0
+		>=app-emulation/xen-4.9.0
 		app-emulation/xen-tools:=
 	)
 	udev? (
-		virtual/libudev
+		virtual/libudev:=
 		>=x11-libs/libpciaccess-0.10.9
 	)
-	zfs? ( sys-fs/zfs )"
-
-DEPEND="${BDEPEND}
+	zfs? ( sys-fs/zfs )
+	kernel_linux? ( sys-apps/util-linux )"
+DEPEND="
+	${BDEPEND}
 	${RDEPEND}
-	${PYTHON_DEPS}"
+	${PYTHON_DEPS}
+	test? (
+		$(python_gen_any_dep '
+			dev-python/pytest[${PYTHON_USEDEP}]
+		')
+	)
+"
+# The 'circular' dependency on dev-python/libvirt-python is because of
+# virt-qemu-qmp-proxy.
+PDEPEND="
+	qemu? ( dev-python/libvirt-python )
+"
 
 PATCHES=(
-	"${FILESDIR}"/${PN}-6.0.0-fix_paths_in_libvirt-guests_sh.patch
+	"${FILESDIR}"/${PN}-11.0.0-Fix-paths-in-libvirt-guests.sh.in.patch
+	"${FILESDIR}"/${PN}-11.3.0-do-not-use-sysconfig.patch
+	"${FILESDIR}"/${PN}-11.3.0-fix-paths-for-apparmor.patch
 )
+
+python_check_deps() {
+	if use test; then
+		python_has_version -d "dev-python/pytest[${PYTHON_USEDEP}]"
+	fi
+}
 
 pkg_setup() {
 	# Check kernel configuration:
@@ -166,12 +205,6 @@ pkg_setup() {
 		~!GRKERNSEC_CHROOT_CHMOD
 		~!GRKERNSEC_CHROOT_CAPS"
 
-	kernel_is lt 4 7 && use lxc && CONFIG_CHECK+="
-		~DEVPTS_MULTIPLE_INSTANCES"
-
-	use macvtap && CONFIG_CHECK+="
-		~MACVTAP"
-
 	use virt-network && CONFIG_CHECK+="
 		~BRIDGE_EBT_MARK_T
 		~BRIDGE_NF_EBTABLES
@@ -179,13 +212,15 @@ pkg_setup() {
 		~NETFILTER_XT_CONNMARK
 		~NETFILTER_XT_MARK
 		~NETFILTER_XT_TARGET_CHECKSUM
+		~NETFILTER_XT_TARGET_MASQUERADE
+		~NET_ACT_CSUM
 		~IP_NF_FILTER
 		~IP_NF_MANGLE
 		~IP_NF_NAT
-		~IP_NF_TARGET_MASQUERADE
 		~IP6_NF_FILTER
 		~IP6_NF_MANGLE
 		~IP6_NF_NAT"
+
 	# Bandwidth Limiting Support
 	use virt-network && CONFIG_CHECK+="
 		~BRIDGE_EBT_T_NAT
@@ -197,24 +232,25 @@ pkg_setup() {
 		~NET_SCH_INGRESS
 		~NET_SCH_SFQ"
 
-	# Handle specific kernel versions for different features
-	kernel_is lt 3 6 && CONFIG_CHECK+=" ~CGROUP_MEM_RES_CTLR"
-	if kernel_is ge 3 6; then
-		CONFIG_CHECK+=" ~MEMCG ~MEMCG_SWAP "
-		kernel_is lt 4 5 && CONFIG_CHECK+=" ~MEMCG_KMEM "
-	fi
-
 	ERROR_USER_NS="Optional depending on LXC configuration."
 
 	if [[ -n ${CONFIG_CHECK} ]]; then
 		linux-info_pkg_setup
 	fi
+
+	python-any-r1_pkg_setup
 }
 
 src_prepare() {
 	touch "${S}/.mailmap" || die
 
 	default
+	python_fix_shebang .
+
+	# Skip fragile tests which relies on pristine environment
+	# (Breaks because of sandbox environment variables)
+	# bug #802876
+	sed -i -e "/commandtest/d" tests/meson.build || die
 
 	# Tweak the init script:
 	cp "${FILESDIR}/libvirtd.init-r19" "${S}/libvirtd.init" || die
@@ -225,10 +261,9 @@ src_prepare() {
 src_configure() {
 	local emesonargs=(
 		$(meson_feature apparmor)
-		$(meson_use apparmor apparmor_profiles)
+		$(meson_feature apparmor apparmor_profiles)
 		$(meson_feature audit)
 		$(meson_feature caps capng)
-		$(meson_feature dbus)
 		$(meson_feature dtrace)
 		$(meson_feature firewalld)
 		$(meson_feature fuse)
@@ -238,10 +273,11 @@ src_configure() {
 		$(meson_feature iscsi-direct storage_iscsi_direct)
 		$(meson_feature libvirtd driver_libvirtd)
 		$(meson_feature libssh)
+		$(meson_feature libssh2)
 		$(meson_feature lvm storage_lvm)
 		$(meson_feature lvm storage_mpath)
 		$(meson_feature lxc driver_lxc)
-		$(meson_feature macvtap)
+		$(meson_feature nbd nbdkit)
 		$(meson_feature nls)
 		$(meson_feature numa numactl)
 		$(meson_feature numa numad)
@@ -250,21 +286,21 @@ src_configure() {
 		$(meson_feature pcap libpcap)
 		$(meson_feature policykit polkit)
 		$(meson_feature qemu driver_qemu)
-		$(meson_feature qemu yajl)
+		$(meson_feature qemu json_c)
 		$(meson_feature rbd storage_rbd)
 		$(meson_feature sasl)
 		$(meson_feature selinux)
+		$(meson_feature test tests)
 		$(meson_feature udev)
-		$(meson_feature vepa virtualport)
 		$(meson_feature virt-network driver_network)
 		$(meson_feature virtualbox driver_vbox)
 		$(meson_feature wireshark-plugins wireshark_dissector)
 		$(meson_feature xen driver_libxl)
 		$(meson_feature zfs storage_zfs)
 
-		-Dhal=disabled
 		-Dnetcf=disabled
 		-Dsanlock=disabled
+		-Dopenwsman=disabled
 
 		-Ddriver_esx=enabled
 		-Dinit_script=systemd
@@ -275,40 +311,50 @@ src_configure() {
 		-Ddriver_vmware=enabled
 
 		--localstatedir="${EPREFIX}/var"
+		-Dinitconfdir="${EPREFIX}/etc/systemd"
 		-Drunstatedir="${EPREFIX}/run"
+		-Ddocdir="${EPREFIX}/usr/share/doc/${PF}"
 	)
+
+	# Workaround for bug #938302
+	if use dtrace && has_version "dev-debug/systemtap[-dtrace-symlink(+)]" ; then
+		local native_file="${T}"/meson.${CHOST}.ini.local
+		cat >> ${native_file} <<-EOF || die
+		[binaries]
+		dtrace='stap-dtrace'
+		EOF
+		emesonargs+=( --native-file "${native_file}" )
+	fi
 
 	meson_src_configure
 }
 
 src_test() {
-	# remove problematic tests, bug #591416, bug #591418
-	sed -i -e 's#commandtest$(EXEEXT) # #' \
-		-e 's#virfirewalltest$(EXEEXT) # #' \
-		-e 's#nwfilterebiptablestest$(EXEEXT) # #' \
-		-e 's#nwfilterxml2firewalltest$(EXEEXT)$##' \
-		tests/Makefile
-
 	export VIR_TEST_DEBUG=1
-	meson_src_test
+	# Don't run the syntax check tests, they're fragile and not relevant
+	# to us downstream anyway.
+	# We also crank up the timeout (as Fedora does) just to preempt failures
+	# on slower arches.
+	meson_src_test --no-suite syntax-check --timeout-multiplier 10
 }
 
 src_install() {
 	meson_src_install
 
-	# Remove bogus, empty directories. They are either not used, or
-	# libvirtd is able to create them on demand
-	rm -rf "${D}"/etc/sysconfig || die
-	rm -rf "${D}"/var || die
-	rm -rf "${D}"/run || die
-
-	newbashcomp "${S}/tools/bash-completion/vsh" virsh
-	bashcomp_alias virsh virt-admin
+	# Depending on configuration option, libvirt will create some bogus
+	# directoreis. They are either not used, or libvirtd is able to create
+	# them on demand, so let's remove them.
+	#
+	# Note, we are using -f here so that rm does not fail or warn if the
+	# directory is nonexistent.
+	rm -rf "${D}"/etc/sysconfig
+	rm -rf "${D}"/var
+	rm -rf "${D}"/run
 
 	use libvirtd || return 0
 	# From here, only libvirtd-related instructions, be warned!
 
-	systemd_newtmpfilesd "${FILESDIR}"/libvirtd.tmpfiles.conf libvirtd.conf
+	newtmpfiles "${FILESDIR}"/libvirtd.tmpfiles.conf libvirtd.conf
 
 	newinitd "${S}/libvirtd.init" libvirtd
 	newinitd "${FILESDIR}/libvirt-guests.init-r4" libvirt-guests
@@ -323,13 +369,6 @@ src_install() {
 	readme.gentoo_create_doc
 }
 
-pkg_preinst() {
-	# we only ever want to generate this once
-	if [[ -e "${ROOT}"/etc/libvirt/qemu/networks/default.xml ]]; then
-		rm -rf "${D}"/etc/libvirt/qemu/networks/default.xml || die
-	fi
-}
-
 pkg_postinst() {
 	if [[ -e "${ROOT}"/etc/libvirt/qemu/networks/default.xml ]]; then
 		touch "${ROOT}"/etc/libvirt/qemu/networks/default.xml || die
@@ -337,6 +376,6 @@ pkg_postinst() {
 
 	use libvirtd || return 0
 	# From here, only libvirtd-related instructions, be warned!
-
+	tmpfiles_process libvirtd.conf
 	readme.gentoo_print_elog
 }

@@ -1,7 +1,7 @@
-# Copyright 1999-2020 Gentoo Authors
+# Copyright 1999-2024 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
-EAPI=5
+EAPI=7
 
 MYSPELL_DICT=(
 	"ro_RO.aff"
@@ -22,12 +22,11 @@ inherit myspell-r2
 DESCRIPTION="Romanian dictionaries for myspell/hunspell"
 HOMEPAGE="https://rospell.wordpress.com"
 SRC_URI="
-	mirror://sourceforge/rospell/ro_RO.${PV}.zip
-	mirror://sourceforge/rospell/hyph_ro_RO.${PV}.zip
-	mirror://sourceforge/rospell/th_ro_RO.3.3.zip
+	https://downloads.sourceforge.net/rospell/ro_RO.${PV}.zip
+	https://downloads.sourceforge.net/rospell/hyph_ro_RO.${PV}.zip
+	https://downloads.sourceforge.net/rospell/th_ro_RO.3.3.zip
 "
 
 LICENSE="GPL-2 LGPL-2.1 MPL-1.1"
 SLOT="0"
-KEYWORDS="~alpha amd64 arm arm64 ~hppa ~ia64 ~mips ppc ppc64 ~riscv sparc x86"
-IUSE=""
+KEYWORDS="~alpha amd64 arm arm64 ~hppa ~loong ~mips ppc ppc64 ~riscv sparc x86"

@@ -1,9 +1,9 @@
-# Copyright 1999-2020 Gentoo Authors
+# Copyright 1999-2025 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
-EAPI=7
+EAPI=8
 
-inherit desktop qmake-utils
+inherit qmake-utils
 [[ "${PV}" == "9999" ]] && inherit git-r3
 
 DESCRIPTION="Tool for one-time conversion from svn to git"
@@ -18,11 +18,11 @@ fi
 
 LICENSE="GPL-3"
 SLOT="0"
-IUSE=""
 # KEYWORDS way up
 
 DEPEND="
-	dev-qt/qtcore:5
+	dev-qt/qt5compat:6
+	dev-qt/qtbase:6
 	dev-vcs/subversion"
 RDEPEND="${DEPEND}
 	dev-vcs/git"
@@ -35,7 +35,7 @@ src_configure() {
 		PREFIX=/usr
 		SVN_INCLUDE=/usr/include/subversion-1
 	)
-	eqmake5 "${qmake_args[@]}" fast-export2.pro
+	eqmake6 "${qmake_args[@]}" fast-export2.pro
 }
 
 src_install() {

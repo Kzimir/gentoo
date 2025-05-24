@@ -1,12 +1,12 @@
-# Copyright 1999-2020 Gentoo Authors
+# Copyright 1999-2024 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
-EAPI=7
+EAPI=8
 
 LUA_COMPAT=( lua5-1 )
-
 EGIT_REPO_URI="https://github.com/accel-ppp/accel-ppp.git"
-inherit cmake flag-o-matic git-r3 linux-info linux-mod lua-single
+MODULES_OPTIONAL_IUSE="ipoe"
+inherit cmake flag-o-matic git-r3 linux-mod-r1 lua-single
 
 DESCRIPTION="High performance PPTP, PPPoE and L2TP server"
 HOMEPAGE="https://sourceforge.net/projects/accel-ppp/"
@@ -15,15 +15,16 @@ SRC_URI=""
 LICENSE="GPL-2"
 SLOT="0"
 KEYWORDS=""
-IUSE="debug doc ipoe lua postgres radius shaper snmp valgrind"
+IUSE="debug doc libtomcrypt lua postgres radius shaper snmp valgrind"
 
-RDEPEND="lua? ( ${LUA_DEPS} )
+RDEPEND="!libtomcrypt? ( dev-libs/openssl:0= )
+	libtomcrypt? ( dev-libs/libtomcrypt:0= )
+	lua? ( ${LUA_DEPS} )
 	postgres? ( dev-db/postgresql:* )
 	snmp? ( net-analyzer/net-snmp )
-	dev-libs/libpcre
-	dev-libs/openssl:0="
+	dev-libs/libpcre"
 DEPEND="${RDEPEND}
-	valgrind? ( dev-util/valgrind )"
+	valgrind? ( dev-debug/valgrind )"
 PDEPEND="net-dialup/ppp-scripts"
 
 DOCS=( README )
@@ -34,12 +35,8 @@ REQUIRED_USE="lua? ( ${LUA_REQUIRED_USE} )
 	valgrind? ( debug )"
 
 pkg_setup() {
-	if use ipoe; then
-		linux-mod_pkg_setup
-		set_arch_to_kernel
-	else
-		linux-info_pkg_setup
-	fi
+	linux-mod-r1_pkg_setup
+	set_arch_to_kernel
 	use lua && lua-single_pkg_setup
 }
 
@@ -60,13 +57,14 @@ src_prepare() {
 
 src_configure() {
 	local libdir="$(get_libdir)"
-	# There must be also dev-libs/tomcrypt (TOMCRYPT) as crypto alternative to OpenSSL
 	local mycmakeargs=(
+		-DCMAKE_INSTALL_SYSCONFDIR="${EPREFIX}/etc"
+		-DCMAKE_INSTALL_LOCALSTATEDIR="${EPREFIX}/var"
 		-DLIB_SUFFIX="${libdir#lib}"
 		-DBUILD_IPOE_DRIVER="$(usex ipoe)"
 		-DBUILD_PPTP_DRIVER=no
 		-DBUILD_VLAN_MON_DRIVER="$(usex ipoe)"
-		-DCRYPTO=OPENSSL
+		-DCRYPTO="$(usex libtomcrypt TOMCRYPT OPENSSL)"
 		-DLOG_PGSQL="$(usex postgres)"
 		-DLUA="$(usex lua TRUE FALSE)"
 		-DMEMDEBUG="$(usex debug)"
@@ -79,15 +77,16 @@ src_configure() {
 }
 
 src_compile() {
+	local modlist=( ipoe=accel-ppp:drivers/ipoe vlan_mon=accel-ppp:drivers/vlan_mon )
+	MODULES_MAKEARGS+=(
+		KDIR="${KV_OUT_DIR}"
+	)
+	linux-mod-r1_src_compile
 	cmake_src_compile
 }
 
 src_install() {
-	if use ipoe; then
-		local MODULE_NAMES="ipoe(accel-ppp:${BUILD_DIR}/drivers/ipoe/driver) vlan_mon(accel-ppp:${BUILD_DIR}/drivers/vlan_mon/driver)"
-		linux-mod_src_install
-	fi
-
+	linux-mod-r1_src_install
 	cmake_src_install
 
 	use doc && dodoc -r rfc
@@ -100,5 +99,6 @@ src_install() {
 	newinitd "${FILESDIR}"/${PN}.initd ${PN}d
 	newconfd "${FILESDIR}"/${PN}.confd ${PN}d
 
+	keepdir /var/lib/accel-ppp
 	keepdir /var/log/accel-ppp
 }

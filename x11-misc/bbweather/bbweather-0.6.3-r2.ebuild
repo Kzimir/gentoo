@@ -1,4 +1,4 @@
-# Copyright 1999-2020 Gentoo Authors
+# Copyright 1999-2023 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
 EAPI=7
@@ -18,20 +18,23 @@ DEPEND="dev-lang/perl
 	x11-libs/libX11"
 RDEPEND="${DEPEND}
 	net-misc/wget
-	x11-apps/xmessage
-	!<=x11-plugins/gkrellweather-2.0.7-r1"
+	x11-apps/xmessage"
 
 PATCHES=( "${FILESDIR}"/${PN}-asneeded.patch )
 
 src_prepare() {
 	default
 	gunzip doc/*.gz || die
+	mv configure.{in,ac} || die
 	sed -i \
 		-e "s:man_DATA:man1_MANS:;s:.gz::g;/^mandir/d" \
 		doc/Makefile.am || die
 	sed -i \
 		-e 's|-helvetica-|-*-|g' \
 		resource.cpp data/${PN}.{nobb,style} || die
+	sed -i \
+		-e 's|register ||' \
+		Image.cpp || die
 	eautoreconf
 }
 

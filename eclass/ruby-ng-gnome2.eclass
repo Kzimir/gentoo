@@ -1,4 +1,4 @@
-# Copyright 1999-2020 Gentoo Authors
+# Copyright 1999-2024 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
 # @ECLASS: ruby-ng-gnome2.eclass
@@ -6,30 +6,31 @@
 # Ruby herd <ruby@gentoo.org>
 # @AUTHOR:
 # Author: Hans de Graaff <graaff@gentoo.org>
-# @SUPPORTED_EAPIS: 6 7
+# @SUPPORTED_EAPIS: 7 8
+# @PROVIDES: ruby-ng
 # @BLURB: An eclass to simplify handling of various ruby-gnome2 parts.
 # @DESCRIPTION:
 # This eclass simplifies installation of the various pieces of
 # ruby-gnome2 since they share a very common installation procedure.
 
-case "${EAPI:-0}" in
-	6)	inherit eapi7-ver ;;
-	7)	;;
-	*)
-		die "Unsupported EAPI=${EAPI} (unknown) for ${ECLASS}"
-		;;
+case ${EAPI} in
+	7|8) ;;
+	*) die "${ECLASS}: EAPI ${EAPI:-0} not supported" ;;
 esac
+
+if [[ -z ${_RUBY_NG_GNOME2_ECLASS} ]]; then
+_RUBY_NG_GNOME2_ECLASS=1
 
 RUBY_FAKEGEM_NAME="${RUBY_FAKEGEM_NAME:-${PN#ruby-}}"
 RUBY_FAKEGEM_TASK_TEST=""
 RUBY_FAKEGEM_TASK_DOC=""
 
-# @ECLASS-VARIABLE: RUBY_GNOME2_NEED_VIRTX
+# @ECLASS_VARIABLE: RUBY_GNOME2_NEED_VIRTX
 # @PRE_INHERIT
 # @DESCRIPTION:
 # If set to 'yes', the test is run with virtx. Set before inheriting this
 # eclass.
-: ${RUBY_GNOME2_NEED_VIRTX:="no"}
+: "${RUBY_GNOME2_NEED_VIRTX:="no"}"
 
 inherit ruby-fakegem
 if [[ ${RUBY_GNOME2_NEED_VIRTX} == yes ]]; then
@@ -39,21 +40,15 @@ fi
 IUSE="test"
 RESTRICT+=" !test? ( test )"
 
-DEPEND="virtual/pkgconfig"
+BDEPEND="virtual/pkgconfig"
 ruby_add_bdepend "
 	dev-ruby/pkg-config
 	test? ( >=dev-ruby/test-unit-2 )"
-SRC_URI="mirror://sourceforge/ruby-gnome2/ruby-gnome2-all-${PV}.tar.gz"
-HOMEPAGE="https://ruby-gnome2.osdn.jp/"
+HOMEPAGE="https://ruby-gnome.github.io/"
 LICENSE="LGPL-2.1+"
 SLOT="0"
-if ver_test -ge "3.4.0"; then
-	SRC_URI="https://github.com/ruby-gnome/ruby-gnome/archive/${PV}.tar.gz -> ruby-gnome2-${PV}.tar.gz"
-	RUBY_S=ruby-gnome-${PV}/${RUBY_FAKEGEM_NAME}
-else
-	SRC_URI="mirror://sourceforge/ruby-gnome2/ruby-gnome2-all-${PV}.tar.gz"
-	RUBY_S=ruby-gnome2-all-${PV}/${RUBY_FAKEGEM_NAME}
-fi
+SRC_URI="https://github.com/ruby-gnome/ruby-gnome/archive/${PV}.tar.gz -> ruby-gnome2-${PV}.tar.gz"
+RUBY_S=ruby-gnome-${PV}/${RUBY_FAKEGEM_NAME}
 
 ruby-ng-gnome2_all_ruby_prepare() {
 	# Avoid compilation of dependencies during test.
@@ -81,6 +76,8 @@ all_ruby_prepare() {
 # @DESCRIPTION:
 # Run the configure script in the subbinding for each specific ruby target.
 each_ruby_configure() {
+	debug-print-function ${FUNCNAME} "$@"
+
 	[[ -e extconf.rb ]] || return
 
 	${RUBY} extconf.rb || die "extconf.rb failed"
@@ -90,6 +87,8 @@ each_ruby_configure() {
 # @DESCRIPTION:
 # Compile the C bindings in the subbinding for each specific ruby target.
 each_ruby_compile() {
+	debug-print-function ${FUNCNAME} "$@"
+
 	[[ -e Makefile ]] || return
 
 	# We have injected --no-undefined in Ruby as a safety precaution
@@ -108,10 +107,12 @@ each_ruby_compile() {
 # @DESCRIPTION:
 # Install the files in the subbinding for each specific ruby target.
 each_ruby_install() {
+	debug-print-function ${FUNCNAME} "$@"
+
 	if [[ -e Makefile ]]; then
 		# Create the directories, or the package will create them as files.
 		local archdir=$(ruby_rbconfig_value "sitearchdir")
-		dodir ${archdir#${EPREFIX}} /usr/$(get_libdir)/pkgconfig
+		dodir "${archdir#${EPREFIX}}" /usr/$(get_libdir)/pkgconfig
 
 		emake DESTDIR="${D}" install
 	fi
@@ -123,6 +124,8 @@ each_ruby_install() {
 # @DESCRIPTION:
 # Install the files common to all ruby targets.
 all_ruby_install() {
+	debug-print-function ${FUNCNAME} "$@"
+
 	for doc in ../AUTHORS ../NEWS ChangeLog README; do
 		[[ -s ${doc} ]] && dodoc $doc
 	done
@@ -138,6 +141,8 @@ all_ruby_install() {
 # @DESCRIPTION:
 # Run the tests for this package.
 each_ruby_test() {
+	debug-print-function ${FUNCNAME} "$@"
+
 	[[ -e test/run-test.rb ]] || return
 
 	if [[ ${RUBY_GNOME2_NEED_VIRTX} == yes ]]; then
@@ -146,3 +151,5 @@ each_ruby_test() {
 		${RUBY} test/run-test.rb || die
 	fi
 }
+
+fi

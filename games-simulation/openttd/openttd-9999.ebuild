@@ -1,36 +1,42 @@
-# Copyright 1999-2020 Gentoo Authors
+# Copyright 1999-2025 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
-EAPI=7
+EAPI=8
 
-inherit toolchain-funcs xdg
+inherit cmake xdg
 
-MY_PV="${PV/_rc/-RC}"
-MY_P="${PN}-${MY_PV}"
-
-DESCRIPTION="OpenTTD is a clone of Transport Tycoon Deluxe"
+DESCRIPTION="A clone of Transport Tycoon Deluxe"
 HOMEPAGE="https://www.openttd.org/"
-if [[ "${PV}" == *9999 ]] ; then
+
+if [[ ${PV} == 9999 ]] ; then
+	EGIT_REPO_URI="https://github.com/OpenTTD/OpenTTD"
 	inherit git-r3
-	EGIT_REPO_URI="https://github.com/OpenTTD/OpenTTD.git"
 else
-	SRC_URI="https://proxy.binaries.openttd.org/openttd-releases/${MY_PV}/${MY_P}-source.tar.xz"
-	KEYWORDS="~amd64 ~ppc64 ~x86"
-	S="${WORKDIR}/${MY_P}"
+	SRC_URI="https://cdn.openttd.org/openttd-releases/${PV}/${P}-source.tar.xz"
+
+	KEYWORDS="~amd64 ~arm64 ~ppc64 ~x86"
 fi
 
 LICENSE="GPL-2"
 SLOT="0"
-IUSE="aplaymidi debug dedicated iconv icu +lzma lzo +openmedia +png cpu_flags_x86_sse +timidity +truetype zlib"
-RESTRICT="test" # needs a graphics set in order to test
+IUSE="allegro cpu_flags_x86_sse debug dedicated +fluidsynth icu +lzma lzo +openmedia +png +sdl timidity +truetype +zlib"
+REQUIRED_USE="!dedicated? ( || ( allegro sdl ) )"
 
-RDEPEND="!dedicated? (
-		media-libs/libsdl2[sound,video]
+RDEPEND="
+	net-misc/curl
+	dedicated? (
+		acct-group/openttd
+		acct-user/openttd
+		app-misc/dtach
+	)
+	!dedicated? (
+		allegro? ( media-libs/allegro:5 )
+		fluidsynth? ( media-sound/fluidsynth )
 		icu? (
-			dev-libs/icu-layoutex
-			dev-libs/icu-le-hb
 			>=dev-libs/icu-58.1:=
+			media-libs/harfbuzz
 		)
+		sdl? ( media-libs/libsdl2[sound,video] )
 		truetype? (
 			media-libs/fontconfig
 			media-libs/freetype:2
@@ -39,138 +45,95 @@ RDEPEND="!dedicated? (
 	)
 	lzma? ( app-arch/xz-utils )
 	lzo? ( dev-libs/lzo:2 )
-	iconv? ( virtual/libiconv )
-	png? (
-		media-libs/libpng:0=
-		sys-libs/zlib:=
-	)
-	zlib? ( sys-libs/zlib:= )"
+	png? ( media-libs/libpng:= )
+	zlib? ( sys-libs/zlib:= )
+"
 DEPEND="${RDEPEND}"
 BDEPEND="
-	virtual/pkgconfig"
+	>=games-util/grfcodec-6.0.6_p20210310
+	virtual/pkgconfig
+"
 PDEPEND="
 	!dedicated? (
 		openmedia? (
-			games-misc/openmsx
-			games-misc/opensfx
+			>=games-misc/openmsx-0.4.0
+			>=games-misc/opensfx-1.0.1
 		)
-		aplaymidi? ( media-sound/alsa-utils )
-		!aplaymidi? ( timidity? ( media-sound/timidity++ ) )
 	)
-	openmedia? ( >=games-misc/opengfx-0.4.7 )"
+	openmedia? ( >=games-misc/opengfx-0.6.1 )
+	timidity? ( media-sound/timidity++ )
+"
+
+DOCS=( docs/directory_structure.md )
 
 PATCHES=(
-	"${FILESDIR}"/${PN}-1.9.0-cflags.patch
-	"${FILESDIR}"/${PN}-1.9.0-dont_compress_manpages.patch
+	"${FILESDIR}/${PN}-1.11.2_dont_compress_man.patch"
 )
 
-src_configure() {
-	local myopts=(
-		--binary-dir="bin"
-		--disable-strip
-		--doc-dir="share/doc/${PF}"
-		--install-dir="${D}"
-		--menu-group="Game;Simulation;"
-		--prefix-dir="${EPREFIX}/usr"
-		$(use_with cpu_flags_x86_sse sse)
-		$(use_with iconv)
-		$(use_with lzma)
-		$(use_with lzo liblzo2)
-		$(use_with png)
-		$(usex debug '--enable-debug=3' '')
-		# there is an allegro interface available as well as sdl, but
-		# the configure for it looks broken so the sdl interface is
-		# always built instead.
-		--without-allegro
+src_prepare() {
+	# Drop automagic LTO usage
+	sed -i -e '/check_ipo_supported(RESULT IPO_FOUND)/d' CMakeLists.txt || die
 
-		--without-fluidsynth
-	)
+	# Don't force _FORTIFY_SOURCE via CMake
+	# (we already set it in the toolchain by default with a minimum level
+	# of _FORTIFY_SOURCE=2)
+	sed -i -e '/-D_FORTIFY_SOURCE/d' cmake/CompileFlags.cmake || die
 
-	if use dedicated ; then
-		myopts+=( --enable-dedicated )
-	else
-		myopts+=(
-			$(usex aplaymidi '--with-midi=/usr/bin/aplaymidi' '')
-			$(use_with truetype freetype)
-			$(use_with icu)
-			--with-sdl
-		)
-	fi
-	if use png || { use !dedicated && use truetype; } || use zlib ; then
-		myopts+=( --with-zlib )
-	else
-		myopts+=( --without-zlib )
-	fi
-
-	# configure is a hand-written bash-script, so econf will not work.
-	# It's all built as C++, upstream uses CFLAGS internally.
-	CC=$(tc-getCC) CXX=$(tc-getCXX) CFLAGS="" \
-	./configure ${myopts[@]} || die
+	cmake_src_prepare
 }
 
-src_compile() {
-	emake VERBOSE=1
+src_configure() {
+	local mycmakeargs=(
+		-DCMAKE_INSTALL_BINDIR=bin
+		-DCMAKE_INSTALL_DATADIR=share
+		-DOPTION_DEDICATED=$(usex dedicated)
+		-DOPTION_USE_ASSERTS=$(usex debug)
+		-DCMAKE_DISABLE_FIND_PACKAGE_Allegro=$(usex !allegro)
+		-DCMAKE_DISABLE_FIND_PACKAGE_Freetype=$(usex !truetype)
+		-DCMAKE_DISABLE_FIND_PACKAGE_Fontconfig=$(usex !truetype)
+		-DCMAKE_DISABLE_FIND_PACKAGE_Fluidsynth=$(usex !fluidsynth)
+		-DCMAKE_DISABLE_FIND_PACKAGE_ICU=$(usex !icu)
+		-DCMAKE_DISABLE_FIND_PACKAGE_Harfbuzz=$(usex !icu)
+		-DCMAKE_DISABLE_FIND_PACKAGE_LibLZMA=$(usex !lzma)
+		-DCMAKE_DISABLE_FIND_PACKAGE_LZO=$(usex !lzo)
+		-DCMAKE_DISABLE_FIND_PACKAGE_PNG=$(usex !png)
+		# N.B. regarding #807364 and #828984: CMAKE_DISABLE_FIND_PACKAGE_SDL is used only
+		# with USE="allegro -sdl" combination flags. There no other way to
+		# completely disable SDL1 support.
+		-DCMAKE_DISABLE_FIND_PACKAGE_SDL=ON
+		-DCMAKE_DISABLE_FIND_PACKAGE_SDL2=$(usex !sdl)
+		-DCMAKE_DISABLE_FIND_PACKAGE_SSE=$(usex !cpu_flags_x86_sse)
+		-DCMAKE_DISABLE_FIND_PACKAGE_ZLIB=$(usex !zlib)
+	)
+
+	cmake_src_configure
 }
 
 src_install() {
-	default
+	cmake_src_install
+
 	if use dedicated ; then
-		newinitd "${FILESDIR}"/${PN}.initd-r1 ${PN}
-		rm -rf "${ED}"/usr/share/{applications,icons,pixmaps} || die
+		newconfd "${FILESDIR}"/openttd.confd-r1 openttd
+		newinitd "${FILESDIR}"/openttd.initd-r3 openttd
 	fi
-	rm -f "${ED}"/usr/share/doc/${PF}/COPYING || die
 }
 
 pkg_postinst() {
 	xdg_pkg_postinst
 
-	if ! use lzo ; then
-		elog "OpenTTD was built without 'lzo' in USE. While 'lzo' is not"
-		elog "required, disabling it does mean that loading old savegames"
-		elog "or scenarios from ancient versions (~0.2) will fail."
+	if ! use openmedia ; then
 		elog
-	fi
-
-	if use dedicated ; then
-		ewarn "Warning: The init script will kill all running openttd"
-		ewarn "processes when triggered, including any running client sessions!"
-	else
-		if use aplaymidi ; then
-			elog "You have emerged with 'aplaymidi' for playing MIDI."
-			elog "This option is for those with a hardware midi device,"
-			elog "or who have set up ALSA to handle midi ports."
-			elog "You must set the environment variable ALSA_OUTPUT_PORTS."
-			elog "Available ports can be listed by using 'aplaymidi -l'."
-		else
-			if ! use timidity ; then
-				elog "OpenTTD was built with neither 'aplaymidi' nor 'timidity'"
-				elog "in USE. Music may or may not work in-game. If you happen"
-				elog "to have timidity++ installed, music will work so long"
-				elog "as it remains installed, but OpenTTD will not depend on it."
-			fi
-		fi
-		if ! use openmedia ; then
-			elog
-			elog "OpenTTD was compiled without the 'openmedia' USE flag."
-			elog
-			elog "In order to play, you must at least install:"
-			elog "games-misc/opengfx, and games-misc/opensfx, or copy the "
-			elog "following 6 files from a version of Transport Tycoon Deluxe"
-			elog "(windows or DOS) to ~/.openttd/data/ or"
-			elog "${GAMES_DATADIR}/${PN}/data/."
-			elog
-			elog "From the WINDOWS version you need: "
-			elog "sample.cat trg1r.grf trgcr.grf trghr.grf trgir.grf trgtr.grf"
-			elog "OR from the DOS version you need: "
-			elog "SAMPLE.CAT TRG1.GRF TRGC.GRF TRGH.GRF TRGI.GRF TRGT.GRF"
-			elog
-			elog "File names are case sensitive, but should work either with"
-			elog "all upper or all lower case names"
-			elog
-			elog "In addition, in-game music will be unavailable: for music,"
-			elog "install games-misc/openmsx, or use the in-game download"
-			elog "functionality to get a music set"
-			elog
-		fi
+		elog "OpenTTD was compiled without the 'openmedia' USE flag."
+		elog
+		elog "In order to play, you must at least install"
+		elog "games-misc/opengfx, and games-misc/opensfx, or copy the "
+		elog "following 6 files from a version of Transport Tycoon Deluxe"
+		elog "(Windows or DOS) to shared or personal location."
+		elog "See ${EROOT}/usr/share/doc/${PF}/directory_structure.md for more info."
+		elog
+		elog "From the Windows version you need: "
+		elog "sample.cat trg1r.grf trgcr.grf trghr.grf trgir.grf trgtr.grf"
+		elog "OR from the DOS version you need: "
+		elog "SAMPLE.CAT TRG1.GRF TRGC.GRF TRGH.GRF TRGI.GRF TRGT.GRF"
 	fi
 }

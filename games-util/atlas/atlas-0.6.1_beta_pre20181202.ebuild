@@ -1,4 +1,4 @@
-# Copyright 1999-2020 Gentoo Authors
+# Copyright 1999-2023 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
 EAPI=7
@@ -10,7 +10,7 @@ MY_PV=d4e5360f8273823205d9dc066547f5077ffc13e2
 MY_P="${MY_PN}-${MY_PV}"
 
 DESCRIPTION="Chart Program to use with Flightgear Flight Simulator"
-HOMEPAGE="http://atlas.sourceforge.net/"
+HOMEPAGE="https://atlas.sourceforge.net/"
 SRC_URI="https://dev.gentoo.org/~reavertm/${MY_P}.zip"
 
 LICENSE="GPL-2+"
@@ -21,6 +21,7 @@ COMMON_DEPEND="
 	media-libs/freeglut
 	media-libs/glew:0=
 	media-libs/libpng:0=
+	media-libs/plib
 	net-misc/curl
 	sys-libs/zlib
 	virtual/glu
@@ -29,7 +30,6 @@ COMMON_DEPEND="
 "
 DEPEND="${COMMON_DEPEND}
 	>=dev-games/simgear-3.0.0
-	media-libs/plib
 "
 RDEPEND="${COMMON_DEPEND}
 	>=games-simulation/flightgear-3.0.0

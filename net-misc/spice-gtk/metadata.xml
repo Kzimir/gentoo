@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE pkgmetadata SYSTEM "http://www.gentoo.org/dtd/metadata.dtd">
+<!DOCTYPE pkgmetadata SYSTEM "https://www.gentoo.org/dtd/metadata.dtd">
 <pkgmetadata>
 	<maintainer type="project">
 		<email>virtualization@gentoo.org</email>
@@ -15,4 +15,7 @@
 		<flag name="webdav">Support for folder-sharing between guest and client
 			using <pkg>net-libs/phodav</pkg></flag>
 	</use>
+	<upstream>
+		<remote-id type="freedesktop-gitlab">spice/spice-gtk</remote-id>
+	</upstream>
 </pkgmetadata>

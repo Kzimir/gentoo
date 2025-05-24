@@ -1,4 +1,4 @@
-# Copyright 1999-2020 Gentoo Authors
+# Copyright 1999-2024 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
 # @ECLASS: php-pear-r2.eclass
@@ -6,7 +6,7 @@
 # Gentoo PHP Team <php-bugs@gentoo.org>
 # @AUTHOR:
 # Author: Brian Evans <grknight@gentoo.org>
-# @SUPPORTED_EAPIS: 6 7
+# @SUPPORTED_EAPIS: 7 8
 # @BLURB: Provides means for an easy installation of PEAR packages.
 # @DESCRIPTION:
 # This eclass provides means for an easy installation of PEAR packages.
@@ -14,41 +14,41 @@
 # Note that this eclass doesn't handle dependencies of PEAR packages
 # on purpose; please use (R)DEPEND to define them correctly!
 
-EXPORT_FUNCTIONS src_install pkg_postinst pkg_postrm
+if [[ -z ${_PHP_PEAR_R2_ECLASS} ]]; then
+_PHP_PEAR_R2_ECLASS=1
 
-case "${EAPI:-0}" in
-	6|7)
-		;;
-	*)
-		die "Unsupported EAPI=${EAPI} for ${ECLASS}"
-		;;
+case ${EAPI} in
+	7|8) ;;
+	*) die "${ECLASS}: EAPI ${EAPI:-0} not supported" ;;
 esac
 
 RDEPEND=">=dev-php/pear-1.8.1"
+[[ ${EAPI} != 7 ]] && IDEPEND=">=dev-php/pear-1.8.1"
 
-# @ECLASS-VARIABLE: PHP_PEAR_PKG_NAME
+# @ECLASS_VARIABLE: PHP_PEAR_PKG_NAME
 # @DESCRIPTION:
 # Set this if the PEAR package name differs from ${PN/PEAR-/}
 # (generally shouldn't be the case).
-: ${PHP_PEAR_PKG_NAME:=${PN/PEAR-/}}
+: "${PHP_PEAR_PKG_NAME:=${PN/PEAR-/}}"
 
-# @ECLASS-VARIABLE: PEAR_PV
+# @ECLASS_VARIABLE: PEAR_PV
 # @DESCRIPTION:
 # Set in ebuild if the ${PV} breaks SRC_URI for alpha/beta/rc versions
-: ${PEAR_PV:=${PV}}
+: "${PEAR_PV:=${PV}}"
 
-# @ECLASS-VARIABLE: PEAR-P
+# @ECLASS_VARIABLE: PEAR-P
 # @INTERNAL
-# @DESCRIPTION: Combines PHP_PEAR_PKG_NAME and PEAR_PV
+# @DESCRIPTION:
+# Combines PHP_PEAR_PKG_NAME and PEAR_PV
 PEAR_P="${PHP_PEAR_PKG_NAME}-${PEAR_PV}"
 
-# @ECLASS-VARIABLE: PHP_PEAR_DOMAIN
+# @ECLASS_VARIABLE: PHP_PEAR_DOMAIN
 # @DESCRIPTION:
 # Set in ebuild to the domain name of the channel if not pear.php.net
 # When the domain is not pear.php.net, setting the SRC_URI is required
-: ${PHP_PEAR_DOMAIN:=pear.php.net}
+: "${PHP_PEAR_DOMAIN:=pear.php.net}"
 
-# @ECLASS-VARIABLE: PHP_PEAR_CHANNEL
+# @ECLASS_VARIABLE: PHP_PEAR_CHANNEL
 # @DEFAULT_UNSET
 # @DESCRIPTION:
 # Set in ebuild to the path of channel.xml file which is necessary for
@@ -60,7 +60,7 @@ if [[ "${PHP_PEAR_DOMAIN}" == "pear.php.net" ]] ; then
 	SRC_URI="https://pear.php.net/get/${PEAR_P}.tgz"
 fi
 
-: ${HOMEPAGE:=https://${PHP_PEAR_DOMAIN}/package/${PHP_PEAR_PKG_NAME}}
+: "${HOMEPAGE:=https://${PHP_PEAR_DOMAIN}/package/${PHP_PEAR_PKG_NAME}}"
 
 S="${WORKDIR}/${PEAR_P}"
 
@@ -100,20 +100,20 @@ php-pear-r2_src_install() {
 # Register package with the local PEAR database.
 php-pear-r2_pkg_postinst() {
 	# Add unknown channels
-	if [[ -f "${EROOT%/}/usr/share/php/.packagexml/${PEAR_P}-channel.xml" ]] ; then
-		"${EROOT%/}/usr/bin/peardev" channel-info "${PHP_PEAR_DOMAIN}" &> /dev/null
+	if [[ -f "${EROOT}/usr/share/php/.packagexml/${PEAR_P}-channel.xml" ]] ; then
+		"${EROOT}/usr/bin/peardev" channel-info "${PHP_PEAR_DOMAIN}" &> /dev/null
 		if [[ $? -ne 0 ]]; then
-			"${EROOT%/}/usr/bin/peardev" channel-add \
-				"${EROOT%/}/usr/share/php/.packagexml/${PEAR_P}-channel.xml" \
+			"${EROOT}/usr/bin/peardev" channel-add \
+				"${EROOT}/usr/share/php/.packagexml/${PEAR_P}-channel.xml" \
 				|| einfo "Ignore any errors about existing channels"
 		fi
 	fi
 
 	# Register the package from the package{,2}.xml file
 	# It is not critical to complete so only warn on failure
-	if [[ -f "${EROOT%/}/usr/share/php/.packagexml/${PEAR_P}.xml" ]] ; then
-		"${EROOT%/}/usr/bin/peardev" install -nrO --force \
-			"${EROOT%/}/usr/share/php/.packagexml/${PEAR_P}.xml" 2> /dev/null \
+	if [[ -f "${EROOT}/usr/share/php/.packagexml/${PEAR_P}.xml" ]] ; then
+		"${EROOT}/usr/bin/peardev" install -nrO --force \
+			"${EROOT}/usr/share/php/.packagexml/${PEAR_P}.xml" 2> /dev/null \
 			|| ewarn "Failed to insert package into local PEAR database"
 	fi
 }
@@ -123,5 +123,9 @@ php-pear-r2_pkg_postinst() {
 # Deregister package from the local PEAR database
 php-pear-r2_pkg_postrm() {
 	# Uninstall known dependency
-	"${EROOT%/}/usr/bin/peardev" uninstall -nrO "${PHP_PEAR_DOMAIN}/${PHP_PEAR_PKG_NAME}"
+	"${EROOT}/usr/bin/peardev" uninstall -nrO "${PHP_PEAR_DOMAIN}/${PHP_PEAR_PKG_NAME}"
 }
+
+fi
+
+EXPORT_FUNCTIONS src_install pkg_postinst pkg_postrm

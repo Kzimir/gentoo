@@ -1,17 +1,16 @@
-# Copyright 1999-2020 Gentoo Authors
+# Copyright 1999-2024 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
-EAPI=7
+EAPI=8
 
-inherit meson xdg-utils
+inherit meson xdg
 
 if [[ ${PV} == *9999 ]]; then
 	inherit git-r3
-	EGIT_REPO_URI="https://git.pwmt.org/pwmt/zathura-cb.git"
-	EGIT_BRANCH="develop"
+	EGIT_REPO_URI="https://github.com/pwmt/zathura-cb.git"
 else
-	KEYWORDS="~amd64 ~arm ~x86"
-	SRC_URI="https://pwmt.org/projects/zathura/plugins/download/${P}.tar.xz"
+	KEYWORDS="~amd64 ~arm ~riscv ~x86"
+	SRC_URI="https://pwmt.org/projects/zathura-cb/download/${P}.tar.xz"
 fi
 
 DESCRIPTION="Comic book plug-in for zathura with 7zip, rar, tar and zip support"
@@ -20,19 +19,18 @@ HOMEPAGE="https://pwmt.org/projects/zathura-cb/"
 LICENSE="ZLIB"
 SLOT="0"
 
-DEPEND=">=app-text/zathura-0.3.9
-	dev-libs/girara
-	dev-libs/glib:2
-	x11-libs/cairo"
+# Tests currently only validating data files
+RESTRICT="test"
 
-RDEPEND="${DEPEND}"
+RDEPEND="app-arch/libarchive:=
+	>=app-text/zathura-0.3.9
+	dev-libs/girara:=
+	dev-libs/glib:2
+	x11-libs/cairo
+	x11-libs/gdk-pixbuf:2[jpeg]
+	x11-libs/gtk+:3"
+
+DEPEND="${RDEPEND}
+	x11-base/xorg-proto"
 
 BDEPEND="virtual/pkgconfig"
-
-pkg_postinst() {
-	xdg_desktop_database_update
-}
-
-pkg_postrm() {
-	xdg_desktop_database_update
-}

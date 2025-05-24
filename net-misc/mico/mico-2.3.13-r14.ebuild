@@ -1,28 +1,21 @@
-# Copyright 1999-2020 Gentoo Authors
+# Copyright 1999-2024 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
 EAPI="7"
 
 inherit flag-o-matic toolchain-funcs autotools
 
-if [[ ${PV} == 9999 ]]; then
-	EDARCS_REPOSITORY="http://www.mico.org/mico-darcs-repository"
-	inherit darcs
-	SRC_URI=""
-	PATCHES="${WORKDIR}/${P}-gentoo.patch"
-else
-	SRC_URI="
-		http://www.mico.org/${P}.tar.gz
-		https://github.com/haubi/mico/compare/${PV}-raw...${PV}-gentoo-${PR}.patch -> ${P}-gentoo-${PR}.patch
-	"
-	PATCHES="${DISTDIR}/${P}-gentoo-${PR}.patch"
-	KEYWORDS="~alpha ~amd64 ~ppc ~sparc ~x86 ~amd64-linux ~x86-linux ~sparc-solaris ~x86-winnt"
-fi
-
 DESCRIPTION="A freely available and fully compliant implementation of the CORBA standard"
 HOMEPAGE="http://www.mico.org/"
+SRC_URI="
+	http://www.mico.org/${P}.tar.gz
+	https://github.com/ssi-schaefer/mico/compare/${PV}-raw...${PV}-gentoo-${PR}.patch -> ${P}-gentoo-${PR}.patch
+"
+S="${WORKDIR}"/${PN}
+
 LICENSE="GPL-2 LGPL-2"
 SLOT="0"
+KEYWORDS="~alpha ~amd64 ~ppc ~sparc ~x86 ~amd64-linux ~x86-linux"
 IUSE="gtk postgres ssl tcl threads X"
 RESTRICT="test" #298101
 
@@ -38,19 +31,13 @@ RDEPEND="
 "
 DEPEND="${RDEPEND}"
 BDEPEND="
-	>=sys-devel/flex-2.5.2
+	app-alternatives/lex
 	>=sys-devel/bison-1.22
 "
 
-if [[ ${PV} == 9999 ]]; then
-	src_unpack() {
-		wget -O ${P}-gentoo.patch "https://github.com/haubi/mico/compare/gentoo.patch" || die
-		darcs_src_unpack
-		default
-	}
-else
-	S=${WORKDIR}/${PN}
-fi
+PATCHES=(
+	"${DISTDIR}"/${P}-gentoo-${PR}.patch
+)
 
 src_prepare() {
 	default
@@ -98,18 +85,6 @@ src_configure() {
 	# Same for gtk after patch 013, searches for gtk release.
 	myconf $(use_with gtk gtk 2)
 
-	# http://www.mico.org/pipermail/mico-devel/2009-April/010285.html
-	[[ ${CHOST} == *-hpux* ]] && append-cppflags -D_XOPEN_SOURCE_EXTENDED
-
-	if [[ ${CHOST} == *-winnt* ]]; then
-		# disabling static libs, since ar on interix takes nearly
-		# one hour per library, thanks to mico's monster objects.
-		use threads &&
-		ewarn "disabling USE='threads', does not work on ${CHOST}"
-		myconf --disable-threads --disable-static --enable-final
-		append-flags -D__STDC__
-	fi
-
 	econf ${myconf}
 }
 
@@ -132,7 +107,7 @@ src_install() {
 	mv "${ED}"/usr/doc "${ED}"/usr/share/doc/${PF} || die
 
 	dodoc BUGS CHANGES* CONVERT README* ROADMAP TODO VERSION WTODO
-	[[ ${PV} == 9999 ]] || dodoc FAQ
+	dodoc FAQ
 }
 
 pkg_postinst() {

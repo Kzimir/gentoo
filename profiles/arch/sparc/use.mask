@@ -1,8 +1,43 @@
-# Copyright 1999-2020 Gentoo Authors
+# Copyright 1999-2025 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
 # Unmask the flag which corresponds to ARCH.
 -sparc
+
+# matoro <matoro_gentoo@matoro.tk> (2024-06-11)
+# Extensive use of unaligned access, no plans to fix, #636552
+# https://github.com/memcached/memcached/issues/902
+memcached
+
+# Ionen Wolkens <ionen@gentoo.org> (2024-01-27)
+# dev-qt/* is not keyworded here, and is mostly known buggy so that is
+# unlikely to change without real interest (e.g. bug #914033, #916867).
+qt5
+qt6
+
+# matoro <matoro_gentoo@matoro.tk> (2023-06-17)
+# media-libs/libheif is not keyworded here
+heif
+
+# matoro <matoro_gentoo@matoro.tk> (2023-03-07)
+# dev-db/mariadb fails tests disastrously.
+mariadb
+
+# Sam James <sam@gentoo.org> (2022-07-21)
+# Untested.
+ieee1394
+
+# Matt Turner <mattst88@gentoo.org> (2022-02-21)
+# app-crypt/tpm2-tss is not keyworded here
+tpm
+
+# Sam James <sam@gentoo.org> (2021-10-16)
+# media-libs/openexr doesn't work on BE.
+openexr
+
+# James Le Cuirot <chewi@gentoo.org> (2021-08-10)
+# media-video/pipewire is not keyworded. Bug #807616.
+pipewire
 
 # Matt Turner <mattst88@gentoo.org> (2020-07-01)
 # Unlikely.
@@ -16,10 +51,6 @@ allegro
 # dev-python/mercurial does not work on sparc due to deps.
 mercurial
 
-# Rolf Eike Beer <eike@sf-mail.de> (2020-04-21)
-# ruby2.4 will go away soon, avoid keywording older packages
-ruby_targets_ruby24
-
 # Rolf Eike Beer <eike@sf-mail.de> (2020-04-14)
 # media-libs/opencv not keyworded on sparc
 opencv
@@ -27,11 +58,6 @@ opencv
 # Rolf Eike Beer <eike@sf-mail.de> (2020-04-09)
 # gimp dependencies unusable because of unaligned accesses, bug #638172
 gimp
-
-# Mattéo Rossillol‑‑Laruelle <beatussum@protonmail.com> (2019‑08‑31)
-# Dependency not keyworded (dev-libs/libappindicator).
-appindicator
-ayatana
 
 # Sergei Trofimovich <slyfox@gentoo.org> (2018-12-12)
 # mongodb is not keyworded on sparc
@@ -41,7 +67,6 @@ mongodb
 # There is no luajit support on sparc. Bug #554376
 lua_single_target_luajit
 lua_targets_luajit
-luajit
 luajittex
 
 # David Seifert <soap@gentoo.org> (2017-07-08)
@@ -49,17 +74,9 @@ luajittex
 fortune
 physfs
 
-# James Le Cuirot <chewi@gentoo.org> (2017-06-29)
-# Unmask as this profile is big endian.
--big-endian
-
-# Andreas Sturmlechner <asturm@gentoo.org> (2017-02-25)
-# kwallet integration split from kde to distinct flag
-kwallet
-
 # Andrey Grozin <grozin@gentoo.org> (2014-06-25)
 # keyworded on sparc
--ecls
+-ecl
 -sbcl
 
 # Alexandre Rostovtsev <tetromino@gentoo.org> (2012-12-31)
@@ -77,7 +94,6 @@ nagios-game
 # Alexandre Rostovtsev <tetromino@gmail.com> (2011-10-28)
 # x11-misc/colord and app-admin/packagekit-base not tested. Bug #387959.
 colord
-packagekit
 
 # Raúl Porcel <armin76@gentoo.org>
 # Stuff that sigbuses
@@ -94,13 +110,9 @@ webkit
 mono
 
 # Gustavo Zacarias <gustavoz@gentoo.org>
-# It doesn't even build
-d
 # LCDproc masks see bug #148072
 lcd_devices_g15
 lcd_devices_ula200
-# Masking hardened, it isn't really supported, see bugs #144126 #78951
-hardened
 # AIO is b0rked for now....
 aio
 romio
@@ -119,10 +131,7 @@ apm
 battery
 dmi
 ibm
-jfs
 libedit
-pm-utils
-reiser4
 reiserfs
 xfs
 
@@ -130,7 +139,6 @@ xfs
 musepack
 topal
 lqr
-indi
 chm
 ebook
 capi
@@ -141,19 +149,17 @@ librtmp
 rtmp
 vpx
 kde
+kwallet
 wildmidi
 barcode
 xmms2
 gme
-aacplus
 soundcloud
 devil
 gts
-clang
 metalink
 tremor
 fdk
-tcmalloc
 jemalloc
 zmq
 
@@ -175,7 +181,6 @@ gps
 # Stuff we don't want
 ots
 frei0r
-prelude
 redis
 
 # USE-flags from differents origins
@@ -186,7 +191,6 @@ java
 lirc
 netbeans
 networkmanager
-pbs
 pcmcia
 rar
 valgrind
@@ -202,7 +206,6 @@ hdf5
 
 # Donnie Berkholz <dberkholz@gentoo.org> (2006-02-05)
 # Modular X: mask for architectures on which they aren't available
-video_cards_nv
 video_cards_nouveau
 
 # Matt Turner <mattst88@gentoo.org>
@@ -227,10 +230,6 @@ alsa_cards_wavefront
 # if a sub-profile want's it, it can -use.mask it
 multilib
 
-# Ben de Groot <yngwin@gentoo.org> (2009-02-11)
-# Both dev-qt/qtphonon and media-sound/phonon are unkeyworded
-phonon
-
 # nvidia toolkit for binary drivers
 cg
 
@@ -242,16 +241,8 @@ opencl
 unwind
 
 # Chí-Thanh Christopher Nguyễn <chithanh@gentoo.org> (2013-11-10)
-# sys-devel/llvm is not keyworded, bug #320221
+# llvm-core/llvm is not keyworded, bug #320221
 llvm
-
-# Pacho Ramos <pacho@gentoo.org> (2014-01-19)
-# Unmask systemd since it is keyworded here.
--systemd
 
 # sys-libs/libseccomp has not been ported to this arch yet #524148
 seccomp
-
-# Ben de Groot <yngwin@gentoo.org> (2015-02-01)
-# please remove when keyworded
-qt5

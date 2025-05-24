@@ -1,4 +1,4 @@
-# Copyright 1999-2020 Gentoo Authors
+# Copyright 1999-2022 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
 EAPI=7
@@ -11,9 +11,10 @@ SRC_URI="
 	mirror://debian/pool/main/x/${PN}/${PN}_${PV/_p/-}.debian.tar.xz
 "
 
+S=${WORKDIR}/${P/_p*}
 LICENSE="HPND"
 SLOT="0"
-KEYWORDS="~amd64 ~ppc ~ppc64 ~x86"
+KEYWORDS="amd64 ppc ppc64 x86"
 
 RDEPEND="
 	x11-libs/libX11
@@ -25,16 +26,18 @@ RDEPEND="
 "
 DEPEND="
 	${RDEPEND}
-	>=sys-apps/sed-4
 	x11-base/xorg-proto
-	x11-misc/imake
+"
+BDEPEND="
+	sys-devel/gcc
+	>=x11-misc/imake-1.0.8-r1
 "
 
 DOCS=( README defining.txt hierarchy.txt sgi-microsoft.txt )
 PATCHES=(
 	"${FILESDIR}"/${P/_p*}-Imakefile.patch
+	"${FILESDIR}"/${P}-clang16.patch
 )
-S=${WORKDIR}/${P/_p*}
 
 src_prepare() {
 	eapply $(
@@ -46,7 +49,8 @@ src_prepare() {
 }
 
 src_configure() {
-	xmkmf || die
+	CC="$(tc-getBUILD_CC)" LD="$(tc-getLD)" \
+		IMAKECPP="${IMAKECPP:-${CHOST}-gcc -E}" xmkmf || die
 	sed -i \
 		-e "s,all:: xkeycaps.\$(MANSUFFIX).html,all:: ,g" \
 		Makefile || die

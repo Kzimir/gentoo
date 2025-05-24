@@ -1,30 +1,39 @@
-# Copyright 1999-2020 Gentoo Authors
+# Copyright 1999-2024 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
-EAPI=5
+EAPI=7
 
-USE_RUBY="ruby24 ruby25 ruby26"
-
-inherit ruby-single
+USE_RUBY="ruby31 ruby32 ruby33"
+inherit edo ruby-single
 
 DESCRIPTION="Reformat XML documents to your custom style"
 SRC_URI="http://www.kitebird.com/software/${PN}/${P}.tar.gz"
 HOMEPAGE="http://www.kitebird.com/software/xmlformat/"
 
-SLOT="0"
 LICENSE="xmlformat"
+SLOT="0"
 KEYWORDS="~amd64 ~ppc ~x86 ~amd64-linux ~x86-linux ~ppc-macos"
+IUSE="doc ruby"
 
-DEPEND="ruby? ( ${RUBY_DEPS} )
-	!ruby? ( dev-lang/perl )"
-RDEPEND=${DEPEND}
-IUSE="ruby doc"
+DEPEND="
+	dev-lang/perl
+	ruby? ( ${RUBY_DEPS} )
+"
+RDEPEND="${DEPEND}"
+
+src_test() {
+	# Perl is always installed, so we may as well always test both.
+	if use ruby; then
+		nonfatal edo ./runtest all || die "runtest for ruby failed"
+	fi
+
+	nonfatal edo ./runtest -p all || die "runtest for perl failed"
+}
 
 src_install() {
 	dobin xmlformat.pl
 
-	if use ruby
-	then
+	if use ruby; then
 		dobin xmlformat.rb
 		dosym xmlformat.rb /usr/bin/xmlformat
 	else
@@ -33,19 +42,8 @@ src_install() {
 
 	dodoc BUGS ChangeLog README TODO
 
-	if use doc
-	then
+	if use doc; then
 		# APIs
-		insinto /usr/share/doc/${PF}
-		doins -r docs/*
-	fi
-}
-
-src_test() {
-	if use ruby
-	then
-		./runtest all || die "runtest for ruby failed."
-	else
-		./runtest -p all || die "runtest for perl failed."
+		dodoc -r docs/*
 	fi
 }

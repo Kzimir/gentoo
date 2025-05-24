@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE pkgmetadata SYSTEM "http://www.gentoo.org/dtd/metadata.dtd">
+<!DOCTYPE pkgmetadata SYSTEM "https://www.gentoo.org/dtd/metadata.dtd">
 <pkgmetadata>
 	<maintainer type="project">
 		<email>fonts@gentoo.org</email>
@@ -19,7 +19,4 @@
 		Gentium Plus now includes more extended Latin glyphs (Unicode 5.1),
 		archaic Greek symbols, and full extended Cyrillic script support.
 	</longdescription>
-	<use>
-		<flag name="compact">Also install more compact version of the font.</flag>
-	</use>
 </pkgmetadata>

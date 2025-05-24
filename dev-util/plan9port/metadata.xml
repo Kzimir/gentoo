@@ -1,10 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE pkgmetadata SYSTEM "http://www.gentoo.org/dtd/metadata.dtd">
+<!DOCTYPE pkgmetadata SYSTEM "https://www.gentoo.org/dtd/metadata.dtd">
 <pkgmetadata>
-	<maintainer type="person">
-		<email>blueness@gentoo.org</email>
-		<name>Anthony G. Basile</name>
-	</maintainer>
+	<!-- maintainer-needed -->
 	<longdescription>
 		Plan9Port is a set of Plan 9 utilities ported to the POSIX
 		environment - also know as Plan 9 from User Space.
@@ -12,4 +9,7 @@
 	<upstream>
 		<remote-id type="github">9fans/plan9port</remote-id>
 	</upstream>
+	<use>
+		<flag name="freefonts">Don't install BigelowHolmes fonts</flag>
+	</use>
 </pkgmetadata>

@@ -1,7 +1,7 @@
-# Copyright 2019-2020 Gentoo Authors
+# Copyright 2019-2025 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
-EAPI=7
+EAPI=8
 
 inherit meson
 
@@ -11,23 +11,37 @@ HOMEPAGE="https://github.com/WayfireWM/wayfire-plugins-extra"
 if [[ ${PV} == 9999 ]]; then
 	inherit git-r3
 	EGIT_REPO_URI="https://github.com/WayfireWM/wayfire-plugins-extra.git"
+	SLOT="0/0.10"
 else
-	SRC_URI="https://github.com/WayfireWM/wayfire-plugins-extra/archive/v${PV}.tar.gz -> ${P}.tar.gz"
-	KEYWORDS="~amd64 ~arm64 ~x86"
+	SRC_URI="https://github.com/WayfireWM/wayfire-plugins-extra/releases/download/v${PV}/${P}.tar.xz"
+	KEYWORDS="~amd64 ~arm64"
+	SLOT="0/$(ver_cut 1-2)"
 fi
 
 LICENSE="MIT"
-SLOT="0"
 
-DEPEND="
-	dev-cpp/glibmm
-	>=gui-libs/wlroots-0.11.0
-	>=gui-wm/wayfire-${PV%.*}
+# no tests
+RESTRICT="test"
+
+WAYFIRE_REVDEP="
+	dev-libs/glib:2
+	dev-libs/libsigc++:2
+	gui-libs/wf-config:=
+	gui-libs/wlroots:0.18
 	x11-libs/cairo
 "
-RDEPEND="${DEPEND}"
 
+DEPEND="
+	${WAYFIRE_REVDEP}
+	dev-cpp/glibmm:2
+	dev-cpp/nlohmann_json
+	dev-libs/libevdev
+	dev-libs/wayland
+	gui-wm/wayfire:0/0.10
+"
+RDEPEND="${DEPEND}"
 BDEPEND="
-	dev-libs/wayland-protocols
+	>=dev-libs/wayland-protocols-1.12
+	dev-util/wayland-scanner
 	virtual/pkgconfig
 "

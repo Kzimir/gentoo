@@ -1,13 +1,13 @@
-# Copyright 1999-2019 Gentoo Authors
+# Copyright 1999-2023 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
 EAPI=7
 
-inherit flag-o-matic
+inherit flag-o-matic toolchain-funcs
 
 DESCRIPTION="microwave CAD software"
-HOMEPAGE="https://wwwhome.cs.utwente.nl/~ptdeboer/ham/puff/"
-SRC_URI="https://wwwhome.cs.utwente.nl/~ptdeboer/ham/${PN}/${P}.tgz"
+HOMEPAGE="https://www.pa3fwm.nl/software/puff/"
+SRC_URI="https://www.pa3fwm.nl/software/${PN}/${P}.tgz"
 
 LICENSE="GPL-3"
 SLOT="0"
@@ -20,14 +20,14 @@ DEPEND="${RDEPEND}
 src_prepare() {
 	default
 	# fix lib path for X11 and dont ignore LDFLAGS
-	sed -i -e "s#lib\\\/#$(get_libdir)\\\/#" \
-		-e 's/CFLAGS/#CFLAGS/' \
-		-e 's/link.res pu/link.res $(LDFLAGS) pu/' Makefile || die
+	# respect CC and LD
+	eapply -p0 "${FILESDIR}"/${P}-Makefile.patch
+	eapply_user
 }
 
 src_compile() {
 	LDFLAGS="$(raw-ldflags)"
-	emake -j1
+	emake -j1 CC="$(tc-getCC)" LD="$(tc-getLD)"
 }
 
 src_install() {

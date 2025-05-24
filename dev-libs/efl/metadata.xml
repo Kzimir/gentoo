@@ -1,12 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE pkgmetadata SYSTEM "http://www.gentoo.org/dtd/metadata.dtd">
+<!DOCTYPE pkgmetadata SYSTEM "https://www.gentoo.org/dtd/metadata.dtd">
 <pkgmetadata>
   <maintainer type="person">
     <email>juippis@gentoo.org</email>
     <name>Joonas Niilola</name>
   </maintainer>
   <use>
-    <flag name="avif">Enable AVIF image loader</flag>
     <flag name="bmp">Enable WBMP image loader</flag>
     <flag name="dds">Enable DDS image loader</flag>
     <flag name="drm">Enable DRM engine</flag>
@@ -19,7 +18,6 @@
     <flag name="ibus">Enable Intelligent Input Bus</flag>
     <flag name="ico">Enable Ico image loader</flag>
     <flag name="json">Enable lottie animation support</flag>
-    <flag name="luajit">USE <pkg>dev-lang/luajit</pkg> instead of <pkg>dev-lang/lua</pkg></flag>
     <flag name="mono">Enable mono bindings</flag>
     <flag name="physics">Enable Bullet physics effects and support</flag>
     <flag name="pmaps">Enable PMAPS image loader</flag>

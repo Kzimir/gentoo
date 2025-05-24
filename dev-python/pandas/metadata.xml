@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE pkgmetadata SYSTEM "http://www.gentoo.org/dtd/metadata.dtd">
+<!DOCTYPE pkgmetadata SYSTEM "https://www.gentoo.org/dtd/metadata.dtd">
 <pkgmetadata>
   <maintainer type="project">
     <email>sci@gentoo.org</email>
@@ -14,7 +14,7 @@
   "labeled" data both easy and intuitive. It aims to be the
   fundamental high-level building block for doing practical, real
   world data analysis in Python. 
-</longdescription>
+  </longdescription>
   <use>
     <flag name="full-support">Pull all packages to give pandas full support</flag>
   </use>

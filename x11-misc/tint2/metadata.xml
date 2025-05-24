@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE pkgmetadata SYSTEM "http://www.gentoo.org/dtd/metadata.dtd">
+<!DOCTYPE pkgmetadata SYSTEM "https://www.gentoo.org/dtd/metadata.dtd">
 <pkgmetadata>
 	<maintainer type="person">
 		<email>amynka@gentoo.org</email>
@@ -7,6 +7,7 @@
 	<use>
 		<flag name="battery">Enable battery status plugin</flag>
 		<flag name="tint2conf">Build/Install tint2conf as well</flag>
+		<flag name="sanitize">Enable ASAN</flag>
 	</use>
 	<longdescription lang="en">tint2 is a simple panel/taskbar intentionally made for 
 		<pkg>x11-wm/openbox</pkg>3, but should also work with other window managers.

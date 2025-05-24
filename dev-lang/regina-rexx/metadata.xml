@@ -1,8 +1,15 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE pkgmetadata SYSTEM "http://www.gentoo.org/dtd/metadata.dtd">
+<!DOCTYPE pkgmetadata SYSTEM "https://www.gentoo.org/dtd/metadata.dtd">
 <pkgmetadata>
-	<!-- maintainer-needed -->
-	<longdescription lang="en">
+	<maintainer type="person" proxied="yes">
+		<email>matoro_gentoo@matoro.tk</email>
+		<name>Matoro Mahri</name>
+	</maintainer>
+	<maintainer type="project" proxied="proxy">
+		<email>proxy-maint@gentoo.org</email>
+		<name>Proxy Maintainers</name>
+	</maintainer>
+	<longdescription>
 		Regina is a Rexx interpreter. Rexx is a programming language that was
 		designed to be easy to use for inexperienced programmers yet powerful
 		enough for experienced users. It is also a language ideally suited as a

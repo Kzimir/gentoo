@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE pkgmetadata SYSTEM "http://www.gentoo.org/dtd/metadata.dtd">
+<!DOCTYPE pkgmetadata SYSTEM "https://www.gentoo.org/dtd/metadata.dtd">
 <pkgmetadata>
 	<maintainer type="project">
 		<email>cjk@gentoo.org</email>
@@ -13,4 +13,7 @@
 		<flag name="libotf">Use <pkg>dev-libs/libotf</pkg> to handle OpenType fonts</flag>
 		<flag name="libxml2">Use <pkg>dev-libs/libxml2</pkg> to parse XML</flag>
 	</use>
+	<upstream>
+		<remote-id type="savannah-nongnu">m17n</remote-id>
+	</upstream>
 </pkgmetadata>

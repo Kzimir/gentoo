@@ -1,23 +1,23 @@
-# Copyright 1999-2019 Gentoo Authors
+# Copyright 1999-2025 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
-EAPI=7
+EAPI=8
 
-CMAKE_ECLASS=cmake
 MY_PN=${PN}2
 MY_P=${MY_PN}-${PV}
+PATCHSET=${PN}-patchset
 inherit cmake-multilib
 
 DESCRIPTION="Official GTK+:2 port of KDE's Oxygen widget style"
 HOMEPAGE="https://store.kde.org/p/1005553/"
-SRC_URI="mirror://kde/stable/${MY_PN}/${PV}/src/${MY_P}.tar.bz2"
+SRC_URI="mirror://kde/stable/${MY_PN}/${PV}/src/${MY_P}.tar.bz2
+	https://dev.gentoo.org/~asturm/distfiles/${PATCHSET}.tar.xz"
+S="${WORKDIR}/${MY_P}"
 
 LICENSE="LGPL-2.1"
-KEYWORDS="amd64 ~ppc x86"
 SLOT="2"
-IUSE="debug"
+KEYWORDS="amd64 ~ppc x86"
 
-BDEPEND="virtual/pkgconfig"
 DEPEND="
 	dev-libs/dbus-glib[${MULTILIB_USEDEP}]
 	dev-libs/glib:2[${MULTILIB_USEDEP}]
@@ -30,17 +30,9 @@ DEPEND="
 RDEPEND="${DEPEND}
 	!x11-themes/oxygen-gtk:0
 "
+BDEPEND="virtual/pkgconfig"
 
-PATCHES=(
-	"${FILESDIR}/${P}-xul.patch"
-	"${FILESDIR}/${P}-eclipse.patch"
-	"${FILESDIR}/${P}-qtpaths.patch"
-	"${FILESDIR}/${P}-warning.patch"
-	"${FILESDIR}/${P}-demo-optional.patch"
-	"${FILESDIR}/${P}-tabstyle.patch"
-)
-
-S=${WORKDIR}/${MY_P}
+PATCHES=( "${WORKDIR}/${PATCHSET}/${PV}" ) # bug 955107
 
 multilib_src_configure() {
 	if ! multilib_is_native_abi; then

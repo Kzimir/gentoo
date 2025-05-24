@@ -1,8 +1,8 @@
-# Copyright 1999-2019 Gentoo Authors
+# Copyright 1999-2025 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
 EAPI=7
-inherit eutils autotools
+inherit autotools
 
 DESCRIPTION="Dymo SDK for LabelWriter/LabelManager printers"
 HOMEPAGE="https://newellrubbermaid.secure.force.com/dymopkb"
@@ -33,7 +33,6 @@ DOCS=( AUTHORS README ChangeLog docs/SAMPLES )
 
 src_prepare() {
 	default
-	eapply_user
 	eautoreconf
 }
 

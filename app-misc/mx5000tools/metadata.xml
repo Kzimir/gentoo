@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE pkgmetadata SYSTEM "http://www.gentoo.org/dtd/metadata.dtd">
+<!DOCTYPE pkgmetadata SYSTEM "https://www.gentoo.org/dtd/metadata.dtd">
 <pkgmetadata>
 	<maintainer type="person">
 		<email>conikost@gentoo.org</email>
@@ -11,4 +11,7 @@
 		These tools make it possible to control what is displayed on the LCD and to use some
 		of the keys that are not recognized by the stock Linux HID driver.
 	</longdescription>
+	<upstream>
+		<remote-id type="github">jwrdegoede/mx5000tools</remote-id>
+	</upstream>
 </pkgmetadata>

@@ -1,11 +1,12 @@
-# Copyright 1999-2021 Gentoo Authors
+# Copyright 1999-2025 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
-EAPI="7"
+EAPI=8
 
-inherit flag-o-matic libtool perl-functions toolchain-funcs multilib
+QA_PKGCONFIG_VERSION=$(ver_cut 1-3)
+inherit autotools flag-o-matic perl-functions toolchain-funcs
 
-if [[ ${PV} == "9999" ]] ; then
+if [[ ${PV} == 9999 ]] ; then
 	EGIT_REPO_URI="https://github.com/ImageMagick/ImageMagick.git"
 	inherit git-r3
 	MY_P="imagemagick-9999"
@@ -13,27 +14,31 @@ else
 	MY_PV="$(ver_rs 3 '-')"
 	MY_P="ImageMagick-${MY_PV}"
 	SRC_URI="mirror://imagemagick/${MY_P}.tar.xz"
-	KEYWORDS="~alpha ~amd64 ~arm ~arm64 ~hppa ~ia64 ~mips ~ppc ~ppc64 ~s390 ~sparc ~x86 ~amd64-linux ~x86-linux ~ppc-macos ~x64-macos ~sparc-solaris ~x64-solaris ~x86-solaris"
+	KEYWORDS="~alpha ~amd64 ~arm ~arm64 ~hppa ~loong ~m68k ~mips ~ppc ~ppc64 ~riscv ~s390 ~sparc ~x86 ~amd64-linux ~x86-linux ~arm64-macos ~ppc-macos ~x64-macos ~x64-solaris"
 fi
 
+S="${WORKDIR}/${MY_P}"
+
 DESCRIPTION="A collection of tools and libraries for many image formats"
-HOMEPAGE="https://www.imagemagick.org/"
+HOMEPAGE="https://imagemagick.org/index.php"
 
 LICENSE="imagemagick"
-SLOT="0/7.0.10-37"
-IUSE="bzip2 corefonts +cxx djvu fftw fontconfig fpx graphviz hdri heif jbig jpeg jpeg2k lcms lqr lzma opencl openexr openmp pango perl png postscript q32 q8 raw static-libs svg test tiff truetype webp wmf X xml zlib"
-RESTRICT="!test? ( test )"
+# Please check this on bumps, SONAME is often not updated! Use abidiff on old/new.
+# If ABI is broken, change the bit after the '-'.
+SLOT="0/$(ver_cut 1-3)-18"
+IUSE="bzip2 corefonts +cxx djvu fftw fontconfig fpx graphviz hardened hdri heif jbig jpeg jpeg2k jpegxl lcms lqr lzma opencl openexr openmp pango perl +png postscript q32 q8 raw static-libs svg test tiff truetype webp wmf X xml zip zlib"
 
-REQUIRED_USE="corefonts? ( truetype )
+REQUIRED_USE="
+	corefonts? ( truetype )
 	svg? ( xml )
-	test? ( corefonts )"
+	test? ( corefonts )
+"
 
 RESTRICT="!test? ( test )"
-
-BDEPEND="virtual/pkgconfig"
 
 RDEPEND="
-	dev-libs/libltdl:0
+	!media-gfx/graphicsmagick[imagemagick]
+	dev-libs/libltdl
 	bzip2? ( app-arch/bzip2 )
 	corefonts? ( media-fonts/corefonts )
 	djvu? ( app-text/djvu )
@@ -41,80 +46,85 @@ RDEPEND="
 	fontconfig? ( media-libs/fontconfig )
 	fpx? ( >=media-libs/libfpx-1.3.0-r1 )
 	graphviz? ( media-gfx/graphviz )
-	heif? ( media-libs/libheif:= )
+	heif? ( media-libs/libheif:=[x265] )
 	jbig? ( >=media-libs/jbigkit-2:= )
-	jpeg? ( virtual/jpeg:0 )
+	jpeg? ( media-libs/libjpeg-turbo:= )
 	jpeg2k? ( >=media-libs/openjpeg-2.1.0:2 )
+	jpegxl? ( >=media-libs/libjxl-0.6:= )
 	lcms? ( media-libs/lcms:2= )
 	lqr? ( media-libs/liblqr )
 	opencl? ( virtual/opencl )
 	openexr? ( media-libs/openexr:0= )
 	pango? ( x11-libs/pango )
-	perl? ( >=dev-lang/perl-5.8.8:0= )
-	png? ( media-libs/libpng:0= )
-	postscript? ( app-text/ghostscript-gpl )
+	perl? ( >=dev-lang/perl-5.8.8:= )
+	png? ( media-libs/libpng:= )
+	postscript? ( app-text/ghostscript-gpl:= )
 	raw? ( media-libs/libraw:= )
 	svg? (
 		gnome-base/librsvg
 		media-gfx/potrace
-		)
-	tiff? ( media-libs/tiff:0= )
+	)
+	tiff? ( media-libs/tiff:= )
 	truetype? (
 		media-fonts/urw-fonts
 		>=media-libs/freetype-2
-		)
-	webp? ( media-libs/libwebp:0= )
+	)
+	webp? ( media-libs/libwebp:= )
 	wmf? ( media-libs/libwmf )
 	X? (
 		x11-libs/libICE
 		x11-libs/libSM
 		x11-libs/libXext
 		x11-libs/libXt
-		)
+	)
 	xml? ( dev-libs/libxml2:= )
 	lzma? ( app-arch/xz-utils )
-	zlib? ( sys-libs/zlib:= )"
+	zip? ( dev-libs/libzip:= )
+	zlib? ( sys-libs/zlib:= )
+"
+DEPEND="
+	${RDEPEND}
+	X? ( x11-base/xorg-proto )
+"
+BDEPEND="virtual/pkgconfig"
 
-DEPEND="${RDEPEND}
-	!media-gfx/graphicsmagick[imagemagick]
-	X? ( x11-base/xorg-proto )"
+PATCHES=(
+	"${FILESDIR}/${PN}-9999-nocputuning.patch"
+)
 
-S="${WORKDIR}/${MY_P}"
+pkg_pretend() {
+	[[ ${MERGE_TYPE} != binary ]] && use openmp && tc-check-openmp
+}
+
+pkg_setup() {
+	[[ ${MERGE_TYPE} != binary ]] && use openmp && tc-check-openmp
+}
 
 src_prepare() {
 	default
 
-	# Apply hardening #664236
-	cp "${FILESDIR}"/policy-hardening.snippet "${S}" || die
-	sed -i -e '/^<policymap>$/ {
-			r policy-hardening.snippet
-			d
-		}' \
-		config/policy.xml || \
-		die "Failed to apply hardening of policy.xml"
-	einfo "policy.xml hardened"
+	#elibtoolize # for Darwin modules
+	eautoreconf
 
-	elibtoolize # for Darwin modules
-
-	# For testsuite, see https://bugs.gentoo.org/show_bug.cgi?id=500580#c3
+	# For testsuite, see bug #500580#c3
 	local ati_cards mesa_cards nvidia_cards render_cards
 	shopt -s nullglob
-	ati_cards=$(echo -n /dev/ati/card* | sed 's/ /:/g')
-	if test -n "${ati_cards}"; then
-		addpredict "${ati_cards}"
-	fi
-	mesa_cards=$(echo -n /dev/dri/card* | sed 's/ /:/g')
-	if test -n "${mesa_cards}"; then
-		addpredict "${mesa_cards}"
-	fi
-	nvidia_cards=$(echo -n /dev/nvidia* | sed 's/ /:/g')
-	if test -n "${nvidia_cards}"; then
-		addpredict "${nvidia_cards}"
-	fi
-	render_cards=$(echo -n /dev/dri/renderD128* | sed 's/ /:/g')
-	if test -n "${render_cards}"; then
-		addpredict "${render_cards}"
-	fi
+	ati_cards=$(echo -n /dev/ati/card*)
+	for card in ${ati_cards[@]} ; do
+		addpredict "${card}"
+	done
+	mesa_cards=$(echo -n /dev/dri/card*)
+	for card in ${mesa_cards[@]} ; do
+		addpredict "${card}"
+	done
+	nvidia_cards=$(echo -n /dev/nvidia*)
+	for card in ${nvidia_cards[@]} ; do
+		addpredict "${card}"
+	done
+	render_cards=$(echo -n /dev/dri/renderD128*)
+	for card in ${render_cards[@]} ; do
+		addpredict "${card}"
+	done
 	shopt -u nullglob
 	addpredict /dev/nvidiactl
 }
@@ -124,17 +134,18 @@ src_configure() {
 	use q8 && depth=8
 	use q32 && depth=32
 
-	local openmp=disable
-	use openmp && { tc-has-openmp && openmp=enable; }
-
 	use perl && perl_check_env
 
 	[[ ${CHOST} == *-solaris* ]] && append-ldflags -lnsl -lsocket
+
+	# Workaround for bug #941208 (gcc PR117100)
+	tc-is-gcc && [[ $(gcc-major-version) == 13 ]] && append-flags -fno-unswitch-loops
 
 	local myeconfargs=(
 		$(use_enable static-libs static)
 		$(use_enable hdri)
 		$(use_enable opencl)
+		$(use_enable openmp)
 		--with-threads
 		--with-modules
 		--with-quantum-depth=${depth}
@@ -144,8 +155,10 @@ src_configure() {
 		--with-gs-font-dir="${EPREFIX}"/usr/share/fonts/urw-fonts
 		$(use_with bzip2 bzlib)
 		$(use_with X x)
+		$(use_with zip)
 		$(use_with zlib)
 		--without-autotrace
+		--with-uhdr
 		$(use_with postscript dps)
 		$(use_with djvu)
 		--with-dejavu-font-dir="${EPREFIX}"/usr/share/fonts/dejavu
@@ -159,7 +172,7 @@ src_configure() {
 		$(use_with jbig)
 		$(use_with jpeg)
 		$(use_with jpeg2k openjp2)
-		--without-jxl
+		$(use_with jpegxl jxl)
 		$(use_with lcms)
 		$(use_with lqr)
 		$(use_with lzma)
@@ -173,14 +186,21 @@ src_configure() {
 		$(use_with corefonts windows-font-dir "${EPREFIX}"/usr/share/fonts/corefonts)
 		$(use_with wmf)
 		$(use_with xml)
-		--${openmp}-openmp
-		--with-gcc-arch=no-automagic
+
+		# Default upstream (as of 6.9.12.96/7.1.1.18 anyway) is open
+		# For now, let's make USE=hardened do 'limited', and have USE=-hardened
+		# reflect the upstream default of 'open'.
+		#
+		# We might change it to 'secure' and 'limited' at some point.
+		# See also bug #716674.
+		--with-security-policy=$(usex hardened limited open)
 	)
-	CONFIG_SHELL=$(type -P bash) econf "${myeconfargs[@]}"
+
+	CONFIG_SHELL="${BROOT}"/bin/bash econf "${myeconfargs[@]}"
 }
 
 src_test() {
-	# Install default (unrestricted) policy in $HOME for test suite #664238
+	# Install default (unrestricted) policy in $HOME for test suite, bug #664238
 	local _im_local_config_home="${HOME}/.config/ImageMagick"
 	mkdir -p "${_im_local_config_home}" || \
 		die "Failed to create IM config dir in '${_im_local_config_home}'"
@@ -188,7 +208,7 @@ src_test() {
 		die "Failed to install default blank policy.xml in '${_im_local_config_home}'"
 
 	local im_command= IM_COMMANDS=()
-	if [[ ${PV} == "9999" ]] ; then
+	if [[ ${PV} == 9999 ]] ; then
 		IM_COMMANDS+=( "magick -version" ) # Show version we are using -- cannot verify because of live ebuild
 	else
 		IM_COMMANDS+=( "magick -version | grep -q -- \"${MY_PV}\"" ) # Verify that we are using version we just built
@@ -210,8 +230,7 @@ src_install() {
 		DOCUMENTATION_PATH="${EPREFIX}"/usr/share/doc/${PF}/html \
 		install
 
-	rm -f "${ED}"/usr/share/doc/${PF}/html/{ChangeLog,LICENSE,NEWS.txt}
-	dodoc {AUTHORS,README}.txt ChangeLog
+	einstalldocs
 
 	if use perl; then
 		find "${ED}" -type f -name perllocal.pod -exec rm -f {} +
@@ -220,7 +239,7 @@ src_install() {
 
 	find "${ED}" -name '*.la' -exec sed -i -e "/^dependency_libs/s:=.*:='':" {} +
 	# .la files in parent are not needed, keep plugin .la files
-	rm "${ED}"/usr/$(get_libdir)/*.la || die
+	find "${ED}"/usr/$(get_libdir)/ -maxdepth 1 -name "*.la" -delete || die
 
 	if use opencl; then
 		cat <<-EOF > "${T}"/99${PN}
@@ -233,36 +252,4 @@ src_install() {
 
 	insinto /usr/share/${PN}
 	doins config/*icm
-}
-
-pkg_postinst() {
-	local _show_policy_xml_notice=
-
-	if [[ -z "${REPLACING_VERSIONS}" ]]; then
-		# This is a new installation
-		_show_policy_xml_notice=yes
-	else
-		local v
-		for v in ${REPLACING_VERSIONS}; do
-			if ! ver_test "${v}" -gt "7.0.8.10-r2"; then
-				# This is an upgrade
-				_show_policy_xml_notice=yes
-
-				# Show this elog only once
-				break
-			fi
-		done
-	fi
-
-	if [[ -n "${_show_policy_xml_notice}" ]]; then
-		elog "For security reasons, a policy.xml file was installed in /etc/ImageMagick-7"
-		elog "which will prevent the usage of the following coders by default:"
-		elog ""
-		elog "  - PS"
-		elog "  - PS2"
-		elog "  - PS3"
-		elog "  - EPS"
-		elog "  - PDF"
-		elog "  - XPS"
-	fi
 }

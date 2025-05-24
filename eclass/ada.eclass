@@ -1,4 +1,4 @@
-# Copyright 2019 Gentoo Authors
+# Copyright 2019-2025 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
 # @ECLASS: ada.eclass
@@ -6,7 +6,7 @@
 # Ada team <ada@gentoo.org>
 # @AUTHOR:
 # Tupone Alfredo <tupone@gentoo.org>
-# @SUPPORTED_EAPIS: 6 7
+# @SUPPORTED_EAPIS: 7 8
 # @BLURB: An eclass for Ada packages
 # @DESCRIPTION:
 # This eclass set the IUSE and REQUIRED_USE to request the ADA_TARGET
@@ -23,21 +23,15 @@
 #
 # Mostly copied from python-single-r1.eclass
 
-case "${EAPI:-0}" in
-	0|1|2|3|4|5)
-		die "Unsupported EAPI=${EAPI:-0} (too old) for ${ECLASS}"
-		;;
-	6|7)
-		# EAPI=5 is required for sane USE_EXPAND dependencies
-		;;
-	*)
-		die "Unsupported EAPI=${EAPI} (unknown) for ${ECLASS}"
-		;;
+case ${EAPI} in
+	7|8) ;;
+	*) die "${ECLASS}: EAPI ${EAPI:-0} not supported" ;;
 esac
 
-EXPORT_FUNCTIONS pkg_setup
+if [[ -z ${_ADA_ECLASS} ]]; then
+_ADA_ECLASS=1
 
-# @ECLASS-VARIABLE: ADA_DEPS
+# @ECLASS_VARIABLE: ADA_DEPS
 # @OUTPUT_VARIABLE
 # @DESCRIPTION:
 # This is an eclass-generated Ada dependency string for all
@@ -52,16 +46,58 @@ EXPORT_FUNCTIONS pkg_setup
 # DEPEND="${RDEPEND}"
 # @CODE
 #
+# Example value:
+# @CODE
+# ada_target_gcc_12? ( sys-devel/gcc:12[ada] )
+# ada_target_gcc_13? ( sys-devel/gcc:13[ada] )
+# @CODE
 
-# @ECLASS-VARIABLE: _ADA_ALL_IMPLS
+# @ECLASS_VARIABLE: _ADA_ALL_IMPLS
 # @INTERNAL
 # @DESCRIPTION:
 # All supported Ada implementations, most preferred last.
 _ADA_ALL_IMPLS=(
-	gnat_2016 gnat_2017 gnat_2018 gnat_2019
+	gcc_12 gcc_13 gcc_14 gcc_15
 )
 readonly _ADA_ALL_IMPLS
 
+# @ECLASS_VARIABLE: ADA_REQUIRED_USE
+# @OUTPUT_VARIABLE
+# @DESCRIPTION:
+# This is an eclass-generated required-use expression which ensures
+# that exactly one ADA_TARGET value has been enabled.
+#
+# This expression should be utilized in an ebuild by including it in
+# REQUIRED_USE, optionally behind a use flag.
+#
+# Example use:
+# @CODE
+# REQUIRED_USE="ada? ( ${ADA_REQUIRED_USE} )"
+# @CODE
+#
+# Example value:
+# @CODE
+# ^^ ( ada_target_gcc_12 ada_target_gcc_13 )
+# @CODE
+
+# @ECLASS_VARIABLE: ADA_USEDEP
+# @OUTPUT_VARIABLE
+# @DESCRIPTION:
+# This is a placeholder variable,
+# in order to depend on ada packages built for the same ada
+# implementations.
+#
+# Example use:
+# @CODE
+# RDEPEND="$(ada_gen_cond_dep '
+#     dev-ada/foo[${ADA_USEDEP}]
+#   ')"
+# @CODE
+#
+# Example value:
+# @CODE
+# ada_targets_gcc_12(-)
+# @CODE
 
 # @FUNCTION: _ada_impl_supported
 # @USAGE: <impl>
@@ -72,9 +108,9 @@ readonly _ADA_ALL_IMPLS
 #
 # Returns 0 if the implementation is valid and supported. If it is
 # unsupported, returns 1 -- and the caller should ignore the entry.
-# If it is invalid, dies with an appopriate error messages.
+# If it is invalid, dies with an appropriate error message.
 _ada_impl_supported() {
-	debug-print-function ${FUNCNAME} "${@}"
+	debug-print-function ${FUNCNAME} "$@"
 
 	[[ ${#} -eq 1 ]] || die "${FUNCNAME}: takes exactly 1 argument (impl)."
 
@@ -83,7 +119,7 @@ _ada_impl_supported() {
 	# keep in sync with _ADA_ALL_IMPLS!
 	# (not using that list because inline patterns shall be faster)
 	case "${impl}" in
-		gnat_201[6789])
+		gcc_12|gcc_13|gcc_14|gcc_15)
 			return 0
 			;;
 		*)
@@ -172,12 +208,12 @@ _ada_set_impls() {
 # They are described more completely in the eclass
 # variable documentation.
 ada_export() {
-	debug-print-function ${FUNCNAME} "${@}"
+	debug-print-function ${FUNCNAME} "$@"
 
 	local impl var
 
 	case "${1}" in
-		gnat_201[6789])
+		gcc_12|gcc_13|gcc_14|gcc_15)
 			impl=${1}
 			shift
 			;;
@@ -191,21 +227,27 @@ ada_export() {
 	debug-print "${FUNCNAME}: implementation: ${impl}"
 
 	local gcc_pv
+	local slot
 	case "${impl}" in
-		gnat_2016)
-			gcc_pv=4.9.4
+		gcc_12)
+			gcc_pv=12
+			slot=12
 			;;
-		gnat_2017)
-			gcc_pv=6.3.0
+		gcc_13)
+			gcc_pv=13
+			slot=13
 			;;
-		gnat_2018)
-			gcc_pv=7.3.1
+		gcc_14)
+			gcc_pv=14
+			slot=14
 			;;
-		gnat_2019)
-			gcc_pv=8.3.1
+		gcc_15)
+			gcc_pv=15
+			slot=15
 			;;
 		*)
 			gcc_pv="9.9.9"
+			slot=9.9.9
 			;;
 	esac
 
@@ -223,6 +265,10 @@ ada_export() {
 				export GCC_PV=${gcc_pv}
 				debug-print "${FUNCNAME}: GCC_PV = ${GCC_PV}"
 				;;
+			GCCPV)
+				export GCCPV=${gcc_pv}
+				debug-print "${FUNCNAME}: GCCPV = ${GCC_PV}"
+				;;
 			GNAT)
 				export GNAT=${EPREFIX}/usr/bin/gnat-${gcc_pv}
 				debug-print "${FUNCNAME}: GNAT = ${GNAT}"
@@ -232,7 +278,7 @@ ada_export() {
 				debug-print "${FUNCNAME}: GNATBIND = ${GNATBIND}"
 				;;
 			GNATMAKE)
-				export GNATMAKE=${EPREFIX}/usr/bin/gnatmake-${gcc_pv}
+				export GNATMAKE=${EPREFIX}/usr/bin/${CHOST}-gnatmake-${gcc_pv}
 				debug-print "${FUNCNAME}: GNATMAKE = ${GNATMAKE}"
 				;;
 			GNATLS)
@@ -248,7 +294,14 @@ ada_export() {
 				debug-print "${FUNCNAME}: GNATCHOP = ${GNATCHOP}"
 				;;
 			ADA_PKG_DEP)
-				ADA_PKG_DEP="dev-lang/gnat-gpl:${gcc_pv}"
+				case "${impl}" in
+					gcc_12|gcc_13|gcc_14|gcc_15)
+						ADA_PKG_DEP="sys-devel/gcc:${slot}[ada]"
+						;;
+					*)
+						ADA_PKG_DEP="=sys-devel/gcc-${gcc_pv}*[ada]"
+						;;
+				esac
 
 				# use-dep
 				if [[ ${ADA_REQ_USE} ]]; then
@@ -270,7 +323,7 @@ _ada_single_set_globals() {
 
 	local flags=( "${_ADA_SUPPORTED_IMPLS[@]/#/ada_target_}" )
 	local unflags=( "${_ADA_UNSUPPORTED_IMPLS[@]/#/-ada_target_}" )
-	local allflags=( ${flags[@]} ${unflags[@]} )
+	local allflags=( "${_ADA_ALL_IMPLS[@]/#/ada_target_}" )
 
 	local optflags=${flags[@]/%/(-)?}
 
@@ -344,7 +397,7 @@ unset -f _ada_single_set_globals
 # setup will be done. If wrapper update is requested, the directory
 # shall be removed first.
 ada_wrapper_setup() {
-	debug-print-function ${FUNCNAME} "${@}"
+	debug-print-function ${FUNCNAME} "$@"
 
 	local workdir=${1:-${T}/${EADA}}
 	local impl=${2:-${EADA}}
@@ -410,14 +463,14 @@ ada_wrapper_setup() {
 # Determine what the selected Ada implementation is and set
 # the Ada build environment up for it.
 ada_setup() {
-	debug-print-function ${FUNCNAME} "${@}"
+	debug-print-function ${FUNCNAME} "$@"
 
 	unset EADA
 
 	if [[ ${#_ADA_SUPPORTED_IMPLS[@]} -eq 1 ]]; then
 		if use "ada_target_${_ADA_SUPPORTED_IMPLS[0]}"; then
 			# Only one supported implementation, enable it explicitly
-			ada_export "${_ADA_SUPPORTED_IMPLS[0]}" EADA GCC_PV GNAT GNATBIND GNATLS GNATMAKE
+			ada_export "${_ADA_SUPPORTED_IMPLS[0]}" EADA GCCPV GCC_PV GNAT GNATBIND GNATLS GNATMAKE
 			ada_wrapper_setup
 		fi
 	else
@@ -433,7 +486,7 @@ ada_setup() {
 					die "More than one implementation in ADA_TARGET."
 				fi
 
-				ada_export "${impl}" EADA GCC_PV GNAT GNATBIND GNATLS GNATMAKE
+				ada_export "${impl}" EADA GCCPV GCC_PV GNAT GNATBIND GNATLS GNATMAKE
 				ada_wrapper_setup
 			fi
 		done
@@ -458,7 +511,11 @@ ada_setup() {
 # @DESCRIPTION:
 # Runs ada_setup.
 ada_pkg_setup() {
-	debug-print-function ${FUNCNAME} "${@}"
+	debug-print-function ${FUNCNAME} "$@"
 
 	[[ ${MERGE_TYPE} != binary ]] && ada_setup
 }
+
+fi
+
+EXPORT_FUNCTIONS pkg_setup

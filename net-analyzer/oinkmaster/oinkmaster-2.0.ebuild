@@ -1,12 +1,11 @@
-# Copyright 1999-2016 Gentoo Foundation
+# Copyright 1999-2024 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
-EAPI=5
-inherit eutils
+EAPI=7
 
 DESCRIPTION="Rule management for SNORT"
-SRC_URI="mirror://sourceforge/oinkmaster/${P}.tar.gz"
-HOMEPAGE="http://oinkmaster.sf.net/"
+HOMEPAGE="https://oinkmaster.sourceforge.net/"
+SRC_URI="https://downloads.sourceforge.net/oinkmaster/${P}.tar.gz"
 
 LICENSE="BSD"
 SLOT="0"
@@ -14,11 +13,11 @@ KEYWORDS="amd64 ~arm ppc sparc x86"
 IUSE="X"
 
 RDEPEND="
-	>=dev-lang/perl-5.6.1
-	X? ( dev-perl/Tk )
-	net-misc/wget
-	app-arch/tar
 	app-arch/gzip
+	app-arch/tar
+	>=dev-lang/perl-5.6.1
+	net-misc/wget
+	X? ( dev-perl/Tk )
 "
 
 src_install() {

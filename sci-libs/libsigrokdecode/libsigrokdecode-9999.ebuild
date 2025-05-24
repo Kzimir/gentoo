@@ -1,14 +1,14 @@
-# Copyright 1999-2020 Gentoo Authors
+# Copyright 1999-2024 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
-EAPI=7
+EAPI="8"
 
-PYTHON_COMPAT=( python3_{6,7,8,9} )
-inherit python-single-r1
+PYTHON_COMPAT=( python3_{10..13} )
+inherit autotools python-single-r1
 
 if [[ ${PV} == *9999* ]]; then
-	EGIT_REPO_URI="git://sigrok.org/${PN}"
-	inherit git-r3 autotools
+	EGIT_REPO_URI="https://github.com/sigrokproject/${PN}.git"
+	inherit git-r3
 else
 	SRC_URI="https://sigrok.org/download/source/${PN}/${P}.tar.gz"
 	KEYWORDS="~amd64 ~x86"
@@ -18,7 +18,7 @@ DESCRIPTION="Provide (streaming) protocol decoding functionality"
 HOMEPAGE="https://sigrok.org/wiki/Libsigrokdecode"
 
 LICENSE="GPL-3"
-SLOT="0/9999"
+SLOT="0/4"
 IUSE="static-libs"
 REQUIRED_USE="${PYTHON_REQUIRED_USE}"
 
@@ -32,17 +32,15 @@ BDEPEND="
 
 src_prepare() {
 	default
-	[[ ${PV} == *9999* ]] && eautoreconf
 
-	# Only a test program (not installed, and not used by src_test)
-	# is used by libsigrok, so disable it to avoid the compile.
-	sed -i \
-		-e '/build_runtc=/s:yes:no:' \
-		configure || die
+	# bug #794592
+	sed -i -e "s/\[SRD_PKGLIBS\],\$/& [python-${EPYTHON#python}-embed], [python-${EPYTHON#python}],/" configure.ac || die
+
+	eautoreconf
 }
 
 src_configure() {
-	econf $(use_enable static-libs static)
+	econf $(use_enable static-libs static) PYTHON3="${PYTHON}"
 }
 
 src_test() {
@@ -51,5 +49,6 @@ src_test() {
 
 src_install() {
 	default
+	python_optimize "${D}"/usr/share/libsigrokdecode/decoders
 	find "${D}" -name '*.la' -type f -delete || die
 }

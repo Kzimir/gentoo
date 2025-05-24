@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE pkgmetadata SYSTEM "http://www.gentoo.org/dtd/metadata.dtd">
+<!DOCTYPE pkgmetadata SYSTEM "https://www.gentoo.org/dtd/metadata.dtd">
 <pkgmetadata>
 	<maintainer type="person">
 		<email>conikost@gentoo.org</email>
@@ -11,7 +11,7 @@
 		to a local drive letter, using raw ethernet frames to communicate.
 	</longdescription>
 	<use>
-		<flag name="tsr">Build the TSR program for DOS, which acts as a client.</flag>
+		<flag name="tsr">Install the precompiled TSR program for DOS, which acts as a client.</flag>
 	</use>
 	<upstream>
 		<remote-id type="sourceforge">etherdfs</remote-id>

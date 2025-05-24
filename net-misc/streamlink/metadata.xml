@@ -1,11 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE pkgmetadata SYSTEM "http://www.gentoo.org/dtd/metadata.dtd">
+<!DOCTYPE pkgmetadata SYSTEM "https://www.gentoo.org/dtd/metadata.dtd">
 <pkgmetadata>
 	<maintainer type="person">
-		<email>leio@gentoo.org</email>
-		<name>Mart Raudsepp</name>
+		<email>sam@gentoo.org</email>
+		<name>Sam James</name>
 	</maintainer>
+	<stabilize-allarches/>
 	<upstream>
 		<remote-id type="github">streamlink/streamlink</remote-id>
+		<remote-id type="pypi">streamlink</remote-id>
 	</upstream>
 </pkgmetadata>

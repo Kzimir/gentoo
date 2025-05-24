@@ -1,104 +1,169 @@
-# Copyright 1999-2020 Gentoo Authors
+# Copyright 1999-2025 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
-EAPI=7
+EAPI=8
 
-inherit cmake fcaps flag-o-matic git-r3 multilib toolchain-funcs wxwidgets
+inherit cmake desktop eapi9-ver fcaps flag-o-matic optfeature toolchain-funcs
 
-DESCRIPTION="A PlayStation 2 emulator"
-HOMEPAGE="https://www.pcsx2.net"
-EGIT_REPO_URI="https://github.com/PCSX2/${PN}.git"
-EGIT_SUBMODULES=()
+if [[ ${PV} == 9999 ]]; then
+	inherit git-r3
+	EGIT_REPO_URI="https://github.com/PCSX2/pcsx2.git"
+else
+	SRC_URI="
+		https://github.com/PCSX2/pcsx2/archive/refs/tags/v${PV}.tar.gz
+			-> ${P}.tar.gz
+	"
+	KEYWORDS="-* ~amd64"
+fi
 
-LICENSE="GPL-3"
+DESCRIPTION="PlayStation 2 emulator"
+HOMEPAGE="https://pcsx2.net/"
+
+LICENSE="
+	GPL-3+ Apache-2.0 BSD BSD-2 BSD-4 Boost-1.0 CC0-1.0 GPL-2+
+	ISC LGPL-2.1+ LGPL-3+ MIT OFL-1.1 ZLIB public-domain
+"
 SLOT="0"
-KEYWORDS=""
-IUSE=""
+IUSE="alsa cpu_flags_x86_sse4_1 +clang jack pulseaudio sndio test vulkan wayland"
+REQUIRED_USE="cpu_flags_x86_sse4_1" # dies at runtime if no support
+RESTRICT="!test? ( test )"
 
+# dlopen: libglvnd, qtsvg, shaderc, vulkan-loader, wayland
+COMMON_DEPEND="
+	app-arch/lz4:=
+	app-arch/zstd:=
+	dev-qt/qtbase:6[concurrent,gui,widgets]
+	dev-qt/qtsvg:6
+	gui-libs/kddockwidgets:=
+	media-libs/freetype
+	media-libs/libglvnd[X]
+	media-libs/libjpeg-turbo:=
+	media-libs/libpng:=
+	media-libs/libsdl3
+	media-libs/libwebp:=
+	media-libs/plutosvg
+	media-libs/plutovg
+	media-video/ffmpeg:=
+	net-libs/libpcap
+	net-misc/curl
+	sys-apps/dbus
+	sys-libs/zlib:=
+	virtual/libudev:=
+	x11-libs/libX11
+	x11-libs/libXi
+	x11-libs/libXrandr
+	alsa? ( media-libs/alsa-lib )
+	jack? ( virtual/jack )
+	pulseaudio? ( media-libs/libpulse )
+	sndio? ( media-sound/sndio:= )
+	vulkan? (
+		media-libs/shaderc
+		media-libs/vulkan-loader
+	)
+	wayland? ( dev-libs/wayland )
+"
+# patches is a optfeature but always pull given PCSX2 complaints if it
+# is missing and it is fairly small (installs a ~1.5MB patches.zip)
 RDEPEND="
-	app-arch/bzip2[abi_x86_32(-)]
-	app-arch/xz-utils[abi_x86_32(-)]
-	dev-libs/libaio[abi_x86_32(-)]
-	dev-libs/libfmt:=[abi_x86_32(-)]
-	dev-libs/libxml2:2[abi_x86_32(-)]
-	media-libs/alsa-lib[abi_x86_32(-)]
-	media-libs/libpng:=[abi_x86_32(-)]
-	media-libs/libsdl2[abi_x86_32(-),haptic,joystick,sound]
-	media-libs/libsoundtouch[abi_x86_32(-)]
-	media-libs/portaudio[abi_x86_32(-)]
-	net-libs/libpcap[abi_x86_32(-)]
-	sys-libs/zlib[abi_x86_32(-)]
-	virtual/libudev[abi_x86_32(-)]
-	virtual/opengl[abi_x86_32(-)]
-	x11-libs/gtk+:3[abi_x86_32(-)]
-	x11-libs/libICE[abi_x86_32(-)]
-	x11-libs/libX11[abi_x86_32(-)]
-	x11-libs/libXext[abi_x86_32(-)]
-	>=x11-libs/wxGTK-3.0.4-r301:3.0-gtk3[abi_x86_32(-),X]
+	${COMMON_DEPEND}
+	>=games-emulation/pcsx2_patches-0_p20241020
 "
-DEPEND="${RDEPEND}
-	dev-cpp/pngpp
-	dev-cpp/sparsehash
+DEPEND="
+	${COMMON_DEPEND}
+	x11-base/xorg-proto
+"
+BDEPEND="
+	dev-qt/qttools:6[linguist]
+	clang? ( llvm-core/clang:* )
+	wayland? (
+		dev-util/wayland-scanner
+		kde-frameworks/extra-cmake-modules
+	)
 "
 
-FILECAPS=(
-	"CAP_NET_RAW+eip CAP_NET_ADMIN+eip" usr/bin/PCSX2
+PATCHES=(
+	"${FILESDIR}"/${PN}-1.7.4667-flags.patch
+	"${FILESDIR}"/${PN}-1.7.5232-cubeb-automagic.patch
+	"${FILESDIR}"/${PN}-1.7.5835-musl-header.patch
+	"${FILESDIR}"/${PN}-1.7.5913-musl-cache.patch
+	"${FILESDIR}"/${PN}-2.2.0-missing-header.patch
+	"${FILESDIR}"/${PN}-2.3.309-pluto-pkgconf.patch
 )
 
-pkg_setup() {
-	if [[ ${MERGE_TYPE} != binary && $(tc-getCC) == *gcc* ]]; then
-		# -mxsave flag is needed when GCC >= 8.2 is used
-		# https://bugs.gentoo.org/685156
-		if [[ $(gcc-major-version) -gt 8 || $(gcc-major-version) == 8 && $(gcc-minor-version) -ge 2 ]]; then
-			append-flags -mxsave
-		fi
+src_prepare() {
+	cmake_src_prepare
+
+	if [[ ${PV} != 9999 ]]; then
+		sed -e '/set(PCSX2_GIT_TAG "")/s/""/"v'${PV}'"/' \
+			-i cmake/Pcsx2Utils.cmake || die
 	fi
+
+	# relax Qt6 and SDL2 version requirements which often get restricted
+	# without a specific need, please report a bug to Gentoo (not upstream)
+	# if a still-available older version is really causing issues
+	sed -e '/find_package(\(Qt6\|SDL3\)/s/ [0-9.]*//' \
+		-i cmake/SearchForStuff.cmake || die
 }
 
 src_configure() {
-	multilib_toolchain_setup x86
-	# Build with ld.gold fails
-	# https://github.com/PCSX2/pcsx2/issues/1671
-	tc-ld-disable-gold
-
-	# pcsx2 build scripts will force CMAKE_BUILD_TYPE=Devel
-	# if it something other than "Devel|Debug|Release"
-	local CMAKE_BUILD_TYPE="Release"
-
-	if use amd64; then
-		# Passing correct CMAKE_TOOLCHAIN_FILE for amd64
-		# https://github.com/PCSX2/pcsx2/pull/422
-		local MYCMAKEARGS=(-DCMAKE_TOOLCHAIN_FILE=cmake/linux-compiler-i386-multilib.cmake)
+	# note that upstream only supports clang and ignores gcc issues, e.g.
+	# https://github.com/PCSX2/pcsx2/issues/10624#issuecomment-1890326047
+	# (CMakeLists.txt also gives a big warning if compiler is not clang)
+	if use clang && ! tc-is-clang; then
+		local -x CC=${CHOST}-clang CXX=${CHOST}-clang++
+		strip-unsupported-flags
 	fi
 
 	local mycmakeargs=(
-		-DARCH_FLAG=
-		-DDISABLE_BUILD_DATE=TRUE
-		-DDISABLE_PCSX2_WRAPPER=TRUE
-		-DDISABLE_SETCAP=TRUE
-		-DEXTRA_PLUGINS=FALSE
-		-DOPTIMIZATION_FLAG=
-		-DPACKAGE_MODE=TRUE
-		-DXDG_STD=TRUE
+		-DBUILD_SHARED_LIBS=no
+		-DDISABLE_ADVANCE_SIMD=yes
+		-DENABLE_TESTS=$(usex test)
+		-DPACKAGE_MODE=yes
+		-DUSE_BACKTRACE=no # not packaged (bug #885471)
+		-DUSE_LINKED_FFMPEG=yes
+		-DUSE_VTUNE=no # not packaged
+		-DUSE_VULKAN=$(usex vulkan)
+		-DWAYLAND_API=$(usex wayland)
+		# not optional given libX11 is hard-required either way and upstream
+		# seemingly has no intention to drop the requirement at the moment
+		# https://github.com/PCSX2/pcsx2/issues/11149
+		-DX11_API=yes
 
-		-DCMAKE_LIBRARY_PATH="/usr/$(get_libdir)/${PN}"
-		-DDOC_DIR=/usr/share/doc/"${PF}"
-		-DGTK3_API=TRUE
-		-DPLUGIN_DIR="/usr/$(get_libdir)/${PN}"
-		# wxGTK must be built against same sdl version
-		-DSDL2_API=TRUE
-		-DUSE_VTUNE=FALSE
+		# bundled cubeb flags, see media-libs/cubeb and cubeb-automagic.patch
+		-DCHECK_ALSA=$(usex alsa)
+		-DCHECK_JACK=$(usex jack)
+		-DCHECK_PULSE=$(usex pulseaudio)
+		-DCHECK_SNDIO=$(usex sndio)
+		-DLAZY_LOAD_LIBS=no
 	)
 
-	WX_GTK_VER="3.0-gtk3" setup-wxwidgets
 	cmake_src_configure
 }
 
+src_test() {
+	cmake_build unittests
+}
+
 src_install() {
-	# Upstream issues:
-	#  https://github.com/PCSX2/pcsx2/issues/417
-	#  https://github.com/PCSX2/pcsx2/issues/3077
-	QA_EXECSTACK="usr/bin/PCSX2"
-	QA_TEXTRELS="usr/$(get_libdir)/pcsx2/* usr/bin/PCSX2"
 	cmake_src_install
+
+	newicon bin/resources/icons/AppIconLarge.png pcsx2.png
+	make_desktop_entry pcsx2-qt PCSX2
+
+	dodoc README.md bin/docs/{Debugger.pdf,GameIndex.pdf,debugger.txt}
+}
+
+pkg_postinst() {
+	fcaps -m 0755 cap_net_admin,cap_net_raw=eip usr/bin/pcsx2-qt
+
+	# calls aplay or gst-play/launch-1.0 as fallback
+	# https://github.com/PCSX2/pcsx2/issues/11141
+	optfeature "UI sound effects support" \
+		media-sound/alsa-utils \
+		media-libs/gst-plugins-base:1.0
+
+	if ver_replacing -lt 2.2.0; then
+		elog
+		elog "Note that the 'pcsx2' executable was renamed to 'pcsx2-qt' with this version."
+	fi
 }

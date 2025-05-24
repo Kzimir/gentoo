@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE pkgmetadata SYSTEM "http://www.gentoo.org/dtd/metadata.dtd">
+<!DOCTYPE pkgmetadata SYSTEM "https://www.gentoo.org/dtd/metadata.dtd">
 <pkgmetadata>
 	<maintainer type="project">
 		<email>java@gentoo.org</email>
@@ -13,6 +13,6 @@
 	website,I found that wrappers to JSONObject and JSONArray can be simpler,
 	due to the simplicity of JSON itself. So I wrote the JSON.simple package.</longdescription>
 	<upstream>
-		<remote-id type="google-code">json-simple</remote-id>
+		<remote-id type="github">cliftonlabs/json-simple</remote-id>
 	</upstream>
 </pkgmetadata>

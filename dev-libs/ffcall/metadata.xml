@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE pkgmetadata SYSTEM "http://www.gentoo.org/dtd/metadata.dtd">
+<!DOCTYPE pkgmetadata SYSTEM "https://www.gentoo.org/dtd/metadata.dtd">
 <pkgmetadata>
 	<maintainer type="project">
 		<email>common-lisp@gentoo.org</email>
@@ -25,6 +25,6 @@ callback
 - closures with variable arguments as first-class C functions (a reentrant combination of vacall and trampoline) 
 	</longdescription>
 	<upstream>
-		<remote-id type="sourceforge">clisp</remote-id>
+		<remote-id type="cpe">cpe:/a:gnu:libffcall</remote-id>
 	</upstream>
 </pkgmetadata>

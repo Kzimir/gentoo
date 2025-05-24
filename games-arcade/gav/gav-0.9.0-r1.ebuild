@@ -1,15 +1,15 @@
-# Copyright 1999-2020 Gentoo Authors
+# Copyright 1999-2024 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
 EAPI=7
 
-inherit desktop toolchain-funcs
+inherit toolchain-funcs
 
 DESCRIPTION="GPL Arcade Volleyball"
-HOMEPAGE="http://gav.sourceforge.net/"
+HOMEPAGE="https://gav.sourceforge.net/"
 # the themes are behind a lame php-counter script.
 SRC_URI="
-	mirror://sourceforge/gav/${P}.tar.gz
+	https://downloads.sourceforge.net/gav/${P}.tar.gz
 	mirror://gentoo/fabeach.tgz
 	mirror://gentoo/florindo.tgz
 	mirror://gentoo/inverted.tgz
@@ -18,7 +18,7 @@ SRC_URI="
 	mirror://gentoo/yisus.tgz
 	mirror://gentoo/yisus2.tgz"
 
-LICENSE="GPL-2"
+LICENSE="GPL-2+"
 SLOT="0"
 KEYWORDS="~amd64 ~x86"
 
@@ -44,12 +44,19 @@ src_prepare() {
 	# Now, move the additional themes in the proper directory
 	mv ../{fabeach,florindo,inverted,naive,unnamed,yisus,yisus2} themes || die
 
-	# no reason to have executable bit set on themes
+	# No reason to have executable bit set on themes
 	find themes -type f -exec chmod a-x '{}' \; || die
+
+	# Respect LD, bug #779976
+	sed -i -e 's/LD = ld/LD ?= ld/' CommonHeader || die
+	sed -i -e 's/$(LD)/& $(LDFLAGS)/' */Makefile || die
 }
 
 src_configure() {
 	tc-export CXX
+
+	# Nobody _really_ sets LD. Tell the compiler what to do instead.
+	export LD="${CXX}"
 }
 
 src_compile() {

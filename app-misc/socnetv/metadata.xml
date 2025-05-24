@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE pkgmetadata SYSTEM "http://www.gentoo.org/dtd/metadata.dtd">
+<!DOCTYPE pkgmetadata SYSTEM "https://www.gentoo.org/dtd/metadata.dtd">
 <pkgmetadata>
 	<!-- maintainer-needed -->
 	<longdescription lang="en">
@@ -11,6 +11,7 @@
 		automatically create networks from all links found in a given initial URL.
 	</longdescription>
 	<upstream>
+		<remote-id type="github">socnetv/app</remote-id>
 		<remote-id type="sourceforge">socnetv</remote-id>
 	</upstream>
 </pkgmetadata>

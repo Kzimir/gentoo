@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE pkgmetadata SYSTEM "http://www.gentoo.org/dtd/metadata.dtd">
+<!DOCTYPE pkgmetadata SYSTEM "https://www.gentoo.org/dtd/metadata.dtd">
 <pkgmetadata>
 <maintainer type="project">
   <email>gnu-emacs@gentoo.org</email>
@@ -10,5 +10,8 @@
   Useful for buffers that display lists of any kind - as a guide for
   your eyes to follow these lines.
 </longdescription>
+<upstream>
+  <remote-id type="gitlab">stepnem/stripes-el</remote-id>
+</upstream>
 <stabilize-allarches/>
 </pkgmetadata>

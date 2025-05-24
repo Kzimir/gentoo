@@ -1,17 +1,17 @@
-# Copyright 1999-2020 Gentoo Authors
+# Copyright 1999-2025 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
-EAPI=7
+EAPI=8
+
 inherit autotools git-r3 libtool xdg-utils
 
 DESCRIPTION="A sophisticated ftp/sftp/http/https/torrent client and file transfer program"
-HOMEPAGE="https://lftp.tech/"
+HOMEPAGE="http://lftp.yar.ru/"
 EGIT_REPO_URI="https://github.com/lavv17/lftp"
 
 LICENSE="GPL-3"
 SLOT="0"
-KEYWORDS=""
-IUSE="convert-mozilla-cookies +gnutls idn ipv6 libressl nls socks5 +ssl verify-file"
+IUSE="convert-mozilla-cookies +gnutls idn nls socks5 +ssl verify-file"
 
 RDEPEND="
 	>=sys-libs/ncurses-5.1:=
@@ -26,10 +26,7 @@ RDEPEND="
 	)
 	ssl? (
 		gnutls? ( >=net-libs/gnutls-1.2.3:0= )
-		!gnutls? (
-			!libressl? ( dev-libs/openssl:0= )
-			libressl? ( dev-libs/libressl:0= )
-		)
+		!gnutls? ( dev-libs/openssl:0= )
 	)
 	verify-file? (
 		dev-perl/String-CRC32
@@ -39,10 +36,9 @@ RDEPEND="
 
 DEPEND="
 	${RDEPEND}
-	dev-libs/gnulib
-	=sys-devel/libtool-2*
+	=dev-build/libtool-2*
 	app-arch/xz-utils
-	nls? ( >=sys-devel/gettext-0.19 )
+	nls? ( >=sys-devel/gettext-0.21 )
 	virtual/pkgconfig
 "
 
@@ -50,35 +46,45 @@ DOCS=(
 	BUGS ChangeLog FAQ FEATURES MIRRORS NEWS README README.debug-levels
 	README.dnssec README.modules THANKS TODO
 )
+
 PATCHES=(
-	"${FILESDIR}"/${PN}-4.5.5-am_config_header.patch
+	"${FILESDIR}"/${PN}-4.0.2.91-lafile.patch
+	"${FILESDIR}"/${PN}-4.7.5-libdir-additional.patch
 	"${FILESDIR}"/${PN}-4.7.5-libdir-expat.patch
 	"${FILESDIR}"/${PN}-4.8.2-libdir-configure.patch
 	"${FILESDIR}"/${PN}-4.8.2-libdir-libidn2.patch
 	"${FILESDIR}"/${PN}-4.8.2-libdir-openssl.patch
 	"${FILESDIR}"/${PN}-4.8.2-libdir-zlib.patch
 	"${FILESDIR}"/${PN}-4.9.1-libdir-readline.patch
+	"${FILESDIR}"/${PN}-4.9.2-socks.patch
+	"${FILESDIR}"/${PN}-4.9.3-gnulib.patch
 )
+
+# Gnulib false positive #900064
+QA_CONFIG_IMPL_DECL_SKIP="( MIN )"
 
 src_prepare() {
 	default
 
-	gnulib-tool --update || die
-
-	chmod +x build-aux/git-version-gen || die
+	# bug #875692
+	sed -e '/#include/s/cmath/math.h/' -i trio/*.c || die
 
 	eautoreconf
+
 	elibtoolize # for Darwin bundles
+
+	# bug #536036
+	printf 'set fish:auto-confirm no\nset sftp:auto-confirm no\n' >> ${PN}.conf || die
 }
 
 src_configure() {
 	econf \
-		$(use_enable ipv6) \
 		$(use_enable nls) \
 		$(use_with idn libidn2) \
 		$(use_with socks5 socksdante "${EPREFIX}"/usr) \
-		$(usex ssl "$(use_with !gnutls openssl ${EPREFIX}/usr)" '--without-openssl') \
+		$(usex ssl "$(use_with !gnutls openssl "${EPREFIX}"/usr)" '--without-openssl') \
 		$(usex ssl "$(use_with gnutls)" '--without-gnutls') \
+		--enable-ipv6 \
 		--enable-packager-mode \
 		--sysconfdir="${EPREFIX}"/etc/${PN} \
 		--with-modules \
@@ -87,8 +93,7 @@ src_configure() {
 }
 
 src_install() {
-	# FIXME: MKDIR_P is not getting picked up in po/Makefile
-	emake DESTDIR="${D}" mkdir_p="mkdir -p" install
+	default
 
 	local script
 	for script in {convert-mozilla-cookies,verify-file}; do

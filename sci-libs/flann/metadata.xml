@@ -1,5 +1,5 @@
-<?xml version='1.0' encoding='UTF-8'?>
-<!DOCTYPE pkgmetadata SYSTEM "http://www.gentoo.org/dtd/metadata.dtd">
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE pkgmetadata SYSTEM "https://www.gentoo.org/dtd/metadata.dtd">
 <pkgmetadata>
   <maintainer type="project">
     <email>sci@gentoo.org</email>
@@ -17,9 +17,8 @@
   <use>
     <flag name="octave">Add bindings for
     <pkg>sci-mathematics/octave</pkg></flag>
-    <flag name="cuda">Enable support for nVidia CUDA</flag>
   </use>
   <upstream>
-    <remote-id type="github">mariusmuja/flann</remote-id>
+    <remote-id type="github">flann-lib/flann</remote-id>
   </upstream>
 </pkgmetadata>

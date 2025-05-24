@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE pkgmetadata SYSTEM "http://www.gentoo.org/dtd/metadata.dtd">
+<!DOCTYPE pkgmetadata SYSTEM "https://www.gentoo.org/dtd/metadata.dtd">
 <pkgmetadata>
 	<maintainer type="person">
 		<email>titanofold@gentoo.org</email>
@@ -10,6 +10,8 @@
 		<name>Gentoo Webapps</name>
 	</maintainer>
 	<use>
+		<flag name="apache">Add <pkg>www-servers/apache</pkg> support</flag>
 		<flag name="lighttpd">Add <pkg>www-servers/lighttpd</pkg> support</flag>
+		<flag name="nginx">Add <pkg>www-servers/nginx</pkg> support</flag>
 	</use>
 </pkgmetadata>

@@ -1,7 +1,8 @@
-# Copyright 1999-2020 Gentoo Authors
+# Copyright 1999-2025 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
 EAPI=7
+
 inherit toolchain-funcs
 
 DESCRIPTION="Bruce's C compiler - Simple C compiler to generate 8086 code"
@@ -10,8 +11,7 @@ SRC_URI="http://v3.sk/~lkundrak/dev86/Dev86src-${PV}.tar.gz"
 
 LICENSE="GPL-2"
 SLOT="0"
-KEYWORDS="amd64 ~arm64 ~ppc ~ppc64 x86"
-IUSE=""
+KEYWORDS="amd64 ~arm ~arm64 ~ppc ~ppc64 x86"
 
 RDEPEND="sys-devel/bin86"
 DEPEND="${RDEPEND}
@@ -22,6 +22,7 @@ PATCHES=(
 	"${FILESDIR}/${PN}-0.16.19-fortify.patch"
 	"${FILESDIR}/${P}-non-void-return-clang.patch"
 	"${FILESDIR}/${PN}-0.16.21-make.patch"
+	"${FILESDIR}/${P}-void-return-check-msdos-clang-fix.patch"
 )
 
 src_prepare() {
@@ -36,10 +37,11 @@ src_prepare() {
 			makefile.in || die
 	fi
 
-	sed -i -e "s|-O2 -g|${CFLAGS}|" -e '/INEXE=/s:-s::' makefile.in || die
+	sed -i -e "s|-O2 -g|${CFLAGS} -std=gnu89|" -e '/INEXE=/s:-s::' makefile.in || die
 	sed -i -e "s:/lib/:/$(get_libdir)/:" bcc/bcc.c || die
 	sed -i -e '/INSTALL_OPTS=/s:-s::' bin86/Makefile || die
 	sed -i -e '/install -m 755 -s/s:-s::' dis88/Makefile || die
+	sed -i -e 's:CFLAGS=-O:CFLAGS=-O -std=gnu89:' dis88/Makefile || die
 }
 
 src_compile() {
@@ -49,8 +51,7 @@ src_compile() {
 
 	# First `make` is also a config, so set all the path vars here
 	emake -j1 \
-		DIST="${D}" \
-		CC="$(tc-getCC)" \
+		CC="$(tc-getCC) -std=gnu89" \
 		LIBDIR="/usr/$(get_libdir)/bcc" \
 		INCLDIR="/usr/$(get_libdir)/bcc" \
 		all
@@ -63,8 +64,7 @@ src_compile() {
 
 	cd bootblocks || die
 	emake \
-		DIST="${D}" \
-		HOSTCC="$(tc-getCC)"
+		HOSTCC="$(tc-getCC) -std=gnu89"
 
 }
 

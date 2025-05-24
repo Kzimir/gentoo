@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE pkgmetadata SYSTEM "http://www.gentoo.org/dtd/metadata.dtd">
+<!DOCTYPE pkgmetadata SYSTEM "https://www.gentoo.org/dtd/metadata.dtd">
 <pkgmetadata>
   <maintainer type="person">
     <email>tamiko@gentoo.org</email>
@@ -15,5 +15,5 @@
   or/and different numeric formats. Equivalently, numdiff is a program with
   the capability to appropriately compare files containing numerical fields
   (and not only).
-</longdescription>
+  </longdescription>
 </pkgmetadata>

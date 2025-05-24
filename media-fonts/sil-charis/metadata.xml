@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE pkgmetadata SYSTEM "http://www.gentoo.org/dtd/metadata.dtd">
+<!DOCTYPE pkgmetadata SYSTEM "https://www.gentoo.org/dtd/metadata.dtd">
 <pkgmetadata>
 	<maintainer type="project">
 		<email>fonts@gentoo.org</email>
@@ -15,7 +15,4 @@
 		proportionally-spaced font optimized for readability in long
 		printed documents.
 	</longdescription>
-	<use>
-		<flag name="compact">Use more compactly spaced font</flag>
-	</use>
 </pkgmetadata>

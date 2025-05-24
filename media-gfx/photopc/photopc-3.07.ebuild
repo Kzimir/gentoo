@@ -1,18 +1,21 @@
-# Copyright 1999-2013 Gentoo Foundation
+# Copyright 1999-2024 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
-EAPI=5
+EAPI=7
 
 inherit toolchain-funcs
 
 DESCRIPTION="Utility to control digital cameras based on Sierra Imaging firmware"
 HOMEPAGE="http://photopc.sourceforge.net"
-SRC_URI="mirror://sourceforge/photopc/${P}.tar.gz"
+SRC_URI="https://downloads.sourceforge.net/photopc/${P}.tar.gz"
 
 LICENSE="photopc"
 SLOT="0"
 KEYWORDS="amd64 ppc x86"
-IUSE=""
+
+PATCHES=(
+	"${FILESDIR}"/${PN}-3.07-implicit-declarations.patch
+)
 
 src_compile() {
 	emake AR="$(tc-getAR)"

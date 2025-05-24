@@ -1,9 +1,9 @@
-# Copyright 2019-2020 Gentoo Authors
+# Copyright 2019-2025 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
-EAPI=7
+EAPI=8
 
-inherit meson
+inherit meson toolchain-funcs
 
 DESCRIPTION="compiz like 3D wayland compositor"
 HOMEPAGE="https://github.com/WayfireWM/wayfire"
@@ -11,88 +11,105 @@ HOMEPAGE="https://github.com/WayfireWM/wayfire"
 if [[ ${PV} == 9999 ]]; then
 	inherit git-r3
 	EGIT_REPO_URI="https://github.com/WayfireWM/${PN}.git"
+	SLOT="0/0.10"
 else
-	SRC_URI="https://github.com/WayfireWM/${PN}/releases/download/${PV}/${P}.tar.xz"
-	KEYWORDS="~amd64 ~arm64 ~x86"
+	SRC_URI="https://github.com/WayfireWM/${PN}/releases/download/v${PV}/${P}.tar.xz"
+	KEYWORDS="~amd64 ~arm64 ~riscv"
+	SLOT="0/$(ver_cut 1-2)"
 fi
 
 LICENSE="MIT"
-SLOT="0"
-IUSE="+gles +system-wfconfig +system-wlroots elogind systemd X"
-REQUIRED_USE="?? ( elogind systemd )"
+IUSE="X +dbus +gles3 openmp test"
+RESTRICT="!test? ( test )"
 
-DEPEND="
+# bundled wlroots has the following dependency string according to included headers.
+# wlroots[drm,gles2-renderer,libinput,x11-backend?,X?]
+# enable x11-backend with X and vice versa
+CDEPEND="
+	dev-cpp/nlohmann_json
+	dev-libs/glib:2
 	dev-libs/libevdev
-	dev-libs/libinput
-	gui-libs/gtk-layer-shell
+	dev-libs/libinput:=
+	dev-libs/wayland
+	dev-libs/yyjson
+	>=dev-libs/wayland-protocols-1.12
+	gui-libs/wf-config:${SLOT}
+	gui-libs/wlroots:0.18[drm(+),libinput(+),x11-backend,X?]
 	media-libs/glm
-	media-libs/mesa:=[gles2,wayland,X?]
-	media-libs/libjpeg-turbo
-	media-libs/libpng
-	media-libs/freetype:=[X?]
-	x11-libs/libdrm
-	x11-libs/gtk+:3=[wayland,X?]
-	x11-libs/cairo:=[X?,svg]
-	X? ( x11-libs/libxkbcommon:=[X] )
+	media-libs/libglvnd
+	media-libs/libjpeg-turbo:=
+	media-libs/libpng:=
+	virtual/libudev:=
+	x11-libs/cairo
+	x11-libs/libxkbcommon
+	x11-libs/pango
 	x11-libs/pixman
-	gles? ( media-libs/libglvnd[X?] )
-	system-wfconfig? ( >=gui-libs/wf-config-${PV%.*} )
-	!system-wfconfig? ( !gui-libs/wf-config )
-	system-wlroots? ( >=gui-libs/wlroots-0.12.0[elogind=,systemd=,X?] )
-	!system-wlroots? ( !gui-libs/wlroots )
+	dbus? ( sys-apps/dbus )
+	X? ( x11-libs/libxcb:= )
 "
 
 RDEPEND="
-	${DEPEND}
-	elogind? ( sys-auth/elogind )
-	systemd? ( sys-apps/systemd )
+	${CDEPEND}
 	x11-misc/xkeyboard-config
 "
-
+DEPEND="
+	${CDEPEND}
+	test? ( dev-cpp/doctest )
+"
 BDEPEND="
-	dev-libs/wayland-protocols
+	dev-util/wayland-scanner
 	virtual/pkgconfig
+	openmp? (
+		|| (
+			sys-devel/gcc[openmp]
+			llvm-core/clang-runtime[openmp]
+		)
+	)
 "
 
+pkg_pretend() {
+	[[ ${MERGE_TYPE} != binary ]] && use openmp && tc-check-openmp
+}
+
+pkg_setup() {
+	[[ ${MERGE_TYPE} != binary ]] && use openmp && tc-check-openmp
+}
+
+src_prepare() {
+	default
+
+	local dbusrunsession=$(usev dbus dbus-run-session)
+	sed -e "s:@EPREFIX@:${EPREFIX}:g" -e "s:@DBUS_RUN_SESSION@:${dbusrunsession}:" \
+		"${FILESDIR}"/wayfire-session-2 > "${T}"/wayfire-session || die
+	sed -e "s:@EPREFIX@:${EPREFIX}:" \
+		"${FILESDIR}"/wayfire-session.desktop > "${T}"/wayfire-session.desktop || die
+}
+
 src_configure() {
-	sed -e "s:@EPREFIX@:${EPREFIX}:" \
-	    "${FILESDIR}"/wayfire-session > "${T}"/wayfire-session || die
-	sed -e "s:@EPREFIX@:${EPREFIX}:" \
-	    "${FILESDIR}"/wayfire-session.desktop > "${T}"/wayfire-session.desktop || die
 	local emesonargs=(
-		$(meson_feature system-wfconfig use_system_wfconfig)
-		$(meson_feature system-wlroots use_system_wlroots)
+		$(meson_feature test tests)
 		$(meson_feature X xwayland)
-		$(meson_use gles enable_gles32)
+		$(meson_use gles3 enable_gles32)
+		$(meson_use openmp enable_openmp)
+		-Duse_system_wfconfig=enabled
+		-Duse_system_wlroots=enabled
 	)
+
 	meson_src_configure
 }
 
 src_install() {
-	default
 	meson_src_install
 	dobin "${T}"/wayfire-session
-	einstalldocs
 
 	insinto "/usr/share/wayland-sessions/"
 	insopts -m644
 	doins wayfire.desktop
 	doins "${T}"/wayfire-session.desktop
 
-	dodoc wayfire.ini
+	insinto "/usr/share/wayfire/"
+	doins wayfire.ini
 
-	if ! use systemd && ! use elogind; then
-		fowners root:0 /usr/bin/wayfire
-		fperms 4511 /usr/bin/wayfire
-	fi
-}
-
-pkg_postinst() {
-	if [ -z "${REPLACING_VERSIONS}" ]; then
-		elog "Wayfire has been installed but the session cannot be used"
-		elog "until you install a configuration file. The default config"
-		elog "file is installed at \"/usr/share/doc/${PF}/wayfire.ini.bz2\""
-		elog "To install the file execute"
-		elog "\$ mkdir -p ~/.config && bzcat /usr/share/doc/${PF}/wayfire.ini.bz2 > ~/.config/wayfire.ini"
-	fi
+	insinto "/etc"
+	doins "${FILESDIR}"/wayfire.env
 }

@@ -1,13 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE pkgmetadata SYSTEM "http://www.gentoo.org/dtd/metadata.dtd">
+<!DOCTYPE pkgmetadata SYSTEM "https://www.gentoo.org/dtd/metadata.dtd">
 <pkgmetadata>
   <maintainer type="person">
     <email>tamiko@gentoo.org</email>
     <name>Matthias Maier</name>
-  </maintainer>
-  <maintainer type="person">
-    <email>patrick@gentoo.org</email>
-    <name>Patrick Lauer</name>
   </maintainer>
   <maintainer type="project">
     <email>sci@gentoo.org</email>
@@ -24,11 +20,8 @@
   string processing. Julia programs are organized around defining
   functions, and overloading them for different combinations of
   argument types (which can also be user-defined).
-</longdescription>
+  </longdescription>
   <upstream>
     <remote-id type="github">JuliaLang/julia</remote-id>
   </upstream>
-  <use>
-    <flag name="system-llvm">(Try to) Use the system LLVM install. YMMV.</flag>
-  </use>
 </pkgmetadata>

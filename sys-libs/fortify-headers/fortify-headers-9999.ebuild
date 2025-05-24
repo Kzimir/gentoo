@@ -1,28 +1,42 @@
-# Copyright 1999-2018 Gentoo Foundation
+# Copyright 1999-2023 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
-EAPI=6
+EAPI=8
+
+inherit toolchain-funcs
+
+DESCRIPTION="Standalone implementation of fortify source"
+HOMEPAGE="https://github.com/jvoisin/fortify-headers"
 
 if [[ ${PV} == *9999* ]] ; then
-	EGIT_REPO_URI="git://git.2f30.org/fortify-headers"
+	EGIT_REPO_URI="https://github.com/jvoisin/fortify-headers"
 	inherit git-r3
 else
-	SRC_URI="http://git.2f30.org/fortify-headers/snapshot/fortify-headers-${PV}.tar.gz"
+	FORTIFY_COMMIT=""
+	SRC_URI="https://github.com/jvoisin/fortify-headers/archive/${FORTIFY_COMMIT}.tar.gz -> ${P}.tar.gz"
 	KEYWORDS="~amd64 ~arm ~mips ~ppc ~x86"
 fi
 
-DESCRIPTION="A standalone implementation of fortify source."
-HOMEPAGE="http://git.2f30.org/fortify-headers/"
-
 LICENSE="ISC"
 SLOT="0"
-IUSE=""
-
-DEPEND=""
-RDEPEND="${DEPEND}"
 
 src_prepare() {
-	sed -i -e 's|^PREFIX = /usr/local|PREFIX = /usr|g' Makefile
-	export DESTDIR="${D}"
-	eapply_user
+	sed -i -e 's|^PREFIX = /usr/local|PREFIX = /usr|g' Makefile || die
+	default
+}
+
+src_compile() {
+	# Nothing to do here but defining a dummy phase allows us to not trigger
+	# the catch-all rule and try to install here where we don't have access
+	# to ${ED}
+	:;
+}
+
+src_test() {
+	emake -C tests CC="$(tc-getCC)"
+}
+
+src_install() {
+	export DESTDIR="${ED}"
+	default
 }

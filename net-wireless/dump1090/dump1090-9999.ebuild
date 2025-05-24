@@ -1,11 +1,11 @@
-# Copyright 1999-2020 Gentoo Authors
+# Copyright 1999-2025 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
-EAPI=7
+EAPI=8
 
-inherit toolchain-funcs
+inherit tmpfiles toolchain-funcs
 
-DESCRIPTION="simple Mode S decoder for RTLSDR devices"
+DESCRIPTION="Simple Mode S decoder for RTLSDR devices"
 HOMEPAGE="https://github.com/flightaware/dump1090"
 
 if [[ ${PV} == *9999 ]] ; then
@@ -16,40 +16,102 @@ else
 	SRC_URI="https://github.com/flightaware/dump1090/archive/v${PV}.tar.gz -> ${P}.tar.gz"
 fi
 
-LICENSE="BSD"
+LICENSE="BSD GPL-2+"
 SLOT="0"
-IUSE="bladerf +rtlsdr"
+IUSE="bladerf hackrf minimal +rtlsdr"
 
 DEPEND="
 	sys-libs/ncurses:=[tinfo]
-	virtual/libusb:1
-	bladerf? ( net-wireless/bladerf:= )
-	rtlsdr? ( net-wireless/rtl-sdr:= )"
+	bladerf? (
+		net-wireless/bladerf:=
+		virtual/libusb:1
+	)
+	hackrf? (
+		net-libs/libhackrf:=
+		virtual/libusb:1
+	)
+	rtlsdr? (
+		net-wireless/rtl-sdr:=
+		virtual/libusb:1
+	)
+"
 RDEPEND="${DEPEND}"
+BDEPEND="virtual/pkgconfig"
+
+PATCHES=(
+	"${FILESDIR}"/${PN}-6.1-libdir.patch
+	"${FILESDIR}"/${PN}-10.0.1-gcc15.patch
+)
 
 src_prepare() {
 	default
-	sed -i -e 's#-O2 -g -Wall -Werror -W##' Makefile || die
-	sed -i -e "s#-lncurses#$($(tc-getPKG_CONFIG) --libs ncurses)#" Makefile || die
+
+	sed \
+		-e '/CFLAGS/s/-Werror//g' \
+		-e "/LIBS_CURSES/s|-lncurses|$($(tc-getPKG_CONFIG) --libs ncurses)|g" \
+		-i Makefile || die
 }
 
 src_compile() {
-	emake CC="$(tc-getCC)" \
-		BLADERF=$(usex bladerf) \
-		RTLSDR=$(usex rtlsdr)
+	myemakeargs=(
+		BLADERF="$(usex bladerf)"
+		CC="$(tc-getCC)"
+		CPUFEATURES="yes"
+		HACKRF="$(usex hackrf)"
+		LIMESDR="no"
+		RTLSDR="$(usex rtlsdr)"
+	)
+
+	emake "${myemakeargs[@]}"
 }
 
 src_install() {
-	dobin ${PN}
-	dobin view1090
-	dodoc README.md
+	dobin dump1090 view1090
 
-	insinto /usr/share/${PN}/html
-	doins -r public_html/*
+	# DSP config files for bladeRF
+	if use bladerf; then
+		insinto usr/share/dump1090/bladerf
+		doins bladerf/*
+	fi
 
-	insinto /usr/share/${PN}
-	doins -r tools
+	newtmpfiles "${FILESDIR}"/tmpfilesd-dump1090-5.0.conf dump1090.conf
+	newconfd "${FILESDIR}"/dump1090-5.0.confd dump1090
+	newinitd "${FILESDIR}"/dump1090-5.0.initd dump1090
 
-	insinto /usr/share/${PN}
-	newins debian/lighttpd/89-dump1090-fa.conf lighttpd.conf
+	einstalldocs
+
+	if use !minimal; then
+		# Install tools
+		insinto /usr/share/dump1090
+		doins -r tools
+
+		# Install lighthttps example files
+		insinto /usr/share/dump1090/lighttpd
+		doins debian/lighttpd/{88-dump1090-fa-statcache.conf,89-skyaware.conf}
+
+		# Some tooling expects the -fa variant directory to contain the files
+		dosym ../../usr/share/dump1090 /usr/share/dump1090-fa
+
+		# Install html docs
+		docinto html
+		doins -r public_html/*
+
+		# See README.md for how to use custom wisdom files
+		exeinto /usr/share/dump1090/wisdom
+		doexe debian/generate-wisdom
+		insinto /usr/share/dump1090/wisdom
+		doins wisdom.*
+		doins wisdom/wisdom.*
+
+		# For /etc/dump1090-fa/wisdom.local
+		keepdir /etc/dump1090-fa/
+
+		# Tooling to generate custom wisdom:
+		exeinto /usr/libexec/dump1090
+		doexe starch-benchmark
+	fi
+}
+
+pkg_postinst() {
+	tmpfiles_process dump1090.conf
 }

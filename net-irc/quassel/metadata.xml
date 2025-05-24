@@ -1,21 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE pkgmetadata SYSTEM "http://www.gentoo.org/dtd/metadata.dtd">
+<!DOCTYPE pkgmetadata SYSTEM "https://www.gentoo.org/dtd/metadata.dtd">
 <pkgmetadata>
 	<maintainer type="person">
-		<email>patrick@gentoo.org</email>
-		<name>Patrick Lauer</name>
-	</maintainer>
-	<maintainer type="person">
-		<email>johu@gentoo.org</email>
-		<name>Johannes Huber</name>
+		<email>sam@gentoo.org</email>
+		<name>Sam James</name>
 	</maintainer>
 	<use>
-		<flag name="bundled-icons">
-			Use icon themes bundled with Quassel, rather than depending on system packages.
-		</flag>
-		<flag name="crypt">
-			Support core-&gt;network per-channel and per-query blowfish
-			encryption via <pkg>app-crypt/qca</pkg> SLOT 2.
+		<flag name="system-icons">
+			Use <pkg>kde-frameworks/breeze-icons</pkg> rather than icons bundled with Quassel.
 		</flag>
 		<flag name="dbus">
 			Support desktop notifications via the StatusNotifier D-Bus service
@@ -36,17 +28,14 @@
 			used. You need this enabled on the server, but you might want to
 			disable it on the client.
 		</flag>
-		<flag name="snorenotify">
-			Support for Snore notification framework.
-		</flag>
-		<flag name="urlpreview">
-			Use QtWebEngine rendering engine for showing URL thumbnails.
-		</flag>
-		<flag name="X">
+		<flag name="gui">
 			Build the Qt5 GUI client for quassel. If this USE flag is
 			disabled, the GUI is not built, and cannot be used. You might
 			want to disable this on the server, but you need it enabled on
 			the client.
 		</flag>
 	</use>
+	<upstream>
+		<remote-id type="github">quassel/quassel</remote-id>
+	</upstream>
 </pkgmetadata>

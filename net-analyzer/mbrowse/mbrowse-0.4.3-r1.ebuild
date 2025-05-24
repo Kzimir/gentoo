@@ -1,12 +1,13 @@
-# Copyright 1999-2020 Gentoo Authors
+# Copyright 1999-2024 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
 EAPI=7
+
 inherit autotools
 
 DESCRIPTION="MBrowse is a graphical MIB browser"
 HOMEPAGE="https://sourceforge.net/projects/mbrowse/"
-SRC_URI="mirror://sourceforge/${PN}/files/${P}.tar.gz"
+SRC_URI="https://downloads.sourceforge.net/${PN}/files/${P}.tar.gz"
 
 LICENSE="GPL-2"
 SLOT="0"
@@ -21,6 +22,7 @@ DEPEND="
 RDEPEND="${DEPEND}"
 
 DOCS=( AUTHORS README ChangeLog )
+
 PATCHES=(
 	"${FILESDIR}"/${PN}-0.4.3-flags.patch
 	"${FILESDIR}"/${PN}-0.4.3-fno-common.patch
@@ -32,6 +34,5 @@ src_prepare() {
 }
 
 src_configure() {
-	econf \
-		--with-snmp-lib="${EPREFIX}/usr/$(get_libdir)"
+	econf --with-snmp-lib="${EPREFIX}/usr/$(get_libdir)"
 }

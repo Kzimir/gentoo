@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE pkgmetadata SYSTEM "http://www.gentoo.org/dtd/metadata.dtd">
+<!DOCTYPE pkgmetadata SYSTEM "https://www.gentoo.org/dtd/metadata.dtd">
 <pkgmetadata>
 	<maintainer type="project">
 		<email>ruby@gentoo.org</email>
@@ -12,4 +12,7 @@
 		This is a port of the Typesafe Config library to Ruby.
 		The library provides Ruby support for the HOCON configuration file format.
 	</longdescription>
+	<upstream>
+		<remote-id type="github">puppetlabs/ruby-hocon</remote-id>
+	</upstream>
 </pkgmetadata>

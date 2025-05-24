@@ -1,13 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE pkgmetadata SYSTEM "http://www.gentoo.org/dtd/metadata.dtd">
+<!DOCTYPE pkgmetadata SYSTEM "https://www.gentoo.org/dtd/metadata.dtd">
 <pkgmetadata>
-	<maintainer type="project">
-		<email>desktop-misc@gentoo.org</email>
-		<name>Gentoo Desktop Miscellaneous Project</name>
-	</maintainer>
 	<maintainer type="person">
-		<email>slyfox@gentoo.org</email>
-		<name>Sergei Trofimovich</name>
+		<email>ultrabug@gentoo.org</email>
+		<name>Alexys Jacob</name>
 	</maintainer>
 	<longdescription>
 		i3status is a small program (about 1500 SLOC) for generating a status bar for
@@ -18,6 +14,9 @@
 		your CPU as much as spawning the corresponding amount of shell commands would.
 	</longdescription>
 	<use>
-		<flag name="filecaps">Linux capabilities library is required for i3status to be able to read net bandwith</flag>
+		<flag name="filecaps">Linux capabilities library is required for i3status to be able to read net bandwidth</flag>
 	</use>
+	<upstream>
+		<remote-id type="github">i3/i3status</remote-id>
+	</upstream>
 </pkgmetadata>

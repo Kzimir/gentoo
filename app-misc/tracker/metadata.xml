@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE pkgmetadata SYSTEM "http://www.gentoo.org/dtd/metadata.dtd">
+<!DOCTYPE pkgmetadata SYSTEM "https://www.gentoo.org/dtd/metadata.dtd">
 <pkgmetadata>
   <maintainer type="project">
     <email>gnome@gentoo.org</email>
@@ -9,4 +9,7 @@
     <flag name="miners">Install the <pkg>app-misc/tracker-miners</pkg> package for actual data mining support for tracker</flag>
     <flag name="stemmer">Add word stemming via <pkg>dev-libs/snowball-stemmer</pkg>.</flag>
   </use>
+  <upstream>
+    <remote-id type="gnome-gitlab">GNOME/tracker</remote-id>
+  </upstream>
 </pkgmetadata>

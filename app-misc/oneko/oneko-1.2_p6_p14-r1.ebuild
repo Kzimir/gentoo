@@ -1,4 +1,4 @@
-# Copyright 1999-2020 Gentoo Authors
+# Copyright 1999-2022 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
 EAPI=7
@@ -15,7 +15,7 @@ SRC_URI="
 
 LICENSE="public-domain"
 SLOT="0"
-KEYWORDS="~amd64 ~ppc ~ppc64 ~x86"
+KEYWORDS="amd64 ppc ppc64 x86"
 
 RDEPEND="
 	x11-libs/libX11
@@ -27,8 +27,9 @@ DEPEND="
 "
 BDEPEND="
 	app-text/rman
+	sys-devel/gcc
 	x11-misc/gccmakedep
-	x11-misc/imake
+	>=x11-misc/imake-1.0.8-r1
 "
 PATCHES=(
 	"${FILESDIR}"/${P/_p*}-include.patch
@@ -41,20 +42,17 @@ src_prepare() {
 	done
 
 	default
-
-	printf '#!/bin/sh\n%s ${*}\n' "$(tc-getLD)" > "${T}"/ld
-	chmod +x "${T}"/ld
-	export PATH="${T}:${PATH}"
 }
 
 src_configure() {
-	xmkmf -a || die
+	CC="$(tc-getBUILD_CC)" LD="$(tc-getLD)" \
+		IMAKECPP="${IMAKECPP:-${CHOST}-gcc -E}" xmkmf -a || die
 }
 
 src_compile() {
 	emake \
 		CC="$(tc-getCC)" \
-		CCOPTIONS="${CFLAGS}" \
+		CDEBUGFLAGS="${CFLAGS}" \
 		EXTRA_LDOPTIONS="${LDFLAGS}"
 }
 

@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE pkgmetadata SYSTEM "http://www.gentoo.org/dtd/metadata.dtd">
+<!DOCTYPE pkgmetadata SYSTEM "https://www.gentoo.org/dtd/metadata.dtd">
 <pkgmetadata>
 	<maintainer type="person">
 		<email>conikost@gentoo.org</email>
@@ -34,6 +34,7 @@
 	</use>
 	<upstream>
 		<bugs-to>https://sourceforge.net/p/cryptmount/bugs/</bugs-to>
+		<remote-id type="github">rwpenney/cryptmount</remote-id>
 		<remote-id type="sourceforge">cryptmount</remote-id>
 	</upstream>
 </pkgmetadata>

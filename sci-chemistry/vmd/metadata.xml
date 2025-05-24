@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE pkgmetadata SYSTEM "http://www.gentoo.org/dtd/metadata.dtd">
+<!DOCTYPE pkgmetadata SYSTEM "https://www.gentoo.org/dtd/metadata.dtd">
 <pkgmetadata>
   <maintainer type="person">
     <email>alexxy@gentoo.org</email>
@@ -10,7 +10,6 @@
     <name>Gentoo Chemistry Project</name>
   </maintainer>
   <use>
-    <flag name="cuda">Use nvidia cuda toolkit for speeding up computations</flag>
     <flag name="gromacs">Add support for TNG file format</flag>
     <flag name="msms">Add support for MSMS SES calcualtion tool</flag>
     <flag name="povray">Add support for povray raytracer for HQ images</flag>

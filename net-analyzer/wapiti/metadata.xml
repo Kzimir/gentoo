@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE pkgmetadata SYSTEM "http://www.gentoo.org/dtd/metadata.dtd">
+<!DOCTYPE pkgmetadata SYSTEM "https://www.gentoo.org/dtd/metadata.dtd">
 <pkgmetadata>
 	<maintainer type="person">
 		<email>voyageur@gentoo.org</email>
@@ -14,7 +14,6 @@ Once it gets this list, Wapiti acts like a fuzzer, injecting payloads to see if 
 		<remote-id type="sourceforge">wapiti</remote-id>
 	</upstream>
 	<use>
-		<flag name="kerberos">Support Kerberos authentication</flag>
-		<flag name="ntlm">Support NTLM authentication</flag>
+		<!-- Need extra dep <flag name="ntlm">Support NTLM authentication</flag> -->
 	</use>
 </pkgmetadata>

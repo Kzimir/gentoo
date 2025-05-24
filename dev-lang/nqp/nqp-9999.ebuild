@@ -1,20 +1,19 @@
-# Copyright 1999-2020 Gentoo Authors
+# Copyright 1999-2025 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
-EAPI=7
+EAPI=8
 
 inherit java-pkg-opt-2 multibuild
 
 if [[ ${PV} == "9999" ]]; then
 	EGIT_REPO_URI="https://github.com/perl6/${PN}.git"
 	inherit git-r3
-	KEYWORDS=""
 else
 	SRC_URI="https://github.com/perl6/${PN}/releases/download/${PV}/${P}.tar.gz"
 	KEYWORDS="~amd64 ~x86"
 fi
 
-DESCRIPTION="Not Quite Perl, a Perl 6 bootstrapping compiler"
+DESCRIPTION="Not Quite Perl, a Raku bootstrapping compiler"
 HOMEPAGE="https://rakudo.org"
 
 LICENSE="Artistic-2"
@@ -24,17 +23,16 @@ RESTRICT="!test? ( test )"
 REQUIRED_USE="|| ( java moar )"
 
 CDEPEND="java? (
-		dev-java/asm:4
-		dev-java/jline:0
-		dev-java/jna:4
+		>=dev-java/asm-9.7.1_p20241213:0
+		>=dev-java/jna-5.17.0:0
 	)
 	moar? ( ~dev-lang/moarvm-${PV}[clang=] )"
 RDEPEND="${CDEPEND}
-	java? ( >=virtual/jre-1.8 )"
+	java? ( >=virtual/jre-11 )"
 DEPEND="${CDEPEND}"
 BDEPEND="${CDEPEND}
-	clang? ( sys-devel/clang )
-	java? ( >=virtual/jdk-1.8 )
+	clang? ( llvm-core/clang )
+	java? ( >=virtual/jdk-11 )
 	dev-lang/perl"
 
 pkg_pretend() {
@@ -44,16 +42,6 @@ pkg_pretend() {
 		ewarn "dev-lang/nqp and dev-lang/rakudo, then do a new installation."
 		ewarn "(see Bug #584394)"
 	fi
-}
-
-java_prepare() {
-	# Don't clean stage0 jars.
-	einfo "Cleaning upstream jars"
-	java-pkg_clean 3rdparty/
-
-	# Don't use jars we just deleted.
-	sed -i -r 's/(:3rdparty[^:]*)+/:${THIRDPARTY_JARS}/g' \
-		src/vm/jvm/runners/nqp-j || die
 }
 
 src_prepare() {
@@ -81,8 +69,7 @@ nqp_compile() {
 	if [[ "${MULTIBUILD_VARIANT}" = jvm ]]; then
 		emake -j1 \
 			-C "${BUILD_DIR}" \
-			THIRDPARTY_JARS=$(java-pkg_getjars --with-dependencies asm-4,jline,jna-4) \
-			JAVAC="$(java-pkg_get-javac) $(java-pkg_javac-args)"
+			JAVAC="$(java-pkg_get-javac)"
 	elif [[ "${MULTIBUILD_VARIANT}" = moar ]]; then
 		emake -j1 \
 			-C "${BUILD_DIR}"

@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE pkgmetadata SYSTEM "http://www.gentoo.org/dtd/metadata.dtd">
+<!DOCTYPE pkgmetadata SYSTEM "https://www.gentoo.org/dtd/metadata.dtd">
 <pkgmetadata>
 	<!-- maintainer-needed -->
 	<longdescription>
@@ -10,7 +10,9 @@
 		All jobs are run with `/bin/sh` for conformity and portability.
 	</longdescription>
 	<upstream>
-		<bugs-to>https://github.com/dubiousjim/dcron/issues</bugs-to>
-		<remote-id type="github">dubiousjim/dcron</remote-id>
+		<bugs-to>https://github.com/ptchinster/dcron/issues</bugs-to>
+		<!-- readme's the doc -->
+		<changelog>https://github.com/ptchinster/dcron/blob/master/CHANGELOG</changelog>
+		<remote-id type="github">ptchinster/dcron</remote-id>
 	</upstream>
 </pkgmetadata>

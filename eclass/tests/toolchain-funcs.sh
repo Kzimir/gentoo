@@ -1,8 +1,9 @@
 #!/bin/bash
-# Copyright 1999-2019 Gentoo Authors
+# Copyright 1999-2024 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
-source tests-common.sh
+EAPI=7
+source tests-common.sh || exit
 
 inherit toolchain-funcs
 
@@ -27,7 +28,7 @@ test-tc-arch-kernel() {
 tbegin "tc-arch-kernel() (KV=2.6.30)"
 test-tc-arch-kernel 2.6.30 \
 	i{3..6}86:x86 x86_64:x86 \
-	powerpc{,64}:powerpc i{3..6}86-gentoo-freebsd:i386 \
+	powerpc{,64}:powerpc \
 	or1k:openrisc or1k-linux-musl:openrisc
 tend $?
 
@@ -59,20 +60,22 @@ tbegin "tc-ld-is-gold (ld=bfd cc=bfd)"
 LD=ld.bfd LDFLAGS=-fuse-ld=bfd tc-ld-is-gold && ret=1 || ret=0
 tend ${ret}
 
-tbegin "tc-ld-is-gold (ld=gold cc=default)"
-LD=ld.gold tc-ld-is-gold
-ret=$?
-tend ${ret}
+if type -P ld.gold &>/dev/null; then
+	tbegin "tc-ld-is-gold (ld=gold cc=default)"
+	LD=ld.gold tc-ld-is-gold
+	ret=$?
+	tend ${ret}
 
-tbegin "tc-ld-is-gold (ld=gold cc=bfd)"
-LD=ld.gold LDFLAGS=-fuse-ld=bfd tc-ld-is-gold
-ret=$?
-tend ${ret}
+	tbegin "tc-ld-is-gold (ld=gold cc=bfd)"
+	LD=ld.gold LDFLAGS=-fuse-ld=bfd tc-ld-is-gold
+	ret=$?
+	tend ${ret}
 
-tbegin "tc-ld-is-gold (ld=bfd cc=gold)"
-LD=ld.bfd LDFLAGS=-fuse-ld=gold tc-ld-is-gold
-ret=$?
-tend ${ret}
+	tbegin "tc-ld-is-gold (ld=bfd cc=gold)"
+	LD=ld.bfd LDFLAGS=-fuse-ld=gold tc-ld-is-gold
+	ret=$?
+	tend ${ret}
+fi
 
 #
 # TEST: tc-ld-disable-gold
@@ -86,23 +89,25 @@ tc-ld-disable-gold
 )
 tend $?
 
-tbegin "tc-ld-disable-gold (ld=gold)"
-(
-export LD=ld.gold LDFLAGS=
-ewarn() { :; }
-tc-ld-disable-gold
-[[ ${LD} == "ld.bfd" || ${LDFLAGS} == *"-fuse-ld=bfd"* ]]
-)
-tend $?
+if type -P ld.gold &>/dev/null; then
+	tbegin "tc-ld-disable-gold (ld=gold)"
+	(
+	export LD=ld.gold LDFLAGS=
+	ewarn() { :; }
+	tc-ld-disable-gold
+	[[ ${LD} == "ld.bfd" || ${LDFLAGS} == *"-fuse-ld=bfd"* ]]
+	)
+	tend $?
 
-tbegin "tc-ld-disable-gold (cc=gold)"
-(
-export LD= LDFLAGS="-fuse-ld=gold"
-ewarn() { :; }
-tc-ld-disable-gold
-[[ ${LD} == *"/ld.bfd" || ${LDFLAGS} == "-fuse-ld=gold -fuse-ld=bfd" ]]
-)
-tend $?
+	tbegin "tc-ld-disable-gold (cc=gold)"
+	(
+	export LD= LDFLAGS="-fuse-ld=gold"
+	ewarn() { :; }
+	tc-ld-disable-gold
+	[[ ${LD} == *"/ld.bfd" || ${LDFLAGS} == "-fuse-ld=gold -fuse-ld=bfd" ]]
+	)
+	tend $?
+fi
 
 unset CPP
 
@@ -196,5 +201,77 @@ for compiler in gcc clang not-really-a-compiler; do
 		tend $?
 	fi
 done
+
+if type -P gcc &>/dev/null; then
+	tbegin "tc-get-cxx-stdlib (gcc)"
+	[[ $(CXX=g++ tc-get-cxx-stdlib) == libstdc++ ]]
+	tend $?
+
+	tbegin "tc-get-c-rtlib (gcc)"
+	[[ $(CC=gcc tc-get-c-rtlib) == libgcc ]]
+	tend $?
+
+	tbegin "tc-is-lto (gcc, -fno-lto)"
+	CC=gcc CFLAGS=-fno-lto tc-is-lto
+	[[ $? -eq 1 ]]
+	tend $?
+
+	tbegin "tc-is-lto (gcc, -flto)"
+	CC=gcc CFLAGS=-flto tc-is-lto
+	[[ $? -eq 0 ]]
+	tend $?
+
+	case $(gcc -dumpmachine) in
+		i*86*-gnu*|arm*-gnu*|powerpc-*-gnu)
+			tbegin "tc-has-64bit-time_t (_TIME_BITS=32)"
+			CC=gcc CFLAGS="-U_TIME_BITS -D_TIME_BITS=32" tc-has-64bit-time_t
+			[[ $? -eq 1 ]]
+			tend $?
+
+			tbegin "tc-has-64bit-time_t (_TIME_BITS=64)"
+			CC=gcc CFLAGS="-U_FILE_OFFSET_BITS -U_TIME_BITS -D_FILE_OFFSET_BITS=64 -D_TIME_BITS=64" tc-has-64bit-time_t
+			[[ $? -eq 0 ]]
+			tend $?
+			;;
+		*)
+			tbegin "tc-has-64bit-time_t"
+			CC=gcc tc-has-64bit-time_t
+			[[ $? -eq 0 ]]
+			tend $?
+			;;
+	esac
+fi
+
+if type -P clang &>/dev/null; then
+	for stdlib in libc++ libstdc++; do
+		if clang++ -stdlib=${stdlib} -x c++ -E -P - &>/dev/null \
+			<<<'#include <ciso646>'
+		then
+			tbegin "tc-get-cxx-stdlib (clang, ${stdlib})"
+			[[ $(CXX=clang++ CXXFLAGS="-stdlib=${stdlib}" tc-get-cxx-stdlib) == ${stdlib} ]]
+			tend $?
+		fi
+	done
+
+	tbegin "tc-get-cxx-stdlib (clang, invalid)"
+	! CXX=clang++ CXXFLAGS="-stdlib=invalid" tc-get-cxx-stdlib
+	tend $?
+
+	for rtlib in compiler-rt libgcc; do
+		tbegin "tc-get-c-rtlib (clang, ${rtlib})"
+		[[ $(CC=clang CFLAGS="--rtlib=${rtlib}" tc-get-c-rtlib) == ${rtlib} ]]
+		tend $?
+	done
+
+	tbegin "tc-is-lto (clang, -fno-lto)"
+	CC=clang CFLAGS=-fno-lto tc-is-lto
+	[[ $? -eq 1 ]]
+	tend $?
+
+	tbegin "tc-is-lto (clang, -flto)"
+	CC=clang CFLAGS=-flto tc-is-lto
+	[[ $? -eq 0 ]]
+	tend $?
+fi
 
 texit

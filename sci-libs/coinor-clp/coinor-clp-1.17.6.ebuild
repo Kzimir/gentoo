@@ -1,4 +1,4 @@
-# Copyright 1999-2020 Gentoo Authors
+# Copyright 1999-2024 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
 EAPI=7
@@ -27,7 +27,7 @@ RESTRICT="!test? ( test )"
 #
 BDEPEND="virtual/fortran
 	virtual/pkgconfig
-	doc? ( app-doc/doxygen[dot] )
+	doc? ( app-text/doxygen[dot] )
 	test? ( sci-libs/coinor-sample )"
 
 # USE=mpi is disabled on sci-libs/mumps because mumps/scotch are in
@@ -38,7 +38,7 @@ BDEPEND="virtual/fortran
 DEPEND="sci-libs/coinor-osi:=
 	sci-libs/coinor-utils:=
 	glpk? ( sci-mathematics/glpk:= sci-libs/amd )
-	metis? ( || ( sci-libs/metis sci-libs/parmetis ) )
+	metis? ( sci-libs/metis )
 	mumps? ( sci-libs/mumps[-mpi] )
 	sparse? ( sci-libs/cholmod )"
 RDEPEND="${DEPEND}"

@@ -1,4 +1,4 @@
-# Copyright 1999-2020 Gentoo Authors
+# Copyright 1999-2024 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
 EAPI=7
@@ -10,11 +10,11 @@ inherit autotools lua-single
 
 DESCRIPTION="Library for parsing video download links"
 HOMEPAGE="http://quvi.sourceforge.net/"
-SRC_URI="mirror://sourceforge/quvi/${PV:0:3}/${P}.tar.xz"
+SRC_URI="https://downloads.sourceforge.net/quvi/${PV:0:3}/${P}.tar.xz"
 
 LICENSE="AGPL-3"
 SLOT="0/8" # subslot = libquvi soname version
-KEYWORDS="~amd64 ~arm ~arm64 ~hppa ~ppc ~ppc64 ~sparc ~x86"
+KEYWORDS="amd64 ~arm ~arm64 ~hppa ppc ppc64 sparc x86"
 IUSE="examples nls static-libs"
 
 REQUIRED_USE="${LUA_REQUIRED_USE}"
@@ -38,7 +38,10 @@ BDEPEND="
 	nls? ( sys-devel/gettext )
 "
 
-PATCHES=( "${FILESDIR}"/${PN}-0.9.1-headers-reinstall.patch )
+PATCHES=(
+	"${FILESDIR}"/${PN}-0.9.1-headers-reinstall.patch
+	"${FILESDIR}"/${PN}-0.9.4-autoconf-2.70.patch #749816
+)
 
 src_prepare() {
 	default

@@ -1,12 +1,12 @@
-# Copyright 1999-2020 Gentoo Authors
+# Copyright 1999-2024 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
-EAPI=6
+EAPI=7
 
-inherit check-reqs eutils multibuild pax-utils
+inherit check-reqs flag-o-matic multibuild pax-utils
 
 DESCRIPTION="Standard ML optimizing compiler and libraries"
-BASE_URI="mirror://sourceforge/${PN}"
+BASE_URI="https://downloads.sourceforge.net/${PN}"
 SRC_URI="!binary? ( ${BASE_URI}/${P}.src.tgz )
 		  !bootstrap-smlnj? ( amd64? ( ${BASE_URI}/${P}-1.amd64-linux.tgz ) )"
 HOMEPAGE="http://www.mlton.org"
@@ -14,14 +14,14 @@ HOMEPAGE="http://www.mlton.org"
 LICENSE="HPND MIT"
 SLOT="0/${PV}"
 KEYWORDS="~amd64 ~x86"
-IUSE="binary bootstrap-smlnj stage3 doc pax_kernel"
+IUSE="binary bootstrap-smlnj stage3 doc pax-kernel"
 
 DEPEND="dev-libs/gmp:*
 		bootstrap-smlnj? ( dev-lang/smlnj )
 		!bootstrap-smlnj? (
 			!amd64?  ( dev-lang/smlnj )
 		)
-		pax_kernel? ( sys-apps/elfix )
+		pax-kernel? ( sys-apps/elfix )
 		doc? ( virtual/latex-base )"
 RDEPEND="dev-libs/gmp:*"
 
@@ -88,7 +88,7 @@ mlton_bootstrap_variant() {
 }
 
 mlton_bootstrap_build_dir() {
-	echo $(basename ${S})"-"$(mlton_bootstrap_variant)
+	echo "$(basename "${S}")-$(mlton_bootstrap_variant)"
 }
 
 mlton_bootstrap_bin_dir() {
@@ -147,12 +147,15 @@ mlton_create_bin_stubs() {
 src_prepare() {
 	if ! use binary; then
 		# For Gentoo hardened: paxmark the mlton-compiler, mllex and mlyacc executables
-		epatch "${FILESDIR}/${PN}-20180207-paxmark.patch"
+		eapply "${FILESDIR}/${PN}-20180207-paxmark.patch"
 		# Fix the bootstrap-smlnj and bootstrap-polyml Makefile targets
-		epatch "${FILESDIR}/${PN}-20180207-bootstrap.patch"
+		eapply "${FILESDIR}/${PN}-20180207-bootstrap.patch"
 	fi
+
 	default
+
 	$(mlton_create_bin_stubs)
+
 	if use binary; then
 		pax-mark m "${R}/lib/${PN}/mlton-compile"
 		pax-mark m "${R}/bin/mllex"
@@ -169,10 +172,14 @@ src_prepare() {
 }
 
 mlton_src_compile() {
+	# produces invalid codegen for twelf
+	# https://bugs.gentoo.org/863266
+	filter-lto
+
 	if [[ ${MULTIBUILD_VARIANT} == $(mlton_bootstrap_variant) ]]; then
 		emake -j1 \
 			"bootstrap-smlnj" \
-			PAXMARK=$(usex pax_kernel "paxmark.sh" "true") \
+			PAXMARK=$(usex pax-kernel "paxmark.sh" "true") \
 			CFLAGS="${CFLAGS}" \
 			WITH_GMP_INC_DIR="${EPREFIX}"/usr/include \
 			WITH_GMP_LIB_DIR="${EPREFIX}"/$(get_libdir)

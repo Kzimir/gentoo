@@ -1,35 +1,37 @@
-# Copyright 1999-2020 Gentoo Authors
+# Copyright 1999-2024 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
-EAPI=7
+EAPI=8
 
-inherit eutils
+inherit flag-o-matic toolchain-funcs
+
+DESCRIPTION="A small but very powerful text-based mail client"
+HOMEPAGE="https://neomutt.org/"
 
 if [[ ${PV} =~ 99999999$ ]]; then
 	inherit git-r3
 	EGIT_REPO_URI="https://github.com/neomutt/neomutt.git"
 else
 	SRC_URI="https://github.com/${PN}/${PN}/archive/${PV}.tar.gz -> ${P}.tar.gz"
-	KEYWORDS="~amd64 ~ppc64 ~x86"
+	KEYWORDS="~amd64 ~ppc64 ~riscv ~x86"
 fi
 
 TEST_FILES_COMMIT=8629adab700a75c54e8e28bf05ad092503a98f75
 SRC_URI+=" test? ( https://github.com/${PN}/neomutt-test-files/archive/${TEST_FILES_COMMIT}.tar.gz -> neomutt-test-files-${TEST_FILES_COMMIT}.tar.gz )"
 
-DESCRIPTION="A small but very powerful text-based mail client"
-HOMEPAGE="https://neomutt.org/"
-
 LICENSE="GPL-2"
 SLOT="0"
-IUSE="berkdb doc gdbm gnutls gpgme idn kerberos kyotocabinet libressl
-	lmdb nls notmuch pgp-classic qdbm sasl selinux slang smime-classic
-	ssl tokyocabinet test"
+IUSE="autocrypt berkdb doc gdbm gnutls gpgme idn kerberos kyotocabinet lmdb lz4
+	nls notmuch pgp-classic qdbm sasl selinux smime-classic ssl tokyocabinet
+	test zlib zstd"
+REQUIRED_USE="
+	autocrypt? ( gpgme )"
 
 CDEPEND="
 	app-misc/mime-types
 	berkdb? (
 		|| (
-			sys-libs/db:6.2
+			sys-libs/db:6.0
 			sys-libs/db:5.3
 			sys-libs/db:4.8
 		)
@@ -43,16 +45,15 @@ CDEPEND="
 	tokyocabinet? ( dev-db/tokyocabinet )
 	gnutls? ( >=net-libs/gnutls-1.0.17:= )
 	gpgme? ( >=app-crypt/gpgme-1.13.1:= )
-	idn? ( net-dns/libidn:= )
+	autocrypt? ( >=dev-db/sqlite-3 )
+	idn? ( net-dns/libidn2:= )
 	kerberos? ( virtual/krb5 )
 	notmuch? ( net-mail/notmuch:= )
 	sasl? ( >=dev-libs/cyrus-sasl-2 )
-	!slang? ( sys-libs/ncurses:0= )
-	slang? ( sys-libs/slang )
-	ssl? (
-		!libressl? ( >=dev-libs/openssl-1.0.2u:0= )
-		libressl? ( dev-libs/libressl:= )
-	)
+	ssl? ( >=dev-libs/openssl-1.0.2u:0= )
+	lz4? ( app-arch/lz4 )
+	zlib? ( sys-libs/zlib )
+	zstd? ( app-arch/zstd )
 "
 DEPEND="${CDEPEND}
 	dev-lang/tcl:=
@@ -74,12 +75,22 @@ RDEPEND="${CDEPEND}
 
 RESTRICT="!test? ( test )"
 
+src_unpack() {
+	if [[ -n ${A} ]]; then
+		unpack ${A}
+	fi
+	if [[ ${PV} =~ 99999999$ ]]; then
+		git-r3_src_unpack
+	fi
+}
+
 src_configure() {
 	local myconf=(
 		"$(usex doc --full-doc --disable-doc)"
 		"$(use_enable nls)"
 		"$(use_enable notmuch)"
 
+		"$(use_enable autocrypt)"
 		"$(use_enable gpgme)"
 		"$(use_enable pgp-classic pgp)"
 		"$(use_enable smime-classic smime)"
@@ -91,11 +102,16 @@ src_configure() {
 		"$(use_enable qdbm)"
 		"$(use_enable tokyocabinet)"
 
-		"$(use_enable idn)"
+		# Header compression.
+		"$(use_enable lz4)"
+		"$(use_enable zlib)"
+		"$(use_enable zstd)"
+
+		--disable-idn
+		"$(use_enable idn idn2)"
 		"$(use_enable kerberos gss)"
 		"$(use_enable lmdb)"
 		"$(use_enable sasl)"
-		"--with-ui=$(usex slang slang ncurses)"
 		"--sysconfdir=${EPREFIX}/etc/${PN}"
 		"$(use_enable ssl)"
 		"$(use_enable gnutls)"
@@ -103,11 +119,18 @@ src_configure() {
 		"$(usex test --testing --disable-testing)"
 	)
 
-	econf CCACHE=none "${myconf[@]}"
+	if is-flagq -fsanitize=address; then
+		myconf+=( --asan )
+	fi
+	if is-flagq -fsanitize=undefined; then
+		myconf+=( --ubsan )
+	fi
+
+	econf CCACHE=none CC_FOR_BUILD="$(tc-getCC)" "${myconf[@]}"
 }
 
 src_test() {
-	local test_dir="$(readlink --canonicalize ${S}/../neomutt-test-files-${TEST_FILES_COMMIT})"
+	local test_dir="$(readlink --canonicalize "${S}"/../neomutt-test-files-${TEST_FILES_COMMIT})"
 	pushd ${test_dir} || die "Could not cd into test_dir"
 	NEOMUTT_TEST_DIR="${test_dir}" ./setup.sh \
 		|| die "Failed to run the setup.sh script"
@@ -144,5 +167,10 @@ pkg_postinst() {
 		ewarn "  support.  You can probably remove pgp-classic (old crypt)"
 		ewarn "  and smime-classic (old smime) from your USE-flags and"
 		ewarn "  only enable gpgme."
+	fi
+
+	if use autocrypt && ! use idn; then
+		ewarn "  It is highly recommended that NeoMutt be also configured"
+		ewarn "  with idn when autocrypt is enabled."
 	fi
 }

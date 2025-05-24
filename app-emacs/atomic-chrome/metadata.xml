@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE pkgmetadata SYSTEM "http://www.gentoo.org/dtd/metadata.dtd">
+<!DOCTYPE pkgmetadata SYSTEM "https://www.gentoo.org/dtd/metadata.dtd">
 <pkgmetadata>
 <maintainer type="project">
   <email>gnu-emacs@gentoo.org</email>
@@ -16,5 +16,8 @@
   Atomic Chrome for Emacs is also compatible with Firefox via the
   GhostText browser extension.
 </longdescription>
+<upstream>
+  <remote-id type="github">alpha22jp/atomic-chrome</remote-id>
+</upstream>
 <stabilize-allarches/>
 </pkgmetadata>

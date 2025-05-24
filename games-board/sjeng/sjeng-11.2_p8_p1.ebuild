@@ -1,4 +1,4 @@
-# Copyright 1999-2020 Gentoo Authors
+# Copyright 1999-2024 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
 EAPI=7
@@ -12,14 +12,13 @@ MY_DEB_PV="${MY_PV}-$(ver_cut 4).$(ver_cut 6)"
 DESCRIPTION="Console based chess interface"
 HOMEPAGE="http://sjeng.sourceforge.net/"
 SRC_URI="
-	mirror://sourceforge/sjeng/Sjeng-Free-${MY_PV}.tar.gz
+	https://downloads.sourceforge.net/sjeng/Sjeng-Free-${MY_PV}.tar.gz
 	mirror://debian/pool/main/s/sjeng/sjeng_${MY_DEB_PV}.diff.gz
 "
 
 LICENSE="GPL-2"
-KEYWORDS="~amd64 ~x86"
+KEYWORDS="~amd64 ~arm64 ~loong ~riscv ~x86"
 SLOT="0"
-IUSE=""
 
 RDEPEND="sys-libs/gdbm:0="
 DEPEND="${RDEPEND}"
@@ -46,6 +45,7 @@ src_install() {
 
 	insinto /etc
 	doins sjeng.rc
+
 	insinto /usr/share/games/sjeng
-	doins books/*.opn || die
+	doins books/*.opn
 }

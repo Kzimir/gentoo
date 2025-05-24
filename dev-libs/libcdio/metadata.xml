@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE pkgmetadata SYSTEM "http://www.gentoo.org/dtd/metadata.dtd">
+<!DOCTYPE pkgmetadata SYSTEM "https://www.gentoo.org/dtd/metadata.dtd">
 <pkgmetadata>
   <maintainer type="project">
     <email>sound@gentoo.org</email>
@@ -12,4 +12,10 @@
     none of the command-line utilities are built, nor is the CDDA library.
   </flag>
   </use>
+  <upstream>
+    <remote-id type="github">libcdio/libcdio</remote-id>
+    <bugs-to>https://github.com/libcdio/libcdio/issues</bugs-to>
+    <changelog>https://github.com/libcdio/libcdio/releases</changelog>
+    <doc>https://github.com/libcdio/libcdio/wiki</doc>
+  </upstream>
 </pkgmetadata>

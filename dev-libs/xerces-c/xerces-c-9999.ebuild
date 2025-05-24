@@ -1,36 +1,44 @@
-# Copyright 1999-2020 Gentoo Authors
+# Copyright 1999-2025 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
-EAPI=6
-: ${CMAKE_MAKEFILE_GENERATOR:=ninja}
+EAPI=8
 
-inherit cmake-utils prefix
+inherit cmake flag-o-matic prefix
 
-DESCRIPTION="A validating XML parser written in a portable subset of C++"
+DESCRIPTION="Validating XML parser written in a portable subset of C++"
 HOMEPAGE="https://xerces.apache.org/xerces-c/"
 
 if [[ ${PV} == *9999 ]] ; then
 	ESVN_REPO_URI="https://svn.apache.org/repos/asf/xerces/c/trunk"
 	inherit subversion
 else
-	SRC_URI="mirror://apache/xerces/c/3/sources/${P}.tar.gz"
-	KEYWORDS="~alpha ~amd64 ~arm ~arm64 ~hppa ~ia64 ~ppc ~ppc64 ~sparc ~x86 ~amd64-linux ~x86-linux ~x64-macos"
+	SRC_URI="
+		mirror://apache/xerces/c/3/sources/${P}.tar.xz
+		https://archive.apache.org/dist/xerces/c/3/sources/${P}.tar.xz
+	"
+	KEYWORDS="~alpha ~amd64 ~arm ~arm64 ~hppa ~ppc ~ppc64 ~riscv ~s390 ~sparc ~x86 ~amd64-linux ~x86-linux ~x64-macos"
 fi
 
 LICENSE="Apache-2.0"
 SLOT="0"
+IUSE="cpu_flags_x86_sse2 curl doc examples iconv icu static-libs test threads"
 
-IUSE="cpu_flags_x86_sse2 curl doc elibc_Darwin elibc_FreeBSD examples iconv icu static-libs test threads"
 RESTRICT="!test? ( test )"
 
-RDEPEND="icu? ( dev-libs/icu:0= )
+RDEPEND="
 	curl? ( net-misc/curl )
+	icu? ( dev-libs/icu:0= )
 	virtual/libiconv"
-DEPEND="${RDEPEND}
-	doc? ( app-doc/doxygen )
+DEPEND="${RDEPEND}"
+BDEPEND="
+	doc? ( app-text/doxygen )
 	test? ( dev-lang/perl )"
 
 DOCS=( CREDITS KEYS NOTICE README )
+
+PATCHES=(
+	"${FILESDIR}"/${PN}-3.2.4-strict-aliasing.patch
+)
 
 pkg_setup() {
 	export ICUROOT="${EPREFIX}/usr"
@@ -42,6 +50,10 @@ pkg_setup() {
 }
 
 src_configure() {
+	# bug #856100
+	filter-lto
+	append-flags -fno-strict-aliasing
+
 	# 'cfurl' is only available on OSX and 'socket' isn't supposed to work.
 	# But the docs aren't clear about it, so we would need some testing...
 	local netaccessor
@@ -67,12 +79,9 @@ src_configure() {
 		transcoder="icu"
 	elif use elibc_Darwin; then
 		transcoder="macosunicodeconverter"
-	elif use elibc_FreeBSD; then
-		transcoder="iconv"
 	else
 		transcoder="gnuiconv"
 	fi
-	# for interix maybe: transcoder="windows"
 
 	local mycmakeargs=(
 		-DCMAKE_INSTALL_DOCDIR="${EPREFIX}/usr/share/doc/${PF}"
@@ -83,17 +92,17 @@ src_configure() {
 		-Dsse2:BOOL="$(usex cpu_flags_x86_sse2)"
 	)
 
-	cmake-utils_src_configure
+	cmake_src_configure
 }
 
 src_compile() {
-	cmake-utils_src_compile
+	cmake_src_compile
 
-	use doc && cmake-utils_src_compile doc-style createapidocs doc-xml
+	use doc && cmake_build doc-style createapidocs doc-xml
 }
 
 src_install() {
-	cmake-utils_src_install
+	cmake_src_install
 
 	# package provides .pc files
 	find "${D}" -name '*.la' -delete || die

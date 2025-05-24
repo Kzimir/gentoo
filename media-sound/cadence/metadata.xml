@@ -1,15 +1,14 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE pkgmetadata SYSTEM "http://www.gentoo.org/dtd/metadata.dtd">
+<!DOCTYPE pkgmetadata SYSTEM "https://www.gentoo.org/dtd/metadata.dtd">
 <pkgmetadata>
-<maintainer type="person">
-	<email>fordfrog@gentoo.org</email>
-	<name>Miroslav Šulc</name>
-</maintainer>
-<maintainer type="project">
-	<email>proaudio@gentoo.org</email>
-	<name>Gentoo ProAudio Project</name>
-</maintainer>
-<use>
-	<flag name="a2jmidid">Enables support for legacy ALSA sequencer applications in JACK MIDI system</flag>
-</use>
+	<maintainer type="project">
+		<email>proaudio@gentoo.org</email>
+		<name>Gentoo ProAudio Project</name>
+	</maintainer>
+	<use>
+		<flag name="a2jmidid">Enables support for legacy ALSA sequencer applications in JACK MIDI system</flag>
+	</use>
+	<upstream>
+		<remote-id type="github">falkTX/Cadence</remote-id>
+	</upstream>
 </pkgmetadata>

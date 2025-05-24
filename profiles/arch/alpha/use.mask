@@ -1,8 +1,44 @@
-# Copyright 1999-2020 Gentoo Authors
+# Copyright 1999-2025 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
 # Unmask the flag which corresponds to ARCH.
 -alpha
+
+# Sam James <sam@gentoo.org> (2025-01-09)
+# dev-db/mysql not keyworded here
+mysql
+
+# matoro <matoro_gentoo@matoro.tk> (2024-01-24)
+# sys-apps/flatpak is not keyworded here
+flatpak
+
+# matoro <matoro_gentoo@matoro.tk> (2023-11-14)
+# Qt is not keyworded here
+qt5
+qt6
+
+# matoro <matoro_gentoo@matoro.tk> (2023-06-17)
+# media-libs/libheif is not keyworded here
+heif
+
+# matoro <matoro_gentoo@matoro.tk> (2023-06-10)
+# dev-lang/go is not keyworded here
+go
+
+# Matt Turner <mattst88@gentoo.org> (2023-02-15)
+# dev-lang/ocaml is not keyworded here
+ocaml
+
+# Matt Turner <mattst88@gentoo.org> (2022-02-21)
+# app-crypt/tpm2-tss is not keyworded here
+tpm
+
+# James Le Cuirot <chewi@gentoo.org> (2021-08-10)
+# media-video/pipewire is not keyworded. Bug #807616.
+pipewire
+
+# Matt Turner <mattst88@gentoo.org> (2021-07-05)
+nftables
 
 # Andreas Sturmlechner <asturm@gentoo.org> (2020-11-12)
 # media-sound/jack-audio-connection-kit re-keywording timeout, bug #736725
@@ -22,10 +58,6 @@ vulkan
 # media-libs/allegro is not keyworded.
 allegro
 
-# Matt Turner <mattst88@gentoo.org> (2020-03-16)
-# Drop support for ghc and darcs
-darcs
-
 # Matt Turner <mattst88@gentoo.org> (2020-02-02)
 # Neither dev-python/pymongo nor dev-libs/mongo-c-driver are keyworded
 mongodb
@@ -42,12 +74,7 @@ acpi
 # There is no luajit support on alpha. Bugs #554376, #608322.
 lua_single_target_luajit
 lua_targets_luajit
-luajit
 luajittex
-
-# Andreas Sturmlechner <asturm@gentoo.org> (2017-02-25)
-# kwallet integration split from kde to distinct flag
-kwallet
 
 # Tobias Klausmann <klausman@gentoo.org> (2016-06-07)
 # We currently do not have the resources to AT qt5 packages.
@@ -82,12 +109,10 @@ wifi
 apm
 battery
 dmi
-pm-utils
 
 # Stuff that doesn't work on alpha, or not tested
 clang
 djbfft
-emboss
 hardened
 mecab
 netbeans
@@ -99,7 +124,7 @@ rtmp
 v4l
 vpx
 kde
-quvi
+kwallet
 metalink
 tremor
 fdk
@@ -114,9 +139,7 @@ openexr
 afs
 ots
 frei0r
-prelude
 libtar
-aacplus
 devil
 gts
 
@@ -161,16 +184,12 @@ d
 topal
 
 # Matt Turner <mattst88@gentoo.org> (2010-12-13)
-# We don't have sys-devel/llvm
+# We don't have llvm-core/llvm
 llvm
 
-# Matt Turner <mattst88@gentoo.org (2012-05-27)
+# Matt Turner <mattst88@gentoo.org> (2012-05-27)
 # net-misc/connman is not keyworded
 connman
-
-# Anthony G. Basile <blueness@gentoo.org> (2012-04-15)
-# Pulls in net-libs/axtls which is not keyworded for arch
-curl_ssl_axtls
 
 # Alexandre Rostovtsev <tetromino@gentoo.org> (2012-12-31)
 # media-libs/xine-lib is not keyworded
@@ -187,10 +206,6 @@ opencl
 
 # Unmask once sys-libs/libunwind gets ported & keyworded.
 unwind
-
-# Pacho Ramos <pacho@gentoo.org> (2014-01-08)
-# Unmask systemd since it is keyworded here.
--systemd
 
 # Tobias Klausmann <klausman@gentoo.org> (2014-07-20)
 # Mask redis USE flag everywhere since redis depends on google-perftools,

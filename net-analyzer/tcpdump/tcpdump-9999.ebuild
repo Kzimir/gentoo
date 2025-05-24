@@ -1,76 +1,81 @@
-# Copyright 1999-2020 Gentoo Authors
+# Copyright 1999-2025 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
-EAPI=7
-inherit autotools git-r3
+EAPI=8
 
-DESCRIPTION="A Tool for network monitoring and data acquisition"
-HOMEPAGE="
-	https://www.tcpdump.org/
-	https://github.com/the-tcpdump-group/tcpdump
-"
+inherit autotools
+
+DESCRIPTION="A tool for network monitoring and data acquisition"
+HOMEPAGE="https://www.tcpdump.org/ https://github.com/the-tcpdump-group/tcpdump"
+
+if [[ ${PV} == *9999* ]] ; then
+	inherit git-r3
+
+	EGIT_REPO_URI="https://github.com/the-tcpdump-group/tcpdump"
+else
+	VERIFY_SIG_OPENPGP_KEY_PATH=/usr/share/openpgp-keys/tcpdump.asc
+	inherit verify-sig
+
+	SRC_URI="https://www.tcpdump.org/release/${P}.tar.gz"
+	SRC_URI+=" verify-sig? ( https://www.tcpdump.org/release/${P}.tar.gz.sig )"
+
+	KEYWORDS="~alpha ~amd64 ~arm ~arm64 ~hppa ~loong ~m68k ~mips ~ppc ~ppc64 ~riscv ~s390 ~sparc ~x86 ~amd64-linux ~x86-linux"
+fi
+
 LICENSE="BSD"
-EGIT_REPO_URI="https://github.com/the-tcpdump-group/tcpdump"
-
 SLOT="0"
-KEYWORDS=""
-IUSE="+drop-root libressl +smi +ssl +samba suid test"
-RESTRICT="!test? ( test )"
+IUSE="+caps +smi +ssl +samba suid test"
 REQUIRED_USE="test? ( samba )"
+RESTRICT="!test? ( test )"
 
 RDEPEND="
-	net-libs/libpcap
-	drop-root? (
+	>=net-libs/libpcap-1.10.1
+	caps? (
 		acct-group/pcap
 		acct-user/pcap
 		sys-libs/libcap-ng
 	)
 	smi? ( net-libs/libsmi )
 	ssl? (
-		!libressl? ( >=dev-libs/openssl-0.9.6m:0= )
-		libressl? ( dev-libs/libressl:= )
+		>=dev-libs/openssl-0.9.6m:=
 	)
 	suid? (
 		acct-group/pcap
 		acct-user/pcap
 	)
 "
-BDEPEND="
-	drop-root? ( virtual/pkgconfig )
-"
 DEPEND="
 	${RDEPEND}
 	test? (
-		>=net-libs/libpcap-1.9.1
 		dev-lang/perl
 	)
 "
-PATCHES=(
-	"${FILESDIR}"/${PN}-9999-libdir.patch
-)
+BDEPEND="caps? ( virtual/pkgconfig )"
+
+if [[ ${PV} != *9999* ]] ; then
+	BDEPEND+=" verify-sig? ( >=sec-keys/openpgp-keys-tcpdump-20240901 )"
+fi
 
 src_prepare() {
 	default
-
 	eautoreconf
 }
 
 src_configure() {
 	econf \
 		$(use_enable samba smb) \
-		$(use_with drop-root cap-ng) \
-		$(use_with drop-root chroot '') \
+		$(use_with caps cap-ng) \
 		$(use_with smi) \
 		$(use_with ssl crypto "${ESYSROOT}/usr") \
-		$(usex drop-root "--with-user=pcap" "")
+		$(usex caps "--with-user=pcap" "")
 }
 
 src_test() {
-	if [[ ${EUID} -ne 0 ]] || ! use drop-root; then
+	if [[ ${EUID} -ne 0 ]] || ! use caps ; then
 		emake check
 	else
 		ewarn "If you want to run the test suite, make sure you either"
-		ewarn "set FEATURES=userpriv or set USE=-drop-root"
+		ewarn "set FEATURES=userpriv or set USE=-caps"
 	fi
 }
 
@@ -80,12 +85,12 @@ src_install() {
 	dodoc *.awk
 	dodoc CHANGES CREDITS README.md
 
-	if use suid; then
+	if use suid ; then
 		fowners root:pcap /usr/sbin/tcpdump
 		fperms 4110 /usr/sbin/tcpdump
 	fi
 }
 
 pkg_postinst() {
-	use suid && elog "To let normal users run tcpdump add them to the pcap group."
+	use suid && elog "To let normal users run tcpdump, add them to the pcap group."
 }

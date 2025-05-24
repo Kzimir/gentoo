@@ -1,11 +1,11 @@
-# Copyright 1999-2020 Gentoo Authors
+# Copyright 1999-2024 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
-EAPI=7
+EAPI=8
 
-inherit meson
+inherit meson systemd
 
-DESCRIPTION="A lightweight notification daemon for Wayland. Works on Sway."
+DESCRIPTION="A lightweight notification daemon for Wayland. Works on Sway"
 HOMEPAGE="https://github.com/emersion/mako"
 
 if [[ ${PV} == 9999 ]]; then
@@ -13,40 +13,58 @@ if [[ ${PV} == 9999 ]]; then
 	EGIT_REPO_URI="https://github.com/emersion/${PN}.git"
 else
 	SRC_URI="https://github.com/emersion/${PN}/archive/v${PV}.tar.gz -> ${P}.tar.gz"
-	KEYWORDS="~amd64 ~arm64 ~x86"
+	KEYWORDS="~amd64 ~arm64 ~ppc64 ~x86"
 fi
 
 LICENSE="MIT"
 SLOT="0"
-IUSE="+icons"
+IUSE="elogind +icons systemd"
 
-DEPEND="
+RDEPEND="
 	dev-libs/wayland
 	x11-libs/pango
 	x11-libs/cairo
 	|| (
-		sys-apps/systemd
-		sys-auth/elogind
+		systemd? ( sys-apps/systemd )
+		elogind? ( sys-auth/elogind )
+		sys-libs/basu
 	)
-	sys-apps/dbus[user-session]
+	sys-apps/dbus
 	icons? (
-		x11-libs/gtk+:3
 		x11-libs/gdk-pixbuf
 	)
 "
-RDEPEND="
-	${DEPEND}
-	dev-libs/wayland-protocols
+DEPEND="
+	${RDEPEND}
+	>=dev-libs/wayland-protocols-1.32
 "
 BDEPEND="
-	virtual/pkgconfig
 	app-text/scdoc
+	dev-util/wayland-scanner
+	virtual/pkgconfig
 "
 
 src_configure() {
 	local emesonargs=(
 		-Dicons=$(usex icons enabled disabled)
-		"-Dwerror=false"
+		-Dzsh-completions=true
+		-Dfish-completions=true
+		-Dbash-completions=true
 	)
+
+	if use systemd ; then
+		emesonargs+=( -Dsd-bus-provider=libsystemd )
+	elif use elogind ; then
+		emesonargs+=( -Dsd-bus-provider=libelogind )
+	else
+		emesonargs+=( -Dsd-bus-provider=basu )
+	fi
+
 	meson_src_configure
+}
+
+src_install() {
+	meson_src_install
+
+	systemd_douserunit contrib/systemd/mako.service
 }

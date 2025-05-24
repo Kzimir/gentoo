@@ -1,4 +1,4 @@
-# Copyright 2004-2019 Gentoo Authors
+# Copyright 2004-2024 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
 # @ECLASS: xdg-utils.eclass
@@ -7,7 +7,7 @@
 # freedesktop-bugs@gentoo.org
 # @AUTHOR:
 # Original author: Gilles Dartiguelongue <eva@gentoo.org>
-# @SUPPORTED_EAPIS: 0 1 2 3 4 5 6 7
+# @SUPPORTED_EAPIS: 7 8
 # @BLURB: Auxiliary functions commonly used by XDG compliant packages.
 # @DESCRIPTION:
 # This eclass provides a set of auxiliary functions needed by most XDG
@@ -17,22 +17,22 @@
 #  * XDG .desktop files cache management
 #  * XDG mime information database management
 
-case "${EAPI:-0}" in
-	0|1|2|3|4|5|6|7) ;;
-	*) die "EAPI=${EAPI} is not supported" ;;
+case ${EAPI} in
+	7|8) ;;
+	*) die "${ECLASS}: EAPI ${EAPI:-0} not supported" ;;
 esac
 
-# @ECLASS-VARIABLE: DESKTOP_DATABASE_DIR
+# @ECLASS_VARIABLE: DESKTOP_DATABASE_DIR
 # @INTERNAL
 # @DESCRIPTION:
 # Directory where .desktop files database is stored
-: ${DESKTOP_DATABASE_DIR="/usr/share/applications"}
+: "${DESKTOP_DATABASE_DIR="/usr/share/applications"}"
 
-# @ECLASS-VARIABLE: MIMEINFO_DATABASE_DIR
+# @ECLASS_VARIABLE: MIMEINFO_DATABASE_DIR
 # @INTERNAL
 # @DESCRIPTION:
 # Directory where .desktop files database is stored
-: ${MIMEINFO_DATABASE_DIR:="/usr/share/mime"}
+: "${MIMEINFO_DATABASE_DIR:="/usr/share/mime"}"
 
 # @FUNCTION: xdg_environment_reset
 # @DESCRIPTION:
@@ -42,9 +42,10 @@ xdg_environment_reset() {
 	export XDG_DATA_HOME="${HOME}/.local/share"
 	export XDG_CONFIG_HOME="${HOME}/.config"
 	export XDG_CACHE_HOME="${HOME}/.cache"
+	export XDG_STATE_HOME="${HOME}/.local/state"
 	export XDG_RUNTIME_DIR="${T}/run"
 	mkdir -p "${XDG_DATA_HOME}" "${XDG_CONFIG_HOME}" "${XDG_CACHE_HOME}" \
-		"${XDG_RUNTIME_DIR}" || die
+		"${XDG_STATE_HOME}" "${XDG_RUNTIME_DIR}" || die
 	# This directory needs to be owned by the user, and chmod 0700
 	# https://standards.freedesktop.org/basedir-spec/basedir-spec-latest.html
 	chmod 0700 "${XDG_RUNTIME_DIR}" || die
@@ -57,7 +58,7 @@ xdg_environment_reset() {
 # Updates the .desktop files database.
 # Generates a list of mimetypes linked to applications that can handle them
 xdg_desktop_database_update() {
-	if [[ ${EBUILD_PHASE} != post* ]] ; then
+	if [[ ${EBUILD_PHASE} != post* ]]; then
 		die "xdg_desktop_database_update must be used in pkg_post* phases."
 	fi
 
@@ -67,7 +68,7 @@ xdg_desktop_database_update() {
 	fi
 
 	ebegin "Updating .desktop files database"
-	update-desktop-database -q "${EROOT%/}${DESKTOP_DATABASE_DIR}"
+	update-desktop-database -q "${EROOT}${DESKTOP_DATABASE_DIR}"
 	eend $?
 }
 
@@ -76,7 +77,7 @@ xdg_desktop_database_update() {
 # Updates icon theme cache files under /usr/share/icons.
 # This function should be called from pkg_postinst and pkg_postrm.
 xdg_icon_cache_update() {
-	if [[ ${EBUILD_PHASE} != post* ]] ; then
+	if [[ ${EBUILD_PHASE} != post* ]]; then
 		die "xdg_icon_cache_update must be used in pkg_post* phases."
 	fi
 
@@ -86,21 +87,17 @@ xdg_icon_cache_update() {
 	fi
 
 	ebegin "Updating icons cache"
-	local dir f retval=0
-	local fails=( )
-	for dir in "${EROOT%/}"/usr/share/icons/*
-	do
-		if [[ -f "${dir}/index.theme" ]] ; then
-			local rv=0
-			gtk-update-icon-cache -qf "${dir}"
-			rv=$?
-			if [[ ! $rv -eq 0 ]] ; then
+	local dir retval=0
+	local fails=()
+	for dir in "${EROOT}"/usr/share/icons/*; do
+		if [[ -f ${dir}/index.theme ]]; then
+			if ! gtk-update-icon-cache -qf "${dir}"; then
 				debug-print "Updating cache failed on ${dir}"
 				# Add to the list of failures
-				fails+=( "${dir}" )
+				fails+=("${dir}")
 				retval=2
 			fi
-		elif [[ $(ls "${dir}") = "icon-theme.cache" ]]; then
+		elif [[ $(ls "${dir}") = icon-theme.cache ]]; then
 			# Clear stale cache files after theme uninstallation
 			rm "${dir}/icon-theme.cache"
 		fi
@@ -110,8 +107,8 @@ xdg_icon_cache_update() {
 		fi
 	done
 	eend ${retval}
-	for f in "${fails[@]}" ; do
-		eerror "Failed to update cache with icon $f"
+	for dir in "${fails[@]}"; do
+		eerror "Failed to update cache with icon ${dir}"
 	done
 }
 
@@ -120,7 +117,7 @@ xdg_icon_cache_update() {
 # Update the mime database.
 # Creates a general list of mime types from several sources
 xdg_mimeinfo_database_update() {
-	if [[ ${EBUILD_PHASE} != post* ]] ; then
+	if [[ ${EBUILD_PHASE} != post* ]]; then
 		die "xdg_mimeinfo_database_update must be used in pkg_post* phases."
 	fi
 
@@ -129,7 +126,10 @@ xdg_mimeinfo_database_update() {
 		return
 	fi
 
+	# https://bugs.gentoo.org/819783
+	local -x PKGSYSTEM_ENABLE_FSYNC=0
+
 	ebegin "Updating shared mime info database"
-	update-mime-database "${EROOT%/}${MIMEINFO_DATABASE_DIR}"
+	update-mime-database "${EROOT}${MIMEINFO_DATABASE_DIR}"
 	eend $?
 }

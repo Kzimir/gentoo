@@ -1,10 +1,11 @@
-# Copyright 2014-2020 Gentoo Authors
+# Copyright 2014-2024 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
-EAPI="7"
-PYTHON_COMPAT=(python{3_6,3_7,3_8,3_9})
+EAPI="8"
+PYTHON_COMPAT=( python3_{10..12} )
+DISTUTILS_USE_PEP517="setuptools"
 DISTUTILS_OPTIONAL="1"
-DISTUTILS_USE_SETUPTOOLS="no"
+DISTUTILS_EXT=1
 
 inherit autotools distutils-r1 toolchain-funcs
 
@@ -16,20 +17,18 @@ fi
 
 DESCRIPTION="Matching Algorithm with Recursively Implemented StorAge"
 HOMEPAGE="https://github.com/s-yata/marisa-trie https://code.google.com/archive/p/marisa-trie/"
-if [[ "${PV}" == "9999" ]]; then
-	SRC_URI=""
-else
+if [[ "${PV}" != "9999" ]]; then
 	SRC_URI="https://github.com/s-yata/marisa-trie/archive/v${PV}.tar.gz -> ${P}.tar.gz"
 fi
 
 LICENSE="|| ( BSD-2 LGPL-2.1+ )"
 SLOT="0"
-KEYWORDS=""
 IUSE="python static-libs"
 REQUIRED_USE="python? ( ${PYTHON_REQUIRED_USE} )"
 
 BDEPEND="python? (
 		${PYTHON_DEPS}
+		${DISTUTILS_DEPS}
 		dev-lang/swig
 	)"
 DEPEND="python? ( ${PYTHON_DEPS} )"

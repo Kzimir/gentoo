@@ -1,7 +1,7 @@
-# Copyright 1999-2020 Gentoo Authors
+# Copyright 1999-2024 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
-EAPI=7
+EAPI=8
 
 inherit meson
 
@@ -13,18 +13,14 @@ if [[ ${PV} == 9999 ]]; then
 	EGIT_REPO_URI="https://github.com/videolabs/${PN}"
 else
 	SRC_URI="https://github.com/videolabs/${PN}/releases/download/${PV}/${P/lib/}.tar.xz"
-	KEYWORDS="~amd64 ~arm ~arm64 ~ppc ~ppc64 ~x86"
+	KEYWORDS="~amd64 ~arm ~arm64 ~loong ~ppc ~ppc64 ~riscv ~x86"
 	S="${WORKDIR}/${P/lib/}"
 fi
 
 LICENSE="LGPL-2.1+"
-SLOT="0"
+SLOT="0/1"
 IUSE="examples test"
 RESTRICT="!test? ( test )"
-
-DEPEND=""
-RDEPEND="${DEPEND}"
-BDEPEND=""
 
 src_configure() {
 	local emesonargs=(

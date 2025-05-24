@@ -1,15 +1,19 @@
-# Copyright 1999-2020 Gentoo Authors
+# Copyright 1999-2025 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
-EAPI=7
+EAPI="8"
+
+inherit toolchain-funcs
 
 if [[ ${PV} == "99999999" ]] ; then
 	inherit git-r3
-	EGIT_REPO_URI="https://anongit.gentoo.org/git/proj/crossdev.git"
+	EGIT_REPO_URI="
+		https://anongit.gentoo.org/git/proj/crossdev.git
+		https://github.com/gentoo/crossdev
+	"
 else
-	SRC_URI="mirror://gentoo/${P}.tar.xz
-		https://dev.gentoo.org/~slyfox/distfiles/${P}.tar.xz"
-	KEYWORDS="~alpha ~amd64 ~arm ~arm64 ~hppa ~ia64 ~m68k ~mips ~ppc ~ppc64 ~riscv ~s390 ~sparc ~x86"
+	SRC_URI="https://dev.gentoo.org/~sam/distfiles/${CATEGORY}/${PN}/${P}.tar.xz"
+	KEYWORDS="~alpha ~amd64 ~arm ~arm64 ~hppa ~loong ~m68k ~mips ~ppc ~ppc64 ~riscv ~s390 ~sparc ~x86"
 fi
 
 DESCRIPTION="Gentoo Cross-toolchain generator"
@@ -17,20 +21,26 @@ HOMEPAGE="https://wiki.gentoo.org/wiki/Project:Crossdev"
 
 LICENSE="GPL-2"
 SLOT="0"
-IUSE=""
 
 RDEPEND="
 	>=sys-apps/portage-2.1
-	>=app-portage/portage-utils-0.55
 	app-shells/bash
 	sys-apps/gentoo-functions
+	sys-apps/config-site
 "
-DEPEND="app-arch/xz-utils"
+BDEPEND="app-arch/xz-utils"
 
 src_install() {
+	tc-export PKG_CONFIG # Bug 955822
+
 	default
 
-	if [[ "${PV}" == "99999999" ]] ; then
+	if [[ ${PV} == "99999999" ]] ; then
 		sed -i "s:@CDEVPV@:${EGIT_VERSION}:" "${ED}"/usr/bin/crossdev || die
+	else
+		sed -i "s:@CDEVPV@:${PV}:" "${ED}"/usr/bin/crossdev || die
 	fi
+
+	dodir /usr/share/config.site.d
+	mv "${ED}"/usr/share/config.site{,.d/80crossdev.conf} || die
 }

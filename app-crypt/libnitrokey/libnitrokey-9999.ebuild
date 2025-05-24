@@ -1,9 +1,9 @@
-# Copyright 1999-2020 Gentoo Authors
+# Copyright 1999-2023 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
-EAPI=7
+EAPI=8
 
-inherit cmake-utils udev
+inherit udev cmake
 
 DESCRIPTION="Support library for the Nitrokey"
 HOMEPAGE="https://github.com/Nitrokey/libnitrokey"
@@ -29,7 +29,7 @@ RDEPEND="
 	virtual/udev"
 DEPEND="
 	${RDEPEND}
-	test? ( >=dev-cpp/catch-2.5.0:0 )"
+	test? ( <dev-cpp/catch-3:0 )"
 BDEPEND="virtual/pkgconfig"
 
 src_configure() {
@@ -43,5 +43,13 @@ src_configure() {
 		-DCOMPILE_TESTS=OFF
 		-DCOMPILE_OFFLINE_TESTS=$(usex test)
 	)
-	cmake-utils_src_configure
+	cmake_src_configure
+}
+
+pkg_postinst() {
+	udev_reload
+}
+
+pkg_postrm() {
+	udev_reload
 }

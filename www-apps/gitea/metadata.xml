@@ -1,11 +1,15 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE pkgmetadata SYSTEM "http://www.gentoo.org/dtd/metadata.dtd">
+<!DOCTYPE pkgmetadata SYSTEM "https://www.gentoo.org/dtd/metadata.dtd">
 <pkgmetadata>
-	<maintainer type="person">
-		<email>nemunaire@nemunai.re</email>
-		<name>Pierre-Olivier Mercier</name>
+	<maintainer type="person" proxied="yes">
+		<email>i@bitbili.net</email>
+		<name>Ryan Qian</name>
 	</maintainer>
-	<maintainer type="project">
+	<maintainer type="person" proxied="proxy">
+		<email>dlan@gentoo.org</email>
+		<name>Yixun Lan</name>
+	</maintainer>
+	<maintainer type="project" proxied="proxy">
 		<email>proxy-maint@gentoo.org</email>
 		<name>Proxy Maintainers</name>
 	</maintainer>
@@ -14,6 +18,6 @@
 	</upstream>
 	<use>
 		<flag name="acct">User and group management via acct-*/git packages</flag>
-		<flag name="build-client">Build the client code, instead of using a precompiled one</flag>
+		<flag name="gogit">(EXPERIMENTAL) Use go-git variants of Git commands.</flag>
 	</use>
 </pkgmetadata>

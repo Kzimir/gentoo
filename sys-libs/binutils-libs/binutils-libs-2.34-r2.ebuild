@@ -1,4 +1,4 @@
-# Copyright 1999-2021 Gentoo Authors
+# Copyright 1999-2025 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
 EAPI=7
@@ -6,7 +6,7 @@ EAPI=7
 PATCH_VER=6
 PATCH_DEV=dilfridge
 
-inherit eutils libtool toolchain-funcs multilib-minimal
+inherit flag-o-matic libtool toolchain-funcs multilib-minimal
 
 MY_PN="binutils"
 MY_P="${MY_PN}-${PV}"
@@ -21,7 +21,7 @@ SRC_URI="mirror://gnu/binutils/${MY_P}.tar.xz
 LICENSE="|| ( GPL-3 LGPL-3 )"
 SLOT="0/${PV}"
 IUSE="64-bit-bfd multitarget nls static-libs"
-KEYWORDS="~alpha amd64 arm arm64 hppa ~ia64 ~m68k ~mips ppc ppc64 ~riscv s390 sparc x86 ~x64-macos ~sparc-solaris ~sparc64-solaris ~x64-solaris ~x86-solaris"
+KEYWORDS="~alpha amd64 arm arm64 hppa ~m68k ~mips ppc ppc64 ~riscv ~s390 sparc x86 ~x64-macos ~x64-solaris"
 
 BDEPEND="nls? ( sys-devel/gettext )"
 DEPEND="sys-libs/zlib[${MULTILIB_USEDEP}]"
@@ -37,7 +37,7 @@ MULTILIB_WRAPPED_HEADERS=(
 )
 
 src_prepare() {
-	if [[ ! -z ${PATCH_VER} ]] ; then
+	if [[ -n ${PATCH_VER} ]] ; then
 		einfo "Applying binutils-${PATCH_BINUTILS_VER} patchset ${PATCH_VER}"
 		eapply "${WORKDIR}/patch"/*.patch
 	fi
@@ -54,6 +54,11 @@ pkgversion() {
 }
 
 multilib_src_configure() {
+	# https://sourceware.org/PR32372
+	append-cflags -std=gnu17
+	# bug #814326
+	filter-lto
+
 	local myconf=(
 		--enable-obsolete
 		--enable-shared

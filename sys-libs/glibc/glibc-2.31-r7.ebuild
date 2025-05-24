@@ -1,12 +1,13 @@
-# Copyright 1999-2020 Gentoo Authors
+# Copyright 1999-2024 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
 EAPI=7
 
-PYTHON_COMPAT=( python3_{6,7,8,9} )
+PYTHON_COMPAT=( python3_{10..11} )
+TMPFILES_OPTIONAL=1
 
-inherit python-any-r1 prefix eutils toolchain-funcs flag-o-matic gnuconfig \
-	multilib systemd multiprocessing
+inherit python-any-r1 prefix toolchain-funcs flag-o-matic gnuconfig \
+	multilib systemd multiprocessing tmpfiles
 
 DESCRIPTION="GNU libc C library"
 HOMEPAGE="https://www.gnu.org/software/libc/"
@@ -22,7 +23,7 @@ PATCH_DEV=dilfridge
 if [[ ${PV} == 9999* ]]; then
 	inherit git-r3
 else
-	KEYWORDS="~alpha amd64 arm arm64 ~hppa ~ia64 ~m68k ~mips ppc ppc64 ~riscv s390 ~sparc x86"
+	KEYWORDS="~alpha amd64 arm arm64 ~hppa ~m68k ~mips ppc ppc64 ~riscv ~s390 ~sparc x86"
 	SRC_URI="mirror://gnu/glibc/${P}.tar.xz"
 	SRC_URI+=" https://dev.gentoo.org/~${PATCH_DEV}/distfiles/${P}-patches-${PATCH_VER}.tar.xz"
 fi
@@ -102,7 +103,7 @@ COMMON_DEPEND="
 	) )
 	suid? ( caps? ( sys-libs/libcap ) )
 	selinux? ( sys-libs/libselinux )
-	systemtap? ( dev-util/systemtap )
+	systemtap? ( dev-debug/systemtap )
 	!<net-misc/openssh-8.1_p1-r2
 "
 DEPEND="${COMMON_DEPEND}
@@ -371,10 +372,16 @@ setup_flags() {
 		append-flags -O2
 	fi
 	strip-unsupported-flags
+	filter-lto
 	filter-flags -m32 -m64 '-mabi=*'
 
 	# glibc aborts if rpath is set by LDFLAGS
 	filter-ldflags '-Wl,-rpath=*'
+
+	# Fails to link (bug #940709) in some cases but even if it manages to,
+	# subtle runtime breakage will occur because the linker scripts need
+	# adaptation. Mentioned in PR21557#c0.
+	filter-ldflags '-Wl,--gc-sections'
 
 	# #492892
 	filter-flags -frecord-gcc-switches
@@ -632,7 +639,7 @@ sanity_prechecks() {
 	if [[ -e ${EROOT}/etc/nsswitch.conf ]] ; then
 		local entry
 		for entry in passwd group shadow; do
-			if ! egrep -q "^[ \t]*${entry}:.*files" "${EROOT}"/etc/nsswitch.conf; then
+			if ! grep -E -q "^[ \t]*${entry}:.*files" "${EROOT}"/etc/nsswitch.conf; then
 				eerror "Your ${EROOT}/etc/nsswitch.conf is out of date."
 				eerror "Please make sure you have 'files' entries for"
 				eerror "'passwd:', 'group:' and 'shadow:' databases."
@@ -647,7 +654,7 @@ sanity_prechecks() {
 	# we test for...
 	if ! is_crosscompile ; then
 		if use amd64 && use multilib && [[ ${MERGE_TYPE} != "binary" ]] ; then
-			ebegin "Checking that IA32 emulation is enabled in the running kernel"
+			ebegin "Checking if the system can execute 32-bit binaries"
 			echo 'int main(){return 0;}' > "${T}/check-ia32-emulation.c"
 			local STAT
 			if "${CC-${CHOST}-gcc}" ${CFLAGS_x86} "${T}/check-ia32-emulation.c" -o "${T}/check-ia32-emulation.elf32"; then
@@ -661,7 +668,11 @@ sanity_prechecks() {
 			fi
 			rm -f "${T}/check-ia32-emulation.elf32"
 			eend $STAT
-			[[ $STAT -eq 0 ]] || die "CONFIG_IA32_EMULATION must be enabled in the kernel to compile a multilib glibc."
+			if [[ $STAT -ne 0 ]]; then
+				eerror "Ensure that CONFIG_IA32_EMULATION is enabled in the kernel."
+				eerror "Seek support otherwise."
+				die "Unable to execute 32-bit binaries"
+			fi
 		fi
 
 	fi
@@ -783,8 +794,10 @@ src_prepare() {
 }
 
 glibc_do_configure() {
-	# Glibc does not work with gold (for various reasons) #269274.
-	tc-ld-disable-gold
+	# glibc does not work with non-bfd (for various reasons):
+	# * gold (bug #269274)
+	# * mold (bug #860900)
+	tc-ld-force-bfd
 
 	# CXX isnt handled by the multilib system, so if we dont unset here
 	# we accumulate crap across abis
@@ -977,7 +990,7 @@ glibc_do_configure() {
 	# add x32 to it, gcc/glibc don't yet support x32.
 	#
 	if [[ -n ${GCC_BOOTSTRAP_VER} ]] && use multilib ; then
-		echo 'main(){}' > "${T}"/test.c
+		echo 'int main(){}' > "${T}"/test.c
 		if ! $(tc-getCC ${CTARGET}) ${CFLAGS} ${LDFLAGS} "${T}"/test.c -Wl,-emain -lgcc 2>/dev/null ; then
 			sed -i -e '/^CC = /s:$: -B$(objdir)/../'"gcc-multilib-bootstrap-${GCC_BOOTSTRAP_VER}/${ABI}:" config.make || die
 		fi
@@ -1241,7 +1254,6 @@ glibc_do_src_install() {
 		n64     /lib64/ld.so.1
 		# powerpc
 		ppc     /lib/ld.so.1
-		ppc64   /lib64/ld64.so.1
 		# riscv
 		lp64d   /lib/ld-linux-riscv64-lp64d.so.1
 		lp64    /lib/ld-linux-riscv64-lp64.so.1
@@ -1257,12 +1269,16 @@ glibc_do_src_install() {
 		ldso_abi_list+=(
 			# arm
 			arm64   /lib/ld-linux-aarch64.so.1
+			# ELFv2 (glibc does not support ELFv1 on LE)
+			ppc64   /lib64/ld64.so.2
 		)
 		;;
 	big)
 		ldso_abi_list+=(
 			# arm
 			arm64   /lib/ld-linux-aarch64_be.so.1
+			# ELFv1 (glibc does not support ELFv2 on BE)
+			ppc64   /lib64/ld64.so.1
 		)
 		;;
 	esac
@@ -1359,7 +1375,7 @@ glibc_do_src_install() {
 		sed -i "${nscd_args[@]}" "${ED}"/etc/init.d/nscd
 
 		systemd_dounit nscd/nscd.service
-		systemd_newtmpfilesd nscd/nscd.tmpfiles nscd.conf
+		newtmpfiles nscd/nscd.tmpfiles nscd.conf
 	fi
 
 	echo 'LDPATH="include ld.so.conf.d/*.conf"' > "${T}"/00glibc
@@ -1482,7 +1498,7 @@ pkg_postinst() {
 	if [[ -e ${EROOT}/etc/nsswitch.conf ]] && ! has_version sys-auth/libnss-nis ; then
 		local entry
 		for entry in passwd group shadow; do
-			if egrep -q "^[ \t]*${entry}:.*nis" "${EROOT}"/etc/nsswitch.conf; then
+			if grep -E -q "^[ \t]*${entry}:.*nis" "${EROOT}"/etc/nsswitch.conf; then
 				ewarn ""
 				ewarn "Your ${EROOT}/etc/nsswitch.conf uses NIS. Support for that has been"
 				ewarn "removed from glibc and is now provided by the package"

@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE pkgmetadata SYSTEM "http://www.gentoo.org/dtd/metadata.dtd">
+<!DOCTYPE pkgmetadata SYSTEM "https://www.gentoo.org/dtd/metadata.dtd">
 <pkgmetadata>
 <maintainer type="project">
   <email>gnu-emacs@gentoo.org</email>
@@ -15,7 +15,7 @@
     functionality),
   * hierarchical buffers with collapsable sections for each artist and album,
   * familiar Emacs bindings for editing Bongo buffers (edit playlists much
-    like you would regular text), 
+    like you would regular text),
   * a nice visual seeking interface doubling as a progress meter (hit ‘s’),
   * a visual audio volume control (<pkg>app-emacs/volume</pkg>, which is
     actually a stand-alone package),
@@ -34,4 +34,7 @@
   backends is very simple.
 </longdescription>
 <stabilize-allarches/>
+<upstream>
+  <remote-id type="github">dbrock/bongo</remote-id>
+</upstream>
 </pkgmetadata>

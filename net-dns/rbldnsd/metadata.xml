@@ -1,10 +1,16 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE pkgmetadata SYSTEM "http://www.gentoo.org/dtd/metadata.dtd">
+<!DOCTYPE pkgmetadata SYSTEM "https://www.gentoo.org/dtd/metadata.dtd">
 <pkgmetadata>
   <maintainer type="person">
     <email>mjo@gentoo.org</email>
     <name>Michael Orlitzky</name>
   </maintainer>
+  <use>
+    <!-- leave this global flag defined here to avoid a pkgcheck warning -->
+    <flag name="ipv6">
+      Support listening on ipv6 addresses and ipv6 database entries.
+    </flag>
+  </use>
 
   <longdescription lang="en">
     rbldnsd is a small and fast DNS daemon which is especially made to

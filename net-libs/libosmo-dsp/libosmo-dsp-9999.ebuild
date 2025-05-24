@@ -1,15 +1,16 @@
-# Copyright 1999-2020 Gentoo Authors
+# Copyright 1999-2024 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
-EAPI=7
-inherit autotools multilib
+EAPI=8
 
-DESCRIPTION="A library with SDR DSP primitives"
-HOMEPAGE="http://git.osmocom.org/libosmo-dsp/"
+inherit autotools
+
+DESCRIPTION="Library with SDR DSP primitives"
+HOMEPAGE="https://gitea.osmocom.org/sdr/libosmo-dsp/"
 
 if [[ ${PV} == 9999* ]]; then
 	inherit git-r3
-	EGIT_REPO_URI="git://git.osmocom.org/${PN}"
+	EGIT_REPO_URI="https://git.osmocom.org/${PN}"
 else
 	SRC_URI="https://dev.gentoo.org/~zerochaos/distfiles/${P}.tar.xz"
 	KEYWORDS="~amd64 ~arm ~x86"
@@ -20,9 +21,11 @@ SLOT="0/${PV}"
 IUSE="doc static-libs"
 
 RDEPEND="sci-libs/fftw:3.0"
-DEPEND="${RDEPEND}
-	doc? ( app-doc/doxygen )
-	virtual/pkgconfig"
+DEPEND="${RDEPEND}"
+BDEPEND="
+	doc? ( app-text/doxygen )
+	virtual/pkgconfig
+"
 
 src_prepare() {
 	default
@@ -37,4 +40,5 @@ src_configure() {
 src_install() {
 	default_src_install
 	use static-libs || rm "${ED}"/usr/$(get_libdir)/libosmodsp.a
+	use static-libs || rm "${ED}"/usr/$(get_libdir)/libosmodsp.la
 }

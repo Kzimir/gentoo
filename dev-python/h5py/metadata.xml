@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE pkgmetadata SYSTEM "http://www.gentoo.org/dtd/metadata.dtd">
+<!DOCTYPE pkgmetadata SYSTEM "https://www.gentoo.org/dtd/metadata.dtd">
 <pkgmetadata>
   <maintainer type="project">
     <email>python@gentoo.org</email>
@@ -17,8 +17,9 @@
   (as used with Numpy recarray types), HDF5 attributes, hyperslab and
   point-based I/O, and more recent features in HDF 1.8 like resizable
   datasets and recursive iteration over entire files.
-</longdescription>
+  </longdescription>
   <upstream>
+    <remote-id type="github">h5py/h5py</remote-id>
     <remote-id type="google-code">h5py</remote-id>
     <remote-id type="pypi">h5py</remote-id>
   </upstream>

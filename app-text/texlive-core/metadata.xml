@@ -1,10 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE pkgmetadata SYSTEM "http://www.gentoo.org/dtd/metadata.dtd">
+<!DOCTYPE pkgmetadata SYSTEM "https://www.gentoo.org/dtd/metadata.dtd">
 <pkgmetadata>
-	<maintainer type="person">
-		<email>aballier@gentoo.org</email>
-		<name>Alexis Ballier</name>
-	</maintainer>
 	<maintainer type="project">
 		<email>tex@gentoo.org</email>
 		<name>Gentoo TeX Project</name>
@@ -14,4 +10,7 @@
 		<flag name="xetex">Add support for XeTeX: a TeX system with Unicode and modern font technologies.</flag>
 		<flag name="xindy">Add support for Xindy: A general-purpose index processor.</flag>
 	</use>
+	<upstream>
+		<remote-id type="github">TeX-Live/texlive-source</remote-id>
+	</upstream>
 </pkgmetadata>

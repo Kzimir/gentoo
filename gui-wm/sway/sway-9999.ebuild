@@ -1,9 +1,9 @@
-# Copyright 1999-2020 Gentoo Authors
+# Copyright 1999-2024 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
-EAPI=7
+EAPI=8
 
-inherit eutils meson
+inherit fcaps meson optfeature
 
 DESCRIPTION="i3-compatible Wayland window manager"
 HOMEPAGE="https://swaywm.org"
@@ -14,40 +14,46 @@ if [[ ${PV} == 9999 ]]; then
 else
 	MY_PV=${PV/_rc/-rc}
 	SRC_URI="https://github.com/swaywm/${PN}/archive/${MY_PV}.tar.gz -> ${P}.tar.gz"
-	KEYWORDS="~amd64 ~arm64 ~ppc64 ~x86"
+	KEYWORDS="~amd64 ~arm64 ~loong ~ppc64 ~riscv ~x86"
 	S="${WORKDIR}/${PN}-${MY_PV}"
 fi
 
 LICENSE="MIT"
 SLOT="0"
-IUSE="elogind fish-completion +man +swaybar +swaybg +swayidle +swaylock +swaymsg +swaynag seatd systemd tray wallpapers X zsh-completion"
-REQUIRED_USE="?? ( elogind systemd )
-	tray? ( || ( elogind systemd ) )"
+IUSE="+man +swaybar +swaynag tray wallpapers X"
+REQUIRED_USE="tray? ( swaybar )"
 
 DEPEND="
 	>=dev-libs/json-c-0.13:0=
-	>=dev-libs/libinput-1.6.0:0=
-	dev-libs/libpcre
-	dev-libs/wayland
+	>=dev-libs/libinput-1.26.0:0=
+	virtual/libudev
+	sys-auth/seatd:=
+	dev-libs/libpcre2
+	>=dev-libs/wayland-1.21.0
 	x11-libs/cairo
-	x11-libs/libxkbcommon
+	>=x11-libs/libxkbcommon-1.5.0:0=
 	x11-libs/pango
 	x11-libs/pixman
-	media-libs/mesa[gles2,libglvnd(+)]
-	elogind? ( >=sys-auth/elogind-239[policykit] )
+	media-libs/libglvnd
 	swaybar? ( x11-libs/gdk-pixbuf:2 )
-	swaybg? ( gui-apps/swaybg )
-	swayidle? ( gui-apps/swayidle )
-	swaylock? ( gui-apps/swaylock )
-	systemd? ( >=sys-apps/systemd-239[policykit] )
-	wallpapers? ( x11-libs/gdk-pixbuf:2[jpeg] )
-	X? ( x11-libs/libxcb:0= )
+	tray? ( || (
+		sys-apps/systemd
+		sys-auth/elogind
+		sys-libs/basu
+	) )
+	wallpapers? ( gui-apps/swaybg[gdk-pixbuf(+)] )
+	X? (
+		x11-libs/libxcb:0=
+		x11-libs/xcb-util-wm
+	)
 "
+# x11-libs/xcb-util-wm needed for xcb-iccm
 if [[ ${PV} == 9999 ]]; then
-	DEPEND+="~gui-libs/wlroots-9999:=[elogind=,seatd=,systemd=,X=]"
+	DEPEND+="~gui-libs/wlroots-9999:=[X?]"
 else
 	DEPEND+="
-		=gui-libs/wlroots-0.12.0*:=[elogind=,seatd=,systemd=,X=]
+		>=gui-libs/wlroots-0.19:=[X?]
+		<gui-libs/wlroots-0.20:=[X?]
 	"
 fi
 RDEPEND="
@@ -55,63 +61,49 @@ RDEPEND="
 	${DEPEND}
 "
 BDEPEND="
-	>=dev-libs/wayland-protocols-1.14
-	>=dev-util/meson-0.53.0
+	>=dev-libs/wayland-protocols-1.24
+	>=dev-build/meson-1.3
 	virtual/pkgconfig
+	man? ( >=app-text/scdoc-1.11.3 )
 "
-if [[ ${PV} == 9999 ]]; then
-	BDEPEND+="man? ( ~app-text/scdoc-9999 )"
-else
-	BDEPEND+="man? ( >=app-text/scdoc-1.9.3 )"
-fi
 
-src_prepare() {
-	default
-
-	use swaybar || sed -e "s/subdir('swaybar')//g" -e "/sway-bar.[0-9].scd/d" \
-		-e "/completions\/[a-z]\+\/_\?swaybar/d" -i meson.build || die
-	use swaymsg || sed -e "s/subdir('swaymsg')//g" -e "/swaymsg.[0-9].scd/d" \
-		-e "/completions\/[a-z]\+\/_\?swaymsg/d" -i meson.build || die
-	use swaynag || sed -e "s/subdir('swaynag')//g" -e "/swaynag.[0-9].scd/d" \
-		-e "/completions\/[a-z]\+\/_\?swaynag/d" -i meson.build || die
-}
+FILECAPS=(
+	cap_sys_nice usr/bin/${PN} # bug 919298
+)
 
 src_configure() {
 	local emesonargs=(
-		-Dman-pages=$(usex man enabled disabled)
-		-Dtray=$(usex tray enabled disabled)
-		-Dxwayland=$(usex X enabled disabled)
+		$(meson_feature man man-pages)
+		$(meson_feature tray)
+		$(meson_feature swaybar gdk-pixbuf)
+		$(meson_use swaynag)
+		$(meson_use swaybar)
 		$(meson_use wallpapers default-wallpaper)
-		$(meson_use fish-completion fish-completions)
-		$(meson_use zsh-completion zsh-completions)
-		"-Dbash-completions=true"
-		"-Dwerror=false"
+		-Dfish-completions=true
+		-Dzsh-completions=true
+		-Dbash-completions=true
 	)
-
-	if use swaybar; then
-		emesonargs+=("-Dgdk-pixbuf=enabled")
-	else
-		emesonargs+=("-Dgdk-pixbuf=disabled")
-	fi
 
 	meson_src_configure
 }
 
-pkg_preinst() {
-	if ! use systemd && ! use elogind && ! use seatd; then
-		fowners root:0 /usr/bin/sway
-		fperms 4511 /usr/bin/sway
-	fi
+src_install() {
+	meson_src_install
+	insinto /usr/share/xdg-desktop-portal
+	doins "${FILESDIR}/sway-portals.conf"
 }
 
 pkg_postinst() {
-	if ! use systemd && ! use elogind && ! use seatd; then
-		elog ""
-		elog "If you use ConsoleKit2, remember to launch sway using:"
-		elog "exec ck-launch-session sway"
-		elog ""
-		elog "If your system does not set the XDG_RUNTIME_DIR environment"
-		elog "variable, you must set it manually to run Sway. See wiki"
-		elog "for details: https://wiki.gentoo.org/wiki/Sway"
-	fi
+	fcaps_pkg_postinst
+
+	optfeature_header "There are several packages that may be useful with sway:"
+	optfeature "wallpaper utility" gui-apps/swaybg
+	optfeature "idle management utility" gui-apps/swayidle
+	optfeature "simple screen locker" gui-apps/swaylock
+	optfeature "lightweight notification daemon" gui-apps/mako
+	echo
+	einfo "For a list of additional addons and tools usable with sway please"
+	einfo "visit the official wiki at:"
+	einfo "https://github.com/swaywm/sway/wiki/Useful-add-ons-for-sway"
+	einfo "Please note that some of them might not (yet) available on gentoo"
 }

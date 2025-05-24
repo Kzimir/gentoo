@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE pkgmetadata SYSTEM "http://www.gentoo.org/dtd/metadata.dtd">
+<!DOCTYPE pkgmetadata SYSTEM "https://www.gentoo.org/dtd/metadata.dtd">
 <pkgmetadata>
   <maintainer type="person">
     <email>mjo@gentoo.org</email>
@@ -10,6 +10,10 @@
     <name>Gentoo Sysadmin Project</name>
   </maintainer>
   <use>
+    <!-- leave this global flag defined here to avoid a pkgcheck warning -->
+    <flag name="ipv6">
+      Enable ipv6 checks.
+    </flag>
     <flag name="nagios-dns">
       Install <pkg>net-dns/bind-tools</pkg> required for monitoring
       DNS servers. Disabling the flag does not remove any plugin file.

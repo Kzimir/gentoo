@@ -1,48 +1,48 @@
-# Copyright 1999-2020 Gentoo Authors
+# Copyright 1999-2025 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
-EAPI="7"
-PYTHON_COMPAT=( python3_{6..9} )
-USE_RUBY="ruby25 ruby26 ruby27"
+EAPI="8"
+PYTHON_COMPAT=( python3_{10..13} )
+USE_RUBY="ruby32 ruby33"
 
 # No, I am not calling ruby-ng
-inherit multilib python-r1 toolchain-funcs multilib-minimal
+inherit flag-o-matic python-r1 toolchain-funcs multilib-minimal
 
-MY_P="${P//_/-}"
-SEPOL_VER="${PV}"
-MY_RELEASEDATE="20200710"
+MY_PV="${PV//_/-}"
+MY_P="${PN}-${MY_PV}"
 
 DESCRIPTION="SELinux userland library"
 HOMEPAGE="https://github.com/SELinuxProject/selinux/wiki"
 
-if [[ ${PV} == 9999 ]] ; then
+if [[ ${PV} == 9999 ]]; then
 	inherit git-r3
 	EGIT_REPO_URI="https://github.com/SELinuxProject/selinux.git"
-	S="${WORKDIR}/${MY_P}/${PN}"
+	S="${WORKDIR}/${P}/${PN}"
 else
-	SRC_URI="https://github.com/SELinuxProject/selinux/releases/download/${MY_RELEASEDATE}/${MY_P}.tar.gz"
-	KEYWORDS="~amd64 ~arm ~arm64 ~mips ~x86"
+	SRC_URI="https://github.com/SELinuxProject/selinux/releases/download/${MY_PV}/${MY_P}.tar.gz"
+	KEYWORDS="~amd64 ~arm ~arm64 ~mips ~riscv ~x86"
 	S="${WORKDIR}/${MY_P}"
 fi
 
 LICENSE="public-domain"
 SLOT="0"
-IUSE="pcre2 python ruby static-libs ruby_targets_ruby25 ruby_targets_ruby26 ruby_targets_ruby27"
+IUSE="python ruby static-libs ruby_targets_ruby32 ruby_targets_ruby33"
 REQUIRED_USE="python? ( ${PYTHON_REQUIRED_USE} )"
 
-RDEPEND=">=sys-libs/libsepol-${SEPOL_VER}:=[${MULTILIB_USEDEP}]
-	!pcre2? ( >=dev-libs/libpcre-8.33-r1:=[static-libs?,${MULTILIB_USEDEP}] )
-	pcre2? ( dev-libs/libpcre2:=[static-libs?,${MULTILIB_USEDEP}] )
+RDEPEND="dev-libs/libpcre2:=[static-libs?,${MULTILIB_USEDEP}]
+	>=sys-libs/libsepol-${PV}:=[${MULTILIB_USEDEP},static-libs(+)]
 	python? ( ${PYTHON_DEPS} )
 	ruby? (
-		ruby_targets_ruby25? ( dev-lang/ruby:2.5 )
-		ruby_targets_ruby26? ( dev-lang/ruby:2.6 )
-		ruby_targets_ruby27? ( dev-lang/ruby:2.7 )
+		ruby_targets_ruby32? ( dev-lang/ruby:3.2 )
+		ruby_targets_ruby33? ( dev-lang/ruby:3.3 )
 	)
 	elibc_musl? ( sys-libs/fts-standalone )"
 DEPEND="${RDEPEND}"
 BDEPEND="virtual/pkgconfig
-	python? ( >=dev-lang/swig-2.0.9 )
+	python? (
+		>=dev-lang/swig-2.0.9
+		dev-python/pip[${PYTHON_USEDEP}]
+)
 	ruby? ( >=dev-lang/swig-2.0.9 )"
 
 src_prepare() {
@@ -54,11 +54,14 @@ src_prepare() {
 multilib_src_compile() {
 	tc-export AR CC PKG_CONFIG RANLIB
 
+	local -x CFLAGS="${CFLAGS} -fno-semantic-interposition"
+
 	emake \
 		LIBDIR="\$(PREFIX)/$(get_libdir)" \
 		SHLIBDIR="/$(get_libdir)" \
 		LDFLAGS="-fPIC ${LDFLAGS} -pthread" \
-		USE_PCRE2="$(usex pcre2 y n)" \
+		USE_PCRE2=y \
+		USE_LFS=y \
 		FTS_LDLIBS="$(usex elibc_musl '-lfts' '')" \
 		all
 
@@ -68,7 +71,8 @@ multilib_src_compile() {
 				LDFLAGS="-fPIC ${LDFLAGS} -lpthread" \
 				LIBDIR="\$(PREFIX)/$(get_libdir)" \
 				SHLIBDIR="/$(get_libdir)" \
-				USE_PCRE2="$(usex pcre2 y n)" \
+				USE_PCRE2=y \
+				USE_LFS=y \
 				FTS_LDLIBS="$(usex elibc_musl '-lfts' '')" \
 				pywrap
 		}
@@ -85,7 +89,8 @@ multilib_src_compile() {
 				LDFLAGS="-fPIC ${LDFLAGS} -lpthread" \
 				LIBDIR="\$(PREFIX)/$(get_libdir)" \
 				SHLIBDIR="/$(get_libdir)" \
-				USE_PCRE2="$(usex pcre2 y n)" \
+				USE_LFS=y \
+				USE_PCRE2=y \
 				FTS_LDLIBS="$(usex elibc_musl '-lfts' '')" \
 				rubywrap
 		}
@@ -101,7 +106,8 @@ multilib_src_install() {
 	emake DESTDIR="${D}" \
 		LIBDIR="\$(PREFIX)/$(get_libdir)" \
 		SHLIBDIR="/$(get_libdir)" \
-		USE_PCRE2="$(usex pcre2 y n)" \
+		USE_LFS=y \
+		USE_PCRE2=y \
 		install
 
 	if multilib_is_native_abi && use python; then
@@ -109,7 +115,8 @@ multilib_src_install() {
 			emake DESTDIR="${D}" \
 				LIBDIR="\$(PREFIX)/$(get_libdir)" \
 				SHLIBDIR="/$(get_libdir)" \
-				USE_PCRE2="$(usex pcre2 y n)" \
+				USE_LFS=y \
+				USE_PCRE2=y \
 				install-pywrap
 			python_optimize # bug 531638
 		}
@@ -125,7 +132,8 @@ multilib_src_install() {
 				LIBDIR="\$(PREFIX)/$(get_libdir)" \
 				SHLIBDIR="/$(get_libdir)" \
 				RUBY=${1} \
-				USE_PCRE2="$(usex pcre2 y n)" \
+				USE_LFS=y \
+				USE_PCRE2=y \
 				install-rubywrap
 		}
 		for RUBYTARGET in ${USE_RUBY}; do
@@ -135,19 +143,19 @@ multilib_src_install() {
 		done
 	fi
 
-	use static-libs || rm "${D}"/usr/lib*/*.a || die
+	use static-libs || rm "${ED}"/usr/$(get_libdir)/*.a || die
 }
 
 pkg_postinst() {
 	# Fix bug 473502
 	for POLTYPE in ${POLICY_TYPES};
 	do
-		mkdir -p /etc/selinux/${POLTYPE}/contexts/files || die
-		touch /etc/selinux/${POLTYPE}/contexts/files/file_contexts.local || die
+		mkdir -p "${ROOT}/etc/selinux/${POLTYPE}/contexts/files" || die
+		touch "${ROOT}/etc/selinux/${POLTYPE}/contexts/files/file_contexts.local" || die
 		# Fix bug 516608
 		for EXPRFILE in file_contexts file_contexts.homedirs file_contexts.local ; do
-			if [[ -f "/etc/selinux/${POLTYPE}/contexts/files/${EXPRFILE}" ]]; then
-				sefcontext_compile /etc/selinux/${POLTYPE}/contexts/files/${EXPRFILE} \
+			if [[ -f "${ROOT}/etc/selinux/${POLTYPE}/contexts/files/${EXPRFILE}" ]]; then
+				sefcontext_compile "${ROOT}/etc/selinux/${POLTYPE}/contexts/files/${EXPRFILE}" \
 				|| die "Failed to recompile contexts"
 			fi
 		done

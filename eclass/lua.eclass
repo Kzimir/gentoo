@@ -1,14 +1,14 @@
-# Copyright 1999-2020 Gentoo Authors
+# Copyright 1999-2024 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
 # @ECLASS: lua.eclass
 # @MAINTAINER:
 # William Hubbs <williamh@gentoo.org>
-# Marek Szuba <marecki@gentoo.org>
 # @AUTHOR:
 # Marek Szuba <marecki@gentoo.org>
 # Based on python-r1.eclass by Michał Górny <mgorny@gentoo.org> et al.
-# @SUPPORTED_EAPIS: 7
+# @SUPPORTED_EAPIS: 7 8
+# @PROVIDES: lua-utils
 # @BLURB: A common eclass for Lua packages
 # @DESCRIPTION:
 # A common eclass providing helper functions to build and install
@@ -27,9 +27,9 @@
 #
 # @EXAMPLE:
 # @CODE
-# EAPI=7
+# EAPI=8
 #
-# LUA_COMPAT=( lua5-{1..3} )
+# LUA_COMPAT=( lua5-{3..4} )
 #
 # inherit lua
 #
@@ -50,28 +50,21 @@
 # }
 # @CODE
 
-case ${EAPI:-0} in
-	0|1|2|3|4|5|6)
-		die "Unsupported EAPI=${EAPI} (too old) for ${ECLASS}"
-		;;
-	7)
-		;;
-	*)
-		die "Unsupported EAPI=${EAPI} (unknown) for ${ECLASS}"
-		;;
+case ${EAPI} in
+	7|8) ;;
+	*) die "${ECLASS}: EAPI ${EAPI:-0} not supported" ;;
 esac
 
-if [[ ! ${_LUA_R0} ]]; then
+if [[ -z ${_LUA_ECLASS} ]]; then
+_LUA_ECLASS=1
 
-if [[ ${_LUA_SINGLE_R0} ]]; then
+if [[ ${_LUA_SINGLE_ECLASS} ]]; then
 	die 'lua.eclass cannot be used with lua-single.eclass.'
 fi
 
 inherit multibuild lua-utils
 
-fi
-
-# @ECLASS-VARIABLE: LUA_COMPAT
+# @ECLASS_VARIABLE: LUA_COMPAT
 # @REQUIRED
 # @PRE_INHERIT
 # @DESCRIPTION:
@@ -81,7 +74,7 @@ fi
 #
 # Example:
 # @CODE
-# LUA_COMPAT=( lua5-1 lua5-2 lua5-3 )
+# LUA_COMPAT=( lua5-1 lua5-3 lua5-4 )
 # @CODE
 #
 # Please note that you can also use bash brace expansion if you like:
@@ -89,7 +82,7 @@ fi
 # LUA_COMPAT=( lua5-{1..3} )
 # @CODE
 
-# @ECLASS-VARIABLE: LUA_COMPAT_OVERRIDE
+# @ECLASS_VARIABLE: LUA_COMPAT_OVERRIDE
 # @USER_VARIABLE
 # @DEFAULT_UNSET
 # @DESCRIPTION:
@@ -106,10 +99,10 @@ fi
 #
 # Example:
 # @CODE
-# LUA_COMPAT_OVERRIDE='lua5-2' emerge -1v dev-lua/foo
+# LUA_COMPAT_OVERRIDE='luajit' emerge -1v dev-lua/foo
 # @CODE
 
-# @ECLASS-VARIABLE: LUA_REQ_USE
+# @ECLASS_VARIABLE: LUA_REQ_USE
 # @DEFAULT_UNSET
 # @PRE_INHERIT
 # @DESCRIPTION:
@@ -129,7 +122,7 @@ fi
 # lua_targets_luaX-Y? ( dev-lang/lua:X.Y[deprecated] )
 # @CODE
 
-# @ECLASS-VARIABLE: BUILD_DIR
+# @ECLASS_VARIABLE: BUILD_DIR
 # @OUTPUT_VARIABLE
 # @DEFAULT_UNSET
 # @DESCRIPTION:
@@ -146,7 +139,7 @@ fi
 # ${WORKDIR}/foo-1.3-lua5-1
 # @CODE
 
-# @ECLASS-VARIABLE: LUA_DEPS
+# @ECLASS_VARIABLE: LUA_DEPS
 # @OUTPUT_VARIABLE
 # @DESCRIPTION:
 # This is an eclass-generated Lua dependency string for all
@@ -162,10 +155,10 @@ fi
 # Example value:
 # @CODE
 # lua_targets_lua5-1? ( dev-lang/lua:5.1 )
-# lua_targets_lua5-2? ( dev-lang/lua:5.2 )
+# lua_targets_lua5-3? ( dev-lang/lua:5.3 )
 # @CODE
 
-# @ECLASS-VARIABLE: LUA_REQUIRED_USE
+# @ECLASS_VARIABLE: LUA_REQUIRED_USE
 # @OUTPUT_VARIABLE
 # @DESCRIPTION:
 # This is an eclass-generated required-use expression which ensures at
@@ -181,10 +174,10 @@ fi
 #
 # Example value:
 # @CODE
-# || ( lua_targets_lua5-1 lua_targets_lua5-2 )
+# || ( lua_targets_lua5-1 lua_targets_lua5-3 )
 # @CODE
 
-# @ECLASS-VARIABLE: LUA_USEDEP
+# @ECLASS_VARIABLE: LUA_USEDEP
 # @OUTPUT_VARIABLE
 # @DESCRIPTION:
 # This is an eclass-generated USE-dependency string which can be used to
@@ -198,10 +191,8 @@ fi
 #
 # Example value:
 # @CODE
-# lua_targets_lua5-1(-)?,lua_targets_lua5-2(-)?
+# lua_targets_lua5-1(-)?,lua_targets_lua5-3(-)?
 # @CODE
-
-if [[ ! ${_LUA_R0} ]]; then
 
 # @FUNCTION: _lua_validate_useflags
 # @INTERNAL
@@ -209,7 +200,7 @@ if [[ ! ${_LUA_R0} ]]; then
 # Enforce the proper setting of LUA_TARGETS, if LUA_COMPAT_OVERRIDE
 # is not in effect. If it is, just warn that the flags will be ignored.
 _lua_validate_useflags() {
-	debug-print-function ${FUNCNAME} "${@}"
+	debug-print-function ${FUNCNAME} "$@"
 
 	if [[ ${LUA_COMPAT_OVERRIDE} ]]; then
 		if [[ ! ${_LUA_COMPAT_OVERRIDE_WARNED} ]]; then
@@ -269,7 +260,7 @@ _lua_obtain_impls() {
 # Initialize the environment for the Lua implementation selected
 # for multibuild.
 _lua_multibuild_wrapper() {
-	debug-print-function ${FUNCNAME} "${@}"
+	debug-print-function ${FUNCNAME} "$@"
 
 	local -x ELUA LUA
 	_lua_export "${MULTIBUILD_VARIANT}" ELUA LUA
@@ -288,7 +279,7 @@ _lua_multibuild_wrapper() {
 # to implementation-specific build directory matching BUILD_DIR used by
 # lua_foreach_abi().
 lua_copy_sources() {
-	debug-print-function ${FUNCNAME} "${@}"
+	debug-print-function ${FUNCNAME} "$@"
 
 	local MULTIBUILD_VARIANTS
 	_lua_obtain_impls
@@ -310,16 +301,13 @@ lua_copy_sources() {
 # For each command being run, ELUA, LUA and BUILD_DIR are set
 # locally, and the former two are exported to the command environment.
 lua_foreach_impl() {
-	debug-print-function ${FUNCNAME} "${@}"
+	debug-print-function ${FUNCNAME} "$@"
 
 	local MULTIBUILD_VARIANTS
 	_lua_obtain_impls
 
 	multibuild_foreach_variant _lua_multibuild_wrapper "${@}"
 }
-
-_LUA_R0=1
-fi
 
 # @FUNCTION: _lua_set_globals
 # @INTERNAL
@@ -379,3 +367,5 @@ _lua_set_globals() {
 
 _lua_set_globals
 unset -f _lua_set_globals
+
+fi

@@ -1,14 +1,13 @@
-# Copyright 1999-2020 Gentoo Authors
+# Copyright 1999-2024 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
 # @ECLASS: lua-utils.eclass
 # @MAINTAINER:
 # William Hubbs <williamh@gentoo.org>
-# Marek Szuba <marecki@gentoo.org>
 # @AUTHOR:
 # Marek Szuba <marecki@gentoo.org>
 # Based on python-utils-r1.eclass by Michał Górny <mgorny@gentoo.org> et al.
-# @SUPPORTED_EAPIS: 7
+# @SUPPORTED_EAPIS: 7 8
 # @BLURB: Utility functions for packages with Lua parts
 # @DESCRIPTION:
 # A utility eclass providing functions to query Lua implementations,
@@ -17,33 +16,36 @@
 # This eclass neither sets any metadata variables nor exports any phase
 # functions. It can be inherited safely.
 
-case ${EAPI:-0} in
-	0|1|2|3|4|5|6)
-		die "Unsupported EAPI=${EAPI} (too old) for ${ECLASS}"
-		;;
-	7)
-		;;
-	*)
-		die "Unsupported EAPI=${EAPI} (unknown) for ${ECLASS}"
-		;;
+case ${EAPI} in
+	7|8) ;;
+	*) die "${ECLASS}: EAPI ${EAPI:-0} not supported" ;;
 esac
 
-if [[ ! ${_LUA_UTILS_R0} ]]; then
+if [[ -z ${_LUA_UTILS_ECLASS} ]]; then
+_LUA_UTILS_ECLASS=1
 
 inherit toolchain-funcs
 
-# @ECLASS-VARIABLE: _LUA_ALL_IMPLS
+# @ECLASS_VARIABLE: _LUA_ALL_IMPLS
 # @INTERNAL
 # @DESCRIPTION:
 # All supported Lua implementations, most preferred last
 _LUA_ALL_IMPLS=(
 	luajit
 	lua5-1
-	lua5-2
 	lua5-3
 	lua5-4
 )
 readonly _LUA_ALL_IMPLS
+
+# @ECLASS_VARIABLE: _LUA_HISTORICAL_IMPLS
+# @INTERNAL
+# @DESCRIPTION:
+# All historical Lua implementations that are no longer supported.
+_LUA_HISTORICAL_IMPLS=(
+	lua5-2
+)
+readonly _LUA_HISTORICAL_IMPLS
 
 # @FUNCTION: _lua_set_impls
 # @INTERNAL
@@ -122,7 +124,7 @@ _lua_set_impls() {
 # setup will be done. If wrapper update is requested, the directory
 # shall be removed first.
 _lua_wrapper_setup() {
-	debug-print-function ${FUNCNAME} "${@}"
+	debug-print-function ${FUNCNAME} "$@"
 
 	local workdir=${1:-${T}/${ELUA}}
 	local impl=${2:-${ELUA}}
@@ -141,18 +143,18 @@ _lua_wrapper_setup() {
 		_lua_export "${impl}" ELUA LUA
 
 		# Lua interpreter
-		ln -s "${EPREFIX}"/usr/bin/${ELUA} "${workdir}"/bin/lua || die
+		ln -s "${LUA}" "${workdir}"/bin/lua || die
 
 		# Lua compiler, or a stub for it in case of luajit
 		if [[ ${ELUA} == luajit ]]; then
 			# Just in case
-			ln -s "${EPREFIX}"/bin/true "${workdir}"/bin/luac || die
+			ln -s "${BROOT}"/bin/true "${workdir}"/bin/luac || die
 		else
-			ln -s "${EPREFIX}"/usr/bin/${ELUA/a/ac} "${workdir}"/bin/luac || die
+			ln -s "${BROOT}"/usr/bin/${ELUA/a/ac} "${workdir}"/bin/luac || die
 		fi
 
 		# pkg-config
-		ln -s "${EPREFIX}"/usr/$(get_libdir)/pkgconfig/${ELUA}.pc \
+		ln -s "${ESYSROOT}"/usr/$(get_libdir)/pkgconfig/${ELUA}.pc \
 			"${workdir}"/pkgconfig/lua.pc || die
 	fi
 
@@ -168,7 +170,7 @@ _lua_wrapper_setup() {
 	export PATH PKG_CONFIG_PATH
 }
 
-# @ECLASS-VARIABLE: ELUA
+# @ECLASS_VARIABLE: ELUA
 # @DEFAULT_UNSET
 # @DESCRIPTION:
 # The executable name of the current Lua interpreter. This variable is set
@@ -179,7 +181,7 @@ _lua_wrapper_setup() {
 # lua5.1
 # @CODE
 
-# @ECLASS-VARIABLE: LUA
+# @ECLASS_VARIABLE: LUA
 # @DEFAULT_UNSET
 # @DESCRIPTION:
 # The absolute path to the current Lua interpreter. This variable is set
@@ -212,7 +214,9 @@ _lua_get_library_file() {
 			die "Invalid implementation: ${impl}"
 			;;
 	esac
+
 	libdir=$($(tc-getPKG_CONFIG) --variable libdir ${impl}) || die
+	libdir="${libdir#${ESYSROOT#${SYSROOT}}}"
 
 	debug-print "${FUNCNAME}: libdir = ${libdir}, libname = ${libname}"
 	echo "${libdir}/${libname}"
@@ -226,11 +230,11 @@ _lua_get_library_file() {
 # as parameters.
 #
 # The optional first parameter may specify the requested Lua
-# implementation (either as LUA_TARGETS value, e.g. lua5-2,
-# or an ELUA one, e.g. lua5.2). If no implementation passed,
+# implementation (either as LUA_TARGETS value, e.g. lua5-4,
+# or an ELUA one, e.g. lua5.4). If no implementation passed,
 # the current one will be obtained from ${ELUA}.
 _lua_export() {
-	debug-print-function ${FUNCNAME} "${@}"
+	debug-print-function ${FUNCNAME} "$@"
 
 	local impl var
 
@@ -259,7 +263,7 @@ _lua_export() {
 				debug-print "${FUNCNAME}: ELUA = ${ELUA}"
 				;;
 			LUA)
-				export LUA="${EPREFIX}"/usr/bin/${impl}
+				export LUA="${BROOT}"/usr/bin/${impl}
 				debug-print "${FUNCNAME}: LUA = ${LUA}"
 				;;
 			LUA_CFLAGS)
@@ -274,6 +278,7 @@ _lua_export() {
 				local val
 
 				val=$($(tc-getPKG_CONFIG) --variable INSTALL_CMOD ${impl}) || die
+				val="${val#${ESYSROOT#${SYSROOT}}}"
 
 				export LUA_CMOD_DIR=${val}
 				debug-print "${FUNCNAME}: LUA_CMOD_DIR = ${LUA_CMOD_DIR}"
@@ -282,6 +287,7 @@ _lua_export() {
 				local val
 
 				val=$($(tc-getPKG_CONFIG) --variable includedir ${impl}) || die
+				val="${val#${ESYSROOT#${SYSROOT}}}"
 
 				export LUA_INCLUDE_DIR=${val}
 				debug-print "${FUNCNAME}: LUA_INCLUDE_DIR = ${LUA_INCLUDE_DIR}"
@@ -298,6 +304,7 @@ _lua_export() {
 				local val
 
 				val=$($(tc-getPKG_CONFIG) --variable INSTALL_LMOD ${impl}) || die
+				val="${val#${ESYSROOT#${SYSROOT}}}"
 
 				export LUA_LMOD_DIR=${val}
 				debug-print "${FUNCNAME}: LUA_LMOD_DIR = ${LUA_LMOD_DIR}"
@@ -344,6 +351,76 @@ _lua_export() {
 	done
 }
 
+# @FUNCTION: lua_enable_tests
+# @USAGE: <test-runner> <test-directory>
+# @DESCRIPTION:
+# Set up IUSE, RESTRICT, BDEPEND and src_test() for running tests
+# with the specified test runner.  Also copies the current value
+# of RDEPEND to test?-BDEPEND.  The test-runner argument must be one of:
+#
+# - busted: dev-lua/busted
+#
+# Additionally, a second argument can be passed after <test-runner>,
+# so <test-runner> will use that directory to search for tests.
+# If not passed, a default directory of <test-runner> will be used.
+#
+# - busted: spec
+#
+# This function is meant as a helper for common use cases, and it only
+# takes care of basic setup.  You still need to list additional test
+# dependencies manually.  If you have uncommon use case, you should
+# not use it and instead enable tests manually.
+#
+# This function must be called in global scope, after RDEPEND has been
+# declared.  Take care not to overwrite the variables set by it.
+lua_enable_tests() {
+	debug-print-function ${FUNCNAME} "$@"
+
+	[[ ${#} -ge 1 ]] || die "${FUNCNAME} takes at least one argument: test-runner (test-directory)"
+	local test_directory
+	local test_pkg
+	case ${1} in
+		busted)
+			test_directory="${2:-spec}"
+			test_pkg="dev-lua/busted"
+			if [[ ! ${_LUA_SINGLE_ECLASS} ]]; then
+				eval "lua_src_test() {
+					busted --lua=\"\${ELUA}\" --output=\"plainTerminal\" \"${test_directory}\" || die \"Tests fail with \${ELUA}\"
+				}"
+				src_test() {
+					lua_foreach_impl lua_src_test
+				}
+			else
+				eval "src_test() {
+					busted --lua=\"\${ELUA}\" --output=\"plainTerminal\" \"${test_directory}\" || die \"Tests fail with \${ELUA}\"
+				}"
+			fi
+			;;
+		*)
+			die "${FUNCNAME}: unsupported argument: ${1}"
+	esac
+
+	local test_deps=${RDEPEND}
+	if [[ -n ${test_pkg} ]]; then
+		if [[ ! ${_LUA_SINGLE_ECLASS} ]]; then
+			test_deps+=" ${test_pkg}[${LUA_USEDEP}]"
+		else
+			test_deps+=" $(lua_gen_cond_dep "
+				${test_pkg}[\${LUA_USEDEP}]
+			")"
+		fi
+	fi
+	if [[ -n ${test_deps} ]]; then
+		IUSE+=" test"
+		RESTRICT+=" !test? ( test )"
+		BDEPEND+=" test? ( ${test_deps} )"
+	fi
+
+	# we need to ensure successful return in case we're called last,
+	# otherwise Portage may wrongly assume sourcing failed
+	return 0
+}
+
 # @FUNCTION: lua_get_CFLAGS
 # @USAGE: [<impl>]
 # @DESCRIPTION:
@@ -354,7 +431,7 @@ _lua_export() {
 # Please note that this function requires Lua and pkg-config installed,
 # and therefore proper build-time dependencies need be added to the ebuild.
 lua_get_CFLAGS() {
-	debug-print-function ${FUNCNAME} "${@}"
+	debug-print-function ${FUNCNAME} "$@"
 
 	_lua_export "${@}" LUA_CFLAGS
 	echo "${LUA_CFLAGS}"
@@ -370,7 +447,7 @@ lua_get_CFLAGS() {
 # Please note that this function requires Lua and pkg-config installed,
 # and therefore proper build-time dependencies need be added to the ebuild.
 lua_get_cmod_dir() {
-	debug-print-function ${FUNCNAME} "${@}"
+	debug-print-function ${FUNCNAME} "$@"
 
 	_lua_export "${@}" LUA_CMOD_DIR
 	echo "${LUA_CMOD_DIR}"
@@ -386,7 +463,7 @@ lua_get_cmod_dir() {
 # Please note that this function requires Lua and pkg-config installed,
 # and therefore proper build-time dependencies need be added to the ebuild.
 lua_get_include_dir() {
-	debug-print-function ${FUNCNAME} "${@}"
+	debug-print-function ${FUNCNAME} "$@"
 
 	_lua_export "${@}" LUA_INCLUDE_DIR
 	echo "${LUA_INCLUDE_DIR}"
@@ -402,7 +479,7 @@ lua_get_include_dir() {
 # Please note that this function requires Lua and pkg-config installed,
 # and therefore proper build-time dependencies need be added to the ebuild.
 lua_get_LIBS() {
-	debug-print-function ${FUNCNAME} "${@}"
+	debug-print-function ${FUNCNAME} "$@"
 
 	_lua_export "${@}" LUA_LIBS
 	echo "${LUA_LIBS}"
@@ -418,7 +495,7 @@ lua_get_LIBS() {
 # Please note that this function requires Lua and pkg-config installed,
 # and therefore proper build-time dependencies need be added to the ebuild.
 lua_get_lmod_dir() {
-	debug-print-function ${FUNCNAME} "${@}"
+	debug-print-function ${FUNCNAME} "$@"
 
 	_lua_export "${@}" LUA_LMOD_DIR
 	echo "${LUA_LMOD_DIR}"
@@ -437,7 +514,7 @@ lua_get_lmod_dir() {
 # Please note that this function requires Lua and pkg-config installed,
 # and therefore proper build-time dependencies need be added to the ebuild.
 lua_get_shared_lib() {
-	debug-print-function ${FUNCNAME} "${@}"
+	debug-print-function ${FUNCNAME} "$@"
 
 	_lua_export "${@}" LUA_SHARED_LIB
 	echo "${LUA_SHARED_LIB}"
@@ -452,11 +529,10 @@ lua_get_shared_lib() {
 # Please note that this function requires Lua and pkg-config installed,
 # and therefore proper build-time dependencies need be added to the ebuild.
 lua_get_version() {
-	debug-print-function ${FUNCNAME} "${@}"
+	debug-print-function ${FUNCNAME} "$@"
 
 	_lua_export "${@}" LUA_VERSION
 	echo "${LUA_VERSION}"
 }
 
-_LUA_UTILS_R0=1
 fi

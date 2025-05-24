@@ -1,21 +1,20 @@
-# Copyright 1999-2020 Gentoo Authors
+# Copyright 1999-2025 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
 EAPI=7
 GNOME_ORG_MODULE="sysprof"
 
-inherit gnome.org meson multilib-minimal systemd
+inherit gnome.org meson-multilib systemd
 
 DESCRIPTION="Static library for sysprof capture data generation"
 HOMEPAGE="http://sysprof.com/"
 
 LICENSE="GPL-3+ GPL-2+"
 SLOT="3"
-KEYWORDS="amd64 x86"
+KEYWORDS="amd64 ~arm64 ~loong x86"
 IUSE=""
 
-RDEPEND=">=dev-libs/glib-2.61.3:2
-	!=dev-util/sysprof-3.34.1-r0"
+RDEPEND=">=dev-libs/glib-2.61.3:2[${MULTILIB_USEDEP}]"
 DEPEND="${RDEPEND}"
 BDEPEND="
 	dev-util/gdbus-codegen
@@ -34,16 +33,4 @@ multilib_src_configure() {
 		-Dlibunwind=false
 	)
 	meson_src_configure
-}
-
-multilib_src_compile() {
-	meson_src_compile
-}
-
-multilib_src_test() {
-	meson_src_test
-}
-
-multilib_src_install() {
-	meson_src_install
 }

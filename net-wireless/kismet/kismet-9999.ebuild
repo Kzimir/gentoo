@@ -1,11 +1,11 @@
-# Copyright 1999-2020 Gentoo Authors
+# Copyright 1999-2025 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
-EAPI=7
+EAPI=8
 
-PYTHON_COMPAT=( python3_{7,8} )
+PYTHON_COMPAT=( python3_{10..13} )
 
-inherit autotools eutils multilib python-single-r1 udev systemd
+inherit autotools eapi9-ver python-single-r1 udev systemd
 
 if [[ ${PV} == "9999" ]] ; then
 	EGIT_REPO_URI="https://www.kismetwireless.net/git/${PN}.git"
@@ -33,87 +33,105 @@ HOMEPAGE="https://www.kismetwireless.net"
 
 LICENSE="GPL-2"
 SLOT="0/${PV}"
-IUSE="libusb lm-sensors networkmanager +pcre rtlsdr selinux +suid ubertooth udev"
+IUSE="libusb lm-sensors mqtt networkmanager +pcre protobuf rtlsdr selinux +suid ubertooth udev +wext"
 REQUIRED_USE="${PYTHON_REQUIRED_USE}"
 
+# upstream said protobuf-26.1 breaks everything
+# details are unclear at this time but adding restriction for safety
 CDEPEND="
 	${PYTHON_DEPS}
-	acct-user/kismet
-	acct-group/kismet
-	networkmanager? ( net-misc/networkmanager:= )
-	dev-libs/glib:=
-	dev-libs/elfutils:=
+	mqtt? ( app-misc/mosquitto )
+	networkmanager? ( net-misc/networkmanager )
+	dev-libs/glib:2
+	dev-libs/elfutils
+	dev-libs/openssl:=
 	sys-libs/zlib:=
-	dev-db/sqlite:=
-	net-libs/libmicrohttpd:=
-	net-libs/libwebsockets:=[client]
+	dev-db/sqlite:3
+	net-libs/libwebsockets:=[client,lejp]
 	kernel_linux? ( sys-libs/libcap
 			dev-libs/libnl:3
 			net-libs/libpcap
 			)
 	libusb? ( virtual/libusb:1 )
-	dev-libs/protobuf-c:=
-	dev-libs/protobuf:=
+	protobuf? ( dev-libs/protobuf-c:=
+		<dev-libs/protobuf-26:= )
 	$(python_gen_cond_dep '
-		dev-python/protobuf-python[${PYTHON_MULTI_USEDEP}]
-		dev-python/websockets[${PYTHON_MULTI_USEDEP}]
+	protobuf? ( dev-python/protobuf[${PYTHON_USEDEP}] )
+		dev-python/websockets[${PYTHON_USEDEP}]
 	')
-	sys-libs/ncurses:=
-	lm-sensors? ( sys-apps/lm-sensors )
-	pcre? ( dev-libs/libpcre )
+	lm-sensors? ( sys-apps/lm-sensors:= )
+	pcre? ( dev-libs/libpcre2:= )
 	suid? ( sys-libs/libcap )
-	ubertooth? ( net-wireless/ubertooth:= )
+	ubertooth? ( net-wireless/ubertooth )
 	"
-
-DEPEND="${CDEPEND}
-	virtual/pkgconfig
-"
-
 RDEPEND="${CDEPEND}
+	acct-user/kismet
+	acct-group/kismet
 	$(python_gen_cond_dep '
-		dev-python/pyserial[${PYTHON_MULTI_USEDEP}]
+		dev-python/pyserial[${PYTHON_USEDEP}]
 	')
-	selinux? ( sec-policy/selinux-kismet )
-"
-PDEPEND="
 	rtlsdr? (
 		$(python_gen_cond_dep '
-			dev-python/numpy[${PYTHON_MULTI_USEDEP}]
+			dev-python/numpy[${PYTHON_USEDEP}]
 		')
-		net-wireless/rtl-sdr
-	)"
+		net-wireless/rtl-sdr:=
+	)
+	selinux? ( sec-policy/selinux-kismet )
+"
+DEPEND="${CDEPEND}
+	dev-libs/boost
+	dev-libs/libfmt
+	sys-libs/libcap
+"
+BDEPEND="virtual/pkgconfig"
 
 src_prepare() {
-	sed -i -e "s:^\(logtemplate\)=\(.*\):\1=/tmp/\2:" \
-		conf/kismet_logging.conf || die
-
-	#this was added to quiet macosx builds but it makes gcc builds noisier
-	sed -i -e 's#-Wno-unknown-warning-option ##g' Makefile.inc.in || die
+	#sed -i -e "s:^\(logtemplate\)=\(.*\):\1=/tmp/\2:" \
+	#	conf/kismet_logging.conf || die
 
 	#sed -i -e 's#root#kismet#g' packaging/systemd/kismet.service.in
 
-	# Don't strip and set correct mangrp
-	sed -i -e 's| -s||g' \
-		-e 's|@mangrp@|root|g' Makefile.in || die
+	rm -r boost || die
+	rm -r fmt || die
 
-	eapply_user
+	# bundles mpack but I failed to successfully unbundle
+	# rm -r mpack || die
 
-	#just use set to fix setup.py
-	find . -name "Makefile.in" -exec sed -i 's#setup.py install#setup.py install --root=$(DESTDIR)#' {} + || die
-	find . -name "Makefile" -exec sed -i 's#setup.py install#setup.py install --root=$(DESTDIR)#' {} + || die
+	#dev-libs/jsoncpp
+	#rm -r json || die
+	#sed -i 's#"json/json.h"#<json/json.h>#' jsoncpp.cc kis_net_beast_httpd.h \
+	#	log_tools/kismetdb_clean.cc log_tools/kismetdb_dump_devices.cc \
+	#	log_tools/kismetdb_statistics.cc log_tools/kismetdb_to_gpx.cc \
+	#	log_tools/kismetdb_to_kml.cc log_tools/kismetdb_to_pcap.cc \
+	#	log_tools/kismetdb_to_wiglecsv.cc trackedcomponent.h \
+	#	trackedelement.h trackedelement_workers.h
+
+	default
 
 	if [ "${PV}" = "9999" ]; then
+		sed -i -e 's#-Wno-dangling-reference##g' configure.ac || die
 		eautoreconf
+	# Untested by should fix same in non-live
+	#else
+	#	sed -i -e 's#-Wno-unknown-warning-option ##g' configure || die
 	fi
+
+	#this was added to quiet macosx builds but it makes gcc builds noisier
+	sed -i -e 's#-Wno-unknown-warning-option ##g' Makefile.inc.in || die
 }
 
 src_configure() {
 	econf \
 		$(use_enable libusb libusb) \
+		$(use_enable libusb wifi-coconut) \
+		$(use_enable mqtt mosquitto) \
 		$(use_enable pcre) \
+		$(use_enable pcre require-pcre2) \
 		$(use_enable lm-sensors lmsensors) \
 		$(use_enable networkmanager libnm) \
+		$(use_enable protobuf) \
 		$(use_enable ubertooth) \
+		$(use_enable wext linuxwext) \
 		--sysconfdir=/etc/kismet \
 		--disable-optimization
 }
@@ -126,8 +144,12 @@ src_install() {
 
 	insinto /usr/share/${PN}
 	doins Makefile.inc
+	if [ "${PV}" = "9999" ];then
+		doins "${FILESDIR}"/gdb
+		dobin "${FILESDIR}"/kismet-gdb
+	fi
 
-	dodoc CHANGELOG README*
+	dodoc README*
 	newinitd "${FILESDIR}"/${PN}.initd-r3 kismet
 	newconfd "${FILESDIR}"/${PN}.confd-r2 kismet
 	systemd_dounit packaging/systemd/kismet.service
@@ -157,7 +179,7 @@ pkg_preinst() {
 migrate_config() {
 	einfo "Kismet Configuration files are now read from /etc/kismet/"
 	ewarn "Please keep user specific settings in /etc/kismet/kismet_site.conf"
-	if [ -n "$(ls ${EROOT}/etc/kismet_*.conf 2> /dev/null)" ]; then
+	if [ -n "$(ls "${EROOT}"/etc/kismet_*.conf 2> /dev/null)" ]; then
 		ewarn "Files at /etc/kismet_*.conf will not be read and should be removed"
 	fi
 	if [ -f "${EROOT}/etc/kismet_site.conf" ] && [ ! -f "${EROOT}/etc/kismet/kismet_site.conf" ]; then
@@ -170,16 +192,12 @@ migrate_config() {
 }
 
 pkg_postinst() {
-	if [ -n "${REPLACING_VERSIONS}" ]; then
-		for v in ${REPLACING_VERSIONS}; do
-			if ver_test ${v} -lt 2019.07.2 ; then
-				migrate_config
-				break
-			fi
-			if ver_test ${v} -eq 9999 ; then
-				migrate_config
-				break
-			fi
-		done
+	if ver_replacing -lt 2019.07.2 || ver_replacing -eq 9999; then
+		migrate_config
 	fi
+	udev_reload
+}
+
+pkg_postrm() {
+	udev_reload
 }

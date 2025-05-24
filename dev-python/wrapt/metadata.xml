@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE pkgmetadata SYSTEM "http://www.gentoo.org/dtd/metadata.dtd">
+<!DOCTYPE pkgmetadata SYSTEM "https://www.gentoo.org/dtd/metadata.dtd">
 <pkgmetadata>
 	<maintainer type="project">
 		<email>python@gentoo.org</email>
@@ -9,4 +9,10 @@
 		<remote-id type="github">GrahamDumpleton/wrapt</remote-id>
 		<remote-id type="pypi">wrapt</remote-id>
 	</upstream>
+	<use>
+		<flag name="native-extensions">
+			Compiles native C extensions (speedups, instead of using python
+			fallback code).
+		</flag>
+	</use>
 </pkgmetadata>

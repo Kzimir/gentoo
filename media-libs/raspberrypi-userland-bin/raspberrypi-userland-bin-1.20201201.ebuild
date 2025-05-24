@@ -11,11 +11,11 @@ S="${WORKDIR}/firmware-${PV}"
 
 LICENSE="BSD GPL-2 raspberrypi-videocore-bin"
 SLOT="0"
-KEYWORDS="-* ~arm"
+KEYWORDS="-* arm"
 IUSE="+hardfp examples"
 
 RDEPEND="!media-libs/raspberrypi-userland"
-DEPEND="${DEPEND}"
+
 RESTRICT="binchecks strip"
 
 src_install() {
@@ -28,7 +28,7 @@ src_install() {
 	dobin bin/*
 
 	insopts -m 0755
-	insinto "/opt/vc/lib"
+	insinto /opt/vc/lib
 	doins -r lib/*
 
 	doenvd "${FILESDIR}"/04${PN}

@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE pkgmetadata SYSTEM "http://www.gentoo.org/dtd/metadata.dtd">
+<!DOCTYPE pkgmetadata SYSTEM "https://www.gentoo.org/dtd/metadata.dtd">
 <pkgmetadata>
 	<maintainer type="person">
 		<email>sbraz@gentoo.org</email>
@@ -18,6 +18,5 @@
 		<remote-id type="pypi">irc</remote-id>
 		<remote-id type="github">jaraco/irc</remote-id>
 		<bugs-to>https://github.com/jaraco/irc/issues</bugs-to>
-		<changelog>https://github.com/jaraco/irc/blob/master/CHANGES.rst</changelog>
 	</upstream>
 </pkgmetadata>

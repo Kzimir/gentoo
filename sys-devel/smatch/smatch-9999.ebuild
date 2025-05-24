@@ -1,25 +1,28 @@
-# Copyright 1999-2020 Gentoo Authors
+# Copyright 1999-2025 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
-EAPI=7
+EAPI=8
 
 inherit toolchain-funcs
-if [[ ${PV} == "9999" ]] ; then
+if [[ ${PV} == 9999 ]] ; then
+	EGIT_REPO_URI="https://repo.or.cz/${PN}.git
+		https://repo.or.cz/r/${PN}.git"
 	inherit git-r3
-	EGIT_REPO_URI="https://repo.or.cz/r/${PN}.git"
 else
-	SRC_URI="http://repo.or.cz/w/smatch.git/snapshot/${PV}.tar.gz -> ${P}.tar.gz
+	SRC_URI="https://repo.or.cz/w/smatch.git/snapshot/${PV}.tar.gz -> ${P}.tar.gz
 		mirror://gentoo/${P}.tar.gz"
-	KEYWORDS="~amd64 ~arm ~hppa ~ia64 ~ppc ~ppc64 ~s390 ~sparc ~x86"
-	S=${WORKDIR}/${PN}
+	# Update on bumps
+	S="${WORKDIR}"/${P}-7f4b936
+
+	KEYWORDS="~amd64 ~arm ~hppa ~ppc ~ppc64 ~s390 ~sparc ~x86"
 fi
 
-DESCRIPTION="static analysis tool for C"
-HOMEPAGE="http://smatch.sourceforge.net/"
+DESCRIPTION="Static analysis tool for C"
+HOMEPAGE="https://smatch.sourceforge.net/"
 
-LICENSE="OSL-1.1"
+# bug #853733
+LICENSE="GPL-2+ MIT OSL-1.1"
 SLOT="0"
-IUSE=""
 
 RDEPEND="dev-db/sqlite"
 DEPEND="${RDEPEND}"
@@ -62,5 +65,5 @@ src_install() {
 	dobin smatch
 	insinto /usr/share/smatch/smatch_data
 	doins smatch_data/*
-	dodoc FAQ README
+	dodoc FAQ Documentation/smatch.rst
 }

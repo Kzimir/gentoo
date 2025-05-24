@@ -1,12 +1,12 @@
-# Copyright 1999-2020 Gentoo Authors
+# Copyright 1999-2024 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
-EAPI=7
+EAPI=8
 
-PYTHON_COMPAT=( python{3_6,3_7,3_8} )
+PYTHON_COMPAT=( python3_{10..12} )
 inherit python-single-r1
 
-DESCRIPTION="Boot your system's rootfs from Encrypted/OpenZFS."
+DESCRIPTION="Boot your system's rootfs from Encrypted/OpenZFS"
 HOMEPAGE="https://github.com/fearedbliss/bliss-initramfs"
 SRC_URI="https://github.com/fearedbliss/${PN}/archive/${PV}.tar.gz -> ${P}.tar.gz"
 
@@ -18,10 +18,10 @@ KEYWORDS="-* amd64"
 
 RDEPEND="
 	${PYTHON_DEPS}
-	app-arch/cpio
+	app-alternatives/cpio
 	virtual/udev"
 
-S="${WORKDIR}/${PN}-${PV}"
+DOCS=( README.md README-MORE.md USAGE.md )
 
 CONFIG_FILE="/etc/bliss-initramfs/settings.json"
 
@@ -35,12 +35,11 @@ src_install() {
 	cp -r "${S}/files" "${D}/opt/${PN}" || die
 	cp -r "${S}/pkg" "${D}/opt/${PN}" || die
 
-	# Copy documentation files
-	dodoc README.md README-MORE.md USAGE.md
-
 	# Copy the configuration file for the user
 	dodir "/etc/${PN}"
 	cp "${S}/files/default-settings.json" "${D}${CONFIG_FILE}"
+
+	python_fix_shebang "${D}/opt/${PN}/${executable}"
 
 	# Make a relative symbolic link: /sbin/bliss-initramfs
 	dosym "../opt/${PN}/${executable}" "/sbin/${PN}"

@@ -1,29 +1,44 @@
-# Copyright 1999-2018 Gentoo Foundation
+# Copyright 1999-2024 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
-EAPI=6
+EAPI=7
+
+inherit toolchain-funcs
 
 DESCRIPTION="mtink is a status monitor and inkjet cartridge changer for some Epson printers"
-HOMEPAGE="http://xwtools.automatix.de/"
-SRC_URI="http://xwtools.automatix.de/files/${P}.tar.gz"
+HOMEPAGE="https://web.archive.org/web/20160316185818/http://xwtools.automatix.de/"
+SRC_URI="https://web.archive.org/web/20160316185818/http://xwtools.automatix.de/files/${P}.tar.gz"
 
 LICENSE="GPL-2"
 SLOT="0"
 KEYWORDS="amd64 ~ppc ~sparc x86"
 IUSE="cups doc X"
 
-DEPEND="X? ( x11-libs/libX11
+DEPEND="
+	virtual/libusb:0
+	cups? ( net-print/cups )
+	X? (
+		x11-libs/libX11
 		x11-libs/libXpm
 		x11-libs/libXt
-		>=x11-libs/motif-2.3:0 )
+		x11-libs/motif:0
+	)
 	cups? ( net-print/cups )
 	virtual/libusb:0"
 RDEPEND="${DEPEND}"
 
 PATCHES=(
-	"${FILESDIR}/${P}-overflow.patch"
-	"${FILESDIR}/${P}-flags.patch"
+	"${FILESDIR}"/${P}-overflow.patch
+	"${FILESDIR}"/${P}-flags.patch
+	"${FILESDIR}"/${P}-motif.patch
+	"${FILESDIR}"/${P}-fno-common.patch
+	"${FILESDIR}"/${P}-fix-function-declarations.patch
 )
+
+src_prepare() {
+	default
+	sed -i -e "s/gcc/$(tc-getCC)/g" Makefile.ORG || die
+}
 
 src_configure() {
 	if use X ; then
@@ -48,9 +63,7 @@ src_compile() {
 src_install() {
 	dobin ttink detect/askPrinter
 
-	if use X; then
-		dobin mtinkc mtink
-	fi
+	use X && dobin mtinkc mtink
 
 	dosbin mtinkd
 
@@ -62,9 +75,8 @@ src_install() {
 		doexe etc/mtink-cups
 	fi
 
-	dodoc README CHANGE.LOG
-	use doc && \
-		dohtml html/*.gif html/*.html
+	dodoc html/README CHANGE.LOG
+	use doc && dodoc -r html/*.{gif,html}
 }
 
 pkg_postinst() {

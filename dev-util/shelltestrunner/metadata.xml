@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE pkgmetadata SYSTEM "http://www.gentoo.org/dtd/metadata.dtd">
+<!DOCTYPE pkgmetadata SYSTEM "https://www.gentoo.org/dtd/metadata.dtd">
 <pkgmetadata>
 	<maintainer type="project">
 		<email>haskell@gentoo.org</email>
@@ -12,4 +12,7 @@
 		and exit status.  Tests can be run selectively, in parallel, with a
 		timeout, in color, and/or with differences highlighted.
 	</longdescription>
+	<upstream>
+		<remote-id type="github">simonmichael/shelltestrunner</remote-id>
+	</upstream>
 </pkgmetadata>

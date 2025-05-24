@@ -1,56 +1,64 @@
-# Copyright 1999-2020 Gentoo Authors
+# Copyright 1999-2025 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
-EAPI=7
+EAPI=8
 
-inherit git-r3 linux-info systemd toolchain-funcs
+PYTHON_COMPAT=( python3_{10..13} )
+
+inherit flag-o-matic git-r3 linux-info python-single-r1 systemd toolchain-funcs
 
 DESCRIPTION="Tvheadend is a TV streaming server and digital video recorder"
 HOMEPAGE="https://tvheadend.org/"
 EGIT_REPO_URI="https://github.com/${PN}/${PN}.git"
-
 LICENSE="GPL-3"
 SLOT="0"
-KEYWORDS=""
+IUSE="dbus debug +ddci dvbcsa +dvb +ffmpeg hdhomerun +imagecache +inotify iptv opus satip systemd +timeshift uriparser vpx x264 x265 xmltv zeroconf zlib"
 
-IUSE="dbus debug +ddci dvbcsa +dvb +ffmpeg hdhomerun +imagecache +inotify iptv libressl opus satip systemd +timeshift uriparser vpx x264 x265 xmltv zeroconf zlib"
+REQUIRED_USE="
+	${PYTHON_REQUIRED_USE}
+	ddci? ( dvb )
+"
 
 BDEPEND="
+	${PYTHON_DEPS}
 	sys-devel/gettext
-	virtual/pkgconfig"
+	virtual/pkgconfig
+"
 
 RDEPEND="
+	${PYTHON_DEPS}
 	acct-user/tvheadend
 	virtual/libiconv
 	dbus? ( sys-apps/dbus )
 	dvbcsa? ( media-libs/libdvbcsa )
-	ffmpeg? ( media-video/ffmpeg:0=[opus?,vpx?,x264?,x265?] )
+	ffmpeg? ( media-video/ffmpeg:=[opus?,vpx?,x264?,x265?] )
 	hdhomerun? ( media-libs/libhdhomerun )
-	!libressl? ( dev-libs/openssl:0= )
-	libressl? ( dev-libs/libressl:= )
+	dev-libs/openssl:0=
 	uriparser? ( dev-libs/uriparser )
 	zeroconf? ( net-dns/avahi )
-	zlib? ( sys-libs/zlib )"
+	zlib? ( sys-libs/zlib )
+"
 
 # ffmpeg sub-dependencies needed for headers only. Check under
 # src/transcoding/codec/codecs/libs for include statements.
 
 DEPEND="
 	${RDEPEND}
-	dvb? ( virtual/linuxtv-dvb-headers )
+	dvb? ( sys-kernel/linux-headers )
 	ffmpeg? (
 		opus? ( media-libs/opus )
 		vpx? ( media-libs/libvpx )
 		x264? ( media-libs/x264 )
 		x265? ( media-libs/x265 )
-	)"
+	)
+"
 
 RDEPEND+="
+	$(python_gen_cond_dep '
+		dev-python/requests[${PYTHON_USEDEP}]
+	')
 	dvb? ( media-tv/dtv-scan-tables )
-	xmltv? ( media-tv/xmltv )"
-
-REQUIRED_USE="
-	ddci? ( dvb )
+	xmltv? ( media-tv/xmltv )
 "
 
 # Some patches from:
@@ -66,6 +74,8 @@ PATCHES=(
 DOCS=( README.md )
 
 pkg_setup() {
+	python-single-r1_pkg_setup
+
 	use inotify &&
 		CONFIG_CHECK="~INOTIFY_USER" linux-info_pkg_setup
 }
@@ -78,8 +88,13 @@ pkg_setup() {
 # most of them only take effect when --enable-ffmpeg_static is given.
 
 src_configure() {
+	# -Werror=lto-type-mismatch
+	# https://bugs.gentoo.org/932794
+	# https://github.com/tvheadend/tvheadend/issues/1732
+	filter-lto
+
 	CC="$(tc-getCC)" \
-	PKG_CONFIG="${CHOST}-pkg-config" \
+	PKG_CONFIG="$(tc-getPKG_CONFIG)" \
 	econf \
 		--disable-bundle \
 		--disable-ccache \
@@ -123,6 +138,7 @@ src_compile() {
 
 src_install() {
 	default
+	python_fix_shebang "${ED}"/usr/bin/
 
 	newinitd "${FILESDIR}"/tvheadend.initd tvheadend
 	newconfd "${FILESDIR}"/tvheadend.confd tvheadend

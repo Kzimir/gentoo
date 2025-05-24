@@ -1,18 +1,15 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE pkgmetadata SYSTEM "http://www.gentoo.org/dtd/metadata.dtd">
+<!DOCTYPE pkgmetadata SYSTEM "https://www.gentoo.org/dtd/metadata.dtd">
 <pkgmetadata>
-	<maintainer type="person">
-		<email>arfrever.fta@gmail.com</email>
-		<name>Arfrever Frehtes Taifersar Arahesis</name>
-	</maintainer>
 	<maintainer type="project">
 		<email>java@gentoo.org</email>
-		<name>Java</name>
 	</maintainer>
-	<slots>
-		<subslots>Soname version number of Protobuf</subslots>
-	</slots>
 	<upstream>
+		<bugs-to>https://github.com/protocolbuffers/protobuf/issues</bugs-to>
+		<doc>https://protobuf.dev/getting-started/javatutorial/</doc>
 		<remote-id type="github">protocolbuffers/protobuf</remote-id>
 	</upstream>
+	<use>
+		<flag name="system-protoc">Use protoc provided by dev-libs/protobuf</flag>
+	</use>
 </pkgmetadata>

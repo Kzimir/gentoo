@@ -1,9 +1,9 @@
-# Copyright 1999-2020 Gentoo Authors
+# Copyright 1999-2023 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
 EAPI=7
 
-PYTHON_COMPAT=( python3_{6..9} )
+PYTHON_COMPAT=( python3_{9..11} )
 
 inherit python-r1
 
@@ -13,7 +13,7 @@ SRC_URI="https://github.com/dagwieers/${PN}/archive/v${PV}.tar.gz -> ${P}.tar.gz
 
 LICENSE="GPL-2"
 SLOT="0"
-KEYWORDS="~alpha amd64 ~arm64 ~hppa ~ia64 ~mips ppc ppc64 sparc x86 ~x86-linux"
+KEYWORDS="~alpha amd64 ~arm64 ~hppa ~mips ppc ppc64 sparc x86 ~x86-linux"
 IUSE="doc examples"
 REQUIRED_USE="${PYTHON_REQUIRED_USE}"
 

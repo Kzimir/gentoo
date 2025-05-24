@@ -1,7 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE pkgmetadata SYSTEM "http://www.gentoo.org/dtd/metadata.dtd">
+<!DOCTYPE pkgmetadata SYSTEM "https://www.gentoo.org/dtd/metadata.dtd">
 <pkgmetadata>
-	<maintainer type="project">
+	<maintainer type="person" proxied="yes">
+		<email>alexander@neuwirth-informatik.de</email>
+		<name>Alexander Puck Neuwirth</name>
+	</maintainer>
+	<maintainer type="project" proxied="proxy">
 		<email>sci-physics@gentoo.org</email>
 		<name>Gentoo Physics Project</name>
 	</maintainer>
@@ -10,4 +14,7 @@
 		N^2*ln(N) time to find jets among N particles, comparing to N*2^N time of
 		other algorithms.
 	</longdescription>
+	<upstream>
+		<remote-id type="gitlab">fastjet/siscone</remote-id>
+	</upstream>
 </pkgmetadata>

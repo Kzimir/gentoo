@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE pkgmetadata SYSTEM "http://www.gentoo.org/dtd/metadata.dtd">
+<!DOCTYPE pkgmetadata SYSTEM "https://www.gentoo.org/dtd/metadata.dtd">
 <pkgmetadata>
   <!-- maintainer-needed -->
   <longdescription lang="en">
@@ -8,4 +8,7 @@
     detached - run in the background - and then later reattached. Together 
     with dvtm it provides a simpler and cleaner alternative to tmux or screen.
   </longdescription>
+  <upstream>
+    <remote-id type="github">martanne/abduco</remote-id>
+  </upstream>
 </pkgmetadata>

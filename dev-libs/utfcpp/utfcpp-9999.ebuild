@@ -1,47 +1,70 @@
-# Copyright 2015-2020 Gentoo Authors
+# Copyright 2015-2024 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
-EAPI="7"
+EAPI=8
 
 inherit cmake
 
-if [[ "${PV}" == "9999" ]]; then
-	inherit git-r3
-
+if [[ ${PV} == *9999* ]]; then
 	EGIT_REPO_URI="https://github.com/nemtrif/utfcpp"
 	EGIT_SUBMODULES=()
+	inherit git-r3
+else
+	FTEST_GIT_REV=""
+	SRC_URI="https://github.com/nemtrif/${PN}/archive/v${PV}.tar.gz -> ${P}.tar.gz
+		test? ( https://github.com/nemtrif/ftest/archive/${FTEST_GIT_REV}.tar.gz -> ftest-${FTEST_GIT_REV:0:8}.tar.gz )"
+	KEYWORDS="~amd64 ~arm ~arm64 ~loong ~ppc ~ppc64 ~riscv ~sparc ~x86"
 fi
 
 DESCRIPTION="UTF-8 C++ library"
 HOMEPAGE="https://github.com/nemtrif/utfcpp"
-if [[ "${PV}" == "9999" ]]; then
-	SRC_URI=""
-else
-	SRC_URI="https://github.com/nemtrif/${PN}/archive/v${PV}.tar.gz -> ${P}.tar.gz"
-fi
 
 LICENSE="Boost-1.0"
 SLOT="0"
-KEYWORDS=""
 IUSE="test"
 RESTRICT="!test? ( test )"
 
-BDEPEND=""
-DEPEND="test? ( dev-cpp/gtest )"
-RDEPEND=""
+src_unpack() {
+	if [[ ${PV} == *9999* ]]; then
+		git-r3_src_unpack
 
-src_prepare() {
-	sed -e "/add_subdirectory(extern\/gtest)/d" -i CMakeLists.txt || die
-	sed -e "s/gtest_main/gtest &/" -i tests/CMakeLists.txt || die
+		if use test; then
+			git-r3_fetch https://github.com/nemtrif/ftest refs/heads/master
+			git-r3_checkout https://github.com/nemtrif/ftest "${WORKDIR}/ftest"
+		fi
+	else
+		default
 
-	cmake_src_prepare
+		if use test; then
+			mv ftest-${FTEST_GIT_REV} ftest || die
+		fi
+	fi
+
+	if use test; then
+		rmdir "${S}/extern/ftest" || die
+		ln -s ../../ftest "${S}/extern/ftest" || die
+	fi
 }
 
 src_configure() {
-	local mycmakeargs=(
-		-DUTF8_SAMPLES=OFF
-		-DUTF8_TESTS=$(usex test ON OFF)
-	)
-
 	cmake_src_configure
+
+	if use test; then
+		CMAKE_USE_DIR=${CMAKE_USE_DIR}/tests BUILD_DIR=${CMAKE_USE_DIR}_build \
+			cmake_src_configure
+	fi
+}
+
+src_compile() {
+	cmake_src_compile
+
+	if use test; then
+		CMAKE_USE_DIR=${CMAKE_USE_DIR}/tests BUILD_DIR=${CMAKE_USE_DIR}_build \
+			cmake_src_compile
+	fi
+}
+
+src_test() {
+	CMAKE_USE_DIR=${CMAKE_USE_DIR}/tests BUILD_DIR=${CMAKE_USE_DIR}_build \
+		cmake_src_test
 }

@@ -1,27 +1,27 @@
-# Copyright 1999-2020 Gentoo Authors
+# Copyright 1999-2023 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
-EAPI="5"
+EAPI="7"
 
-inherit eutils toolchain-funcs
+inherit toolchain-funcs
 
-MY_PN="${PN/netkit/bsd}"
-MY_PN="${MY_PN/rd/r}"
 DESCRIPTION="Netkit - fingerd and finger client"
-HOMEPAGE="ftp://ftp.uk.linux.org/pub/linux/Networking/netkit/"
-SRC_URI="mirror://debian/pool/main/b/${MY_PN}/${MY_PN}_${PV}.orig.tar.gz"
+HOMEPAGE="https://wiki.linuxfoundation.org/networking/netkit"
+SRC_URI="http://ftp.linux.org.uk/pub/linux/Networking/finger/bsd-finger-${PV}.tar.gz"
 
 LICENSE="BSD"
 SLOT="0"
-KEYWORDS="~alpha amd64 arm arm64 ~hppa ~ia64 ~m68k ~mips ppc ppc64 s390 sparc x86"
-IUSE=""
+KEYWORDS="~alpha amd64 arm arm64 ~hppa ~m68k ~mips ppc ppc64 ~s390 sparc x86"
+IUSE="selinux"
 
-S=${WORKDIR}/${MY_PN}-${PV}
+RDEPEND="selinux? ( sec-policy/selinux-finger )"
 
-src_prepare() {
-	epatch "${FILESDIR}"/${P}-r2-gentoo.diff
-	epatch "${FILESDIR}"/${P}-name-check.patch #80286
-}
+S=${WORKDIR}/bsd-finger-${PV}
+
+PATCHES=(
+	"${FILESDIR}"/netkit-fingerd-0.17-includes.patch
+	"${FILESDIR}"/${P}-name-check.patch #80286
+)
 
 src_configure() {
 	# We'll skip this stage as the configure script is crappy and not really

@@ -1,15 +1,17 @@
-# Copyright 1999-2020 Gentoo Authors
+# Copyright 1999-2025 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
-EAPI=7
-inherit multilib toolchain-funcs eutils
+EAPI=8
 
-if [[ ${PV} == "9999" ]] ; then
-	EGIT_REPO_URI="git://git.kernel.org/pub/scm/utils/dtc/dtc.git"
+PYTHON_COMPAT=( python3_{11..13} )
+inherit dot-a meson python-single-r1
+
+if [[ ${PV} == 9999 ]] ; then
+	EGIT_REPO_URI="https://git.kernel.org/pub/scm/utils/dtc/dtc.git"
 	inherit git-r3
 else
 	SRC_URI="https://www.kernel.org/pub/software/utils/${PN}/${P}.tar.xz"
-	KEYWORDS="~alpha ~amd64 ~arm ~arm64 ~hppa ~ia64 ~m68k ~mips ~ppc ~ppc64 ~riscv ~s390 ~sparc ~x86"
+	KEYWORDS="~alpha ~amd64 ~arm ~arm64 ~hppa ~loong ~m68k ~mips ~ppc ~ppc64 ~riscv ~s390 ~sparc ~x86"
 fi
 
 DESCRIPTION="Open Firmware device tree compiler"
@@ -17,65 +19,59 @@ HOMEPAGE="https://devicetree.org/ https://git.kernel.org/cgit/utils/dtc/dtc.git/
 
 LICENSE="GPL-2"
 SLOT="0"
-IUSE="static-libs yaml"
+IUSE="python static-libs test yaml"
+RESTRICT="!test? ( test )"
+REQUIRED_USE="python? ( ${PYTHON_REQUIRED_USE} )"
 
 BDEPEND="
-	sys-devel/bison
-	sys-devel/flex
+	app-alternatives/yacc
+	app-alternatives/lex
 	virtual/pkgconfig
+	python? (
+		dev-lang/swig
+		$(python_gen_cond_dep '
+			dev-python/setuptools[${PYTHON_USEDEP}]
+		')
+	)
 "
-RDEPEND="yaml? ( dev-libs/libyaml )"
-DEPEND="${RDEPEND}"
+RDEPEND="
+	python? ( ${PYTHON_DEPS} )
+	yaml? ( >=dev-libs/libyaml-0.2.3[static-libs?] )
+"
+DEPEND="
+	${RDEPEND}
+"
 
-DOCS="
+DOCS=(
 	Documentation/dt-object-internal.txt
 	Documentation/dts-format.txt
 	Documentation/manual.txt
-"
+)
 
-_emake() {
-	# valgrind is used only in 'make checkm'
-	emake \
-		NO_PYTHON=1 \
-		NO_VALGRIND=1 \
-		NO_YAML=$(usex !yaml 1 0) \
-		\
-		AR="$(tc-getAR)" \
-		CC="$(tc-getCC)" \
-		PKG_CONFIG="$(tc-getPKG_CONFIG)" \
-		\
-		V=1 \
-		\
-		PREFIX="${EPREFIX}/usr" \
-		\
-		LIBDIR="\$(PREFIX)/$(get_libdir)" \
-		\
-		"$@"
+pkg_setup() {
+	if use python ; then
+		export SETUPTOOLS_SCM_PRETEND_VERSION=${PV}
+		python-single-r1_pkg_setup
+	fi
 }
 
-src_prepare() {
-	default
+src_configure() {
+	use static-libs && lto-guarantee-fat
+	local emesonargs=(
+		-Ddefault_library=$(usex static-libs both shared)
+		-Dtools=true
+		-Dvalgrind=disabled # only used for some tests
+		$(meson_feature python)
+		$(meson_use test tests)
+		$(meson_feature yaml)
+	)
 
-	sed -i \
-		-e '/^CFLAGS =/s:=:+=:' \
-		-e '/^CPPFLAGS =/s:=:+=:' \
-		-e 's:-Werror::' \
-		-e 's:-g -Os::' \
-		Makefile || die
-
-	tc-export AR CC PKG_CONFIG
-}
-
-src_compile() {
-	_emake
-}
-
-src_test() {
-	_emake check
+	meson_src_configure
 }
 
 src_install() {
-	_emake DESTDIR="${D}" install
+	meson_src_install
+	strip-lto-bytecode
 
-	use static-libs || find "${ED}" -name '*.a' -delete
+	use python && python_optimize "${ED}"
 }

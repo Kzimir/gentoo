@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE pkgmetadata SYSTEM "http://www.gentoo.org/dtd/metadata.dtd">
+<!DOCTYPE pkgmetadata SYSTEM "https://www.gentoo.org/dtd/metadata.dtd">
 <pkgmetadata>
 	<maintainer type="project">
 		<email>haskell@gentoo.org</email>
@@ -11,6 +11,11 @@
 		<flag name="ghcbootstrap">Internal: Bootstrap GHC from an existing GHC installation.</flag>
 		<flag name="ghcmakebinary">Internal: Build binary friendly for redistribution.</flag>
 		<flag name="gmp">Use <pkg>dev-libs/gmp</pkg> for integer operations (works faster, but an external depend).</flag>
+		<flag name="llvm">Pull in dependencies for the <pkg>llvm-core/llvm</pkg> codegen backend.</flag>
 		<flag name="numa">Enable NUMA thread balancing policy using <pkg>sys-process/numactl</pkg>.</flag>
+		<flag name="unregisterised">Create an unregisterised build in which only the C codegen backend will be available.</flag>
 	</use>
+	<upstream>
+		<remote-id type="github">ghc/ghc</remote-id>
+	</upstream>
 </pkgmetadata>

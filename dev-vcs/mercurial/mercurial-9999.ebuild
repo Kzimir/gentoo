@@ -1,14 +1,15 @@
-# Copyright 1999-2021 Gentoo Authors
+# Copyright 1999-2025 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
-EAPI=7
+EAPI=8
 
-PYTHON_COMPAT=( python3_{6..8} )
-PYTHON_REQ_USE="threads(+)"
-DISTUTILS_USE_SETUPTOOLS=no
 CARGO_OPTIONAL=1
+DISTUTILS_USE_PEP517="setuptools"
+DISTUTILS_EXT=1
+PYTHON_COMPAT=( python3_{10..13} )
+PYTHON_REQ_USE="threads(+)"
 
-inherit bash-completion-r1 cargo elisp-common eutils distutils-r1 mercurial flag-o-matic
+inherit bash-completion-r1 cargo elisp-common distutils-r1 mercurial flag-o-matic multiprocessing
 
 DESCRIPTION="Scalable distributed SCM"
 HOMEPAGE="https://www.mercurial-scm.org/"
@@ -16,8 +17,7 @@ EHG_REPO_URI="https://www.mercurial-scm.org/repo/hg"
 
 LICENSE="GPL-2+"
 SLOT="0"
-KEYWORDS=""
-IUSE="+chg emacs gpg test tk rust zsh-completion"
+IUSE="+chg emacs gpg test tk rust"
 
 BDEPEND="
 	dev-python/docutils[${PYTHON_USEDEP}]
@@ -25,25 +25,31 @@ BDEPEND="
 
 RDEPEND="
 	app-misc/ca-certificates
-	dev-python/zstandard[${PYTHON_USEDEP}]
 	gpg? ( app-crypt/gnupg )
-	tk? ( dev-lang/tk )
-	zsh-completion? ( app-shells/zsh )"
+	tk? ( dev-lang/tk )"
 
 DEPEND="emacs? ( >=app-editors/emacs-23.1:* )
-	test? ( app-arch/unzip
-		dev-python/pygments[${PYTHON_USEDEP}] )"
+	test? (
+		app-arch/unzip
+		dev-python/pygments[${PYTHON_USEDEP}]
+		)"
 
 SITEFILE="70${PN}-gentoo.el"
 
-# Too many tests fail #608720
-RESTRICT="test"
+RESTRICT="!test? ( test )"
+
+pkg_setup() {
+	use rust && rust_pkg_setup
+}
 
 src_unpack() {
 	mercurial_src_unpack
 	if use rust; then
 		local S="${S}/rust/hg-cpython"
 		cargo_live_src_unpack
+	else
+		# Needed because distutils-r1 install under cargo_env if cargo is inherited
+		cargo_gen_config
 	fi
 }
 
@@ -51,11 +57,14 @@ python_prepare_all() {
 	# fix up logic that won't work in Gentoo Prefix (also won't outside in
 	# certain cases), bug #362891
 	sed -i -e 's:xcodebuild:nocodebuild:' setup.py || die
-	sed -i -e '/    hgenv =/a\' -e '    hgenv.pop("PYTHONPATH", None)' setup.py || die
-	# Use absolute import for zstd
-	sed -i -e 's/from \.* import zstd/import zstandard as zstd/' \
-		mercurial/utils/compression.py \
-		mercurial/wireprotoframing.py || die
+	sed -i -e 's/__APPLE__/__NO_APPLE__/g' mercurial/cext/osutil.c || die
+
+	# Build assumes the Rust target directory, which is wrong for us.
+	sed -i -r "s:\brust[/,' ]+target[/,' ]+release\b:rust/$(cargo_target_dir):g" \
+		Makefile \
+		setup.py \
+		tests/run-tests.py \
+		|| die
 
 	distutils-r1_python_prepare_all
 }
@@ -63,19 +72,18 @@ python_prepare_all() {
 src_compile() {
 	if use rust; then
 		pushd rust/hg-cpython || die
-		cargo_src_compile
-		popd
+		cargo_src_compile --no-default-features --jobs $(makeopts_jobs)
+		popd || die
 	fi
 	distutils-r1_src_compile
 }
 
 python_compile() {
 	filter-flags -ftracer -ftree-vectorize
-	python_is_python3 || local -x CFLAGS="${CFLAGS} -fno-strict-aliasing"
 	if use rust; then
 		local -x HGWITHRUSTEXT="cpython"
 	fi
-	distutils-r1_python_compile build_ext --no-zstd
+	distutils-r1_python_compile build_ext
 }
 
 python_compile_all() {
@@ -83,6 +91,11 @@ python_compile_all() {
 	emake doc
 	if use chg; then
 		emake -C contrib/chg
+	fi
+	if use rust; then
+		pushd rust/rhg || die
+		cargo_src_compile --no-default-features --jobs $(makeopts_jobs)
+		popd || die
 	fi
 	if use emacs; then
 		cd contrib || die
@@ -98,7 +111,9 @@ python_install() {
 	if use rust; then
 		local -x HGWITHRUSTEXT="cpython"
 	fi
-	distutils-r1_python_install build_ext --no-zstd
+
+	distutils-r1_python_install build_ext
+	python_doscript contrib/hg-ssh
 }
 
 python_install_all() {
@@ -106,20 +121,17 @@ python_install_all() {
 
 	newbashcomp contrib/bash_completion hg
 
-	if use zsh-completion ; then
-		insinto /usr/share/zsh/site-functions
-		newins contrib/zsh_completion _hg
-	fi
+	insinto /usr/share/zsh/site-functions
+	newins contrib/zsh_completion _hg
 
 	dobin hgeditor
 	if use tk; then
 		dobin contrib/hgk
 	fi
-	python_foreach_impl python_doscript contrib/hg-ssh
 
 	if use emacs; then
 		elisp-install ${PN} contrib/mercurial.el* || die "elisp-install failed!"
-		elisp-site-file-install "${FILESDIR}"/${SITEFILE}
+		elisp-make-site-file "${SITEFILE}"
 	fi
 
 	local RM_CONTRIB=( hgk hg-ssh bash_completion zsh_completion plan9 *.el )
@@ -128,6 +140,9 @@ python_install_all() {
 		dobin contrib/chg/chg
 		doman contrib/chg/chg.1
 		RM_CONTRIB+=( chg )
+	fi
+	if use rust; then
+		dobin "rust/$(cargo_target_dir)/rhg"
 	fi
 
 	for f in ${RM_CONTRIB[@]}; do
@@ -154,6 +169,8 @@ src_test() {
 	rm -f test-convert-mtn*		# monotone
 	rm -f test-convert-tla*		# GNU Arch tla
 	rm -f test-largefiles*		# tends to time out
+	rm -f test-https*			# requires to support tls1.0
+	rm -rf test-removeemptydirs*	# requires access to access parent directories
 	if [[ ${EUID} -eq 0 ]]; then
 		einfo "Removing tests which require user privileges to succeed"
 		rm -f test-convert*
@@ -169,14 +186,10 @@ src_test() {
 }
 
 python_test() {
-	local TEST_DIR
-
-	rm -rf "${TMPDIR}"/test
-	distutils_install_for_testing
 	cd tests || die
-	"${PYTHON}" run-tests.py --verbose \
-		--tmpdir="${TMPDIR}"/test \
-		--with-hg="${TEST_DIR}"/scripts/hg \
+	PYTHONWARNINGS=ignore "${PYTHON}" run-tests.py \
+		--jobs $(makeopts_jobs) \
+		--timeout 0 \
 		|| die "Tests fail with ${EPYTHON}"
 }
 

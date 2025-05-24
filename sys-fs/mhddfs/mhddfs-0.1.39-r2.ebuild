@@ -1,4 +1,4 @@
-# Copyright 1999-2019 Gentoo Authors
+# Copyright 1999-2023 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
 EAPI=7
@@ -22,15 +22,19 @@ RDEPEND="
 	sys-fs/fuse:0
 "
 DEPEND="${RDEPEND}"
+BDEPEND="virtual/pkgconfig"
 
 DOCS=( ChangeLog README )
 PATCHES=(
 	"${FILESDIR}/${PN}-respect-compiler-vars.patch"
 	"${FILESDIR}/${P}-segfault-fix.patch"
 	"${FILESDIR}/${P}-xattr.patch"
+	"${FILESDIR}/${P}-parallel-build.patch"
 )
 
 src_compile() {
+	tc-export PKG_CONFIG
+
 	emake CC="$(tc-getCC)"
 }
 

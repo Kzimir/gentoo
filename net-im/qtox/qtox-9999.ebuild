@@ -1,70 +1,77 @@
-# Copyright 1999-2020 Gentoo Authors
+# Copyright 1999-2025 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
-EAPI=7
+EAPI=8
 
-inherit cmake git-r3 xdg
+inherit cmake xdg
 
-DESCRIPTION="Most feature-rich GUI for net-libs/tox using Qt5"
-HOMEPAGE="https://github.com/qTox/qTox"
-EGIT_REPO_URI="https://github.com/qTox/qTox.git"
+if [[ ${PV} == 9999 ]]; then
+	inherit git-r3
+	EGIT_REPO_URI="https://github.com/TokTok/qTox.git"
+else
+	MY_P="qTox-${PV}"
+	SRC_URI="https://github.com/TokTok/qTox/archive/v${PV}/v${PV}.tar.gz -> ${MY_P}.tar.gz"
+	KEYWORDS="~amd64"
+	S="${WORKDIR}/qTox-${PV}"
+fi
+
+DESCRIPTION="Instant messaging client using the encrypted p2p Tox protocol"
+HOMEPAGE="https://qtox.github.io/"
 
 LICENSE="GPL-3+"
 SLOT="0"
-KEYWORDS=""
-IUSE="notification test X"
-
-RESTRICT="!test? ( test )"
+IUSE="spellcheck X"
 
 BDEPEND="
-	dev-qt/linguist-tools:5
+	dev-qt/qttools:6[linguist]
 	virtual/pkgconfig
 "
 RDEPEND="
 	dev-db/sqlcipher
 	dev-libs/libsodium:=
-	dev-qt/qtconcurrent:5
-	dev-qt/qtcore:5
-	|| (
-		dev-qt/qtgui:5[gif,jpeg,png,X(-)]
-		dev-qt/qtgui:5[gif,jpeg,png,xcb(-)]
-	)
-	dev-qt/qtnetwork:5
-	dev-qt/qtopengl:5
-	dev-qt/qtsql:5
-	dev-qt/qtsvg:5
-	dev-qt/qtwidgets:5
-	dev-qt/qtxml:5
+	dev-qt/qtbase:6[concurrent,gui,network,opengl,widgets,xml]
+	dev-qt/qtsvg:6
 	media-gfx/qrencode:=
-	media-libs/libexif:=
+	media-libs/libexif
 	media-libs/openal
-	>=media-video/ffmpeg-2.6.3:=[webp,v4l]
-	net-libs/tox:0/0.2[av]
-	notification? ( x11-libs/gtk+:2 )
-	X? ( x11-libs/libX11
-		x11-libs/libXScrnSaver )
+	media-video/ffmpeg:=[webp]
+	>=net-libs/tox-0.2.19:=[av]
+	spellcheck? (
+		|| (
+			kde-frameworks/sonnet:6[aspell]
+			kde-frameworks/sonnet:6[hunspell]
+		)
+	)
+	X? (
+		dev-qt/qtbase:6=[X]
+		x11-libs/libX11
+		x11-libs/libXScrnSaver
+	)
 "
 DEPEND="${RDEPEND}
-	test? ( dev-qt/qttest:5 )
+	X? ( x11-base/xorg-proto )
 "
 
-src_prepare() {
-	cmake_src_prepare
-
-	# bug 628574
-	if ! use test; then
-		sed -i CMakeLists.txt -e "/include(Testing)/d" || die
-		sed -i cmake/Dependencies.cmake -e "/find_package(Qt5Test/d" || die
-	fi
-}
+DOCS=( CHANGELOG.md README.md doc/user_manual_en.md )
 
 src_configure() {
 	local mycmakeargs=(
-		-DENABLE_STATUSNOTIFIER=$(usex notification)
-		-DENABLE_GTK_SYSTRAY=$(usex notification)
+		-DASAN=OFF
 		-DPLATFORM_EXTENSIONS=$(usex X)
-		-DUSE_FILTERAUDIO=OFF
+		-DSPELL_CHECK=$(usex spellcheck)
+		-DSTRICT_OPTIONS=OFF
+		-DTSAN=OFF
+		-DUBSAN=ON
+		-DUPDATE_CHECK=OFF
+		-DUSE_CCACHE=OFF
 	)
 
+	[[ ${PV} != 9999 ]] && mycmakeargs+=( -DGIT_DESCRIBE=${PV} )
+
 	cmake_src_configure
+}
+
+src_test() {
+	# The excluded tests require network access.
+	cmake_src_test -E "test_(bsu|core)"
 }

@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE pkgmetadata SYSTEM "http://www.gentoo.org/dtd/metadata.dtd">
+<!DOCTYPE pkgmetadata SYSTEM "https://www.gentoo.org/dtd/metadata.dtd">
 <pkgmetadata>
 	<maintainer type="person">
 		<email>lu_zero@gentoo.org</email>
@@ -20,4 +20,7 @@
 		<flag name="packet-socket">Enable packet socket support.</flag>
 		<flag name="viewer">Build the GTK+-based video viewer.</flag>
 	</use>
+	<upstream>
+		<remote-id type="github">AravisProject/aravis</remote-id>
+	</upstream>
 </pkgmetadata>

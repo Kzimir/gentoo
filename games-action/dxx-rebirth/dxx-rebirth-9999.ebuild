@@ -1,30 +1,35 @@
-# Copyright 2017-2020 Gentoo Authors
+# Copyright 2017-2025 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
-EAPI=7
-PYTHON_COMPAT=( python3_7 )
+EAPI=8
 
-inherit desktop eutils python-any-r1 scons-utils toolchain-funcs xdg
-if [[ "$PV" = 9999 ]]; then
+PYTHON_COMPAT=( python3_{10..13} )
+MY_COMMIT=""
+
+# Games under Gentoo are marked as 'testing' by convention
+#
+# Other architectures are reported to work, but not tested regularly by
+# the core team.
+#
+# Raspberry Pi support is tested by an outside contributor, and his
+# fixes are merged into the main source by upstream.
+#
+# Cross-compilation to Windows is also supported.
+KEYWORDS="~amd64 ~arm64 ~ppc64 ~x86"
+
+inherit desktop flag-o-matic python-any-r1 scons-utils toolchain-funcs xdg
+
+if [[ "${PV}" = 9999 ]]; then
 	inherit git-r3
 	EGIT_REPO_URI="https://github.com/dxx-rebirth/dxx-rebirth"
-	# Live ebuilds have blank keywords.
-	KEYWORDS=
-	PROPERTIES="live"
-else
-	MY_COMMIT=''
-	S="$WORKDIR/$PN-$MY_COMMIT"
-	SRC_URI="https://codeload.github.com/dxx-rebirth/dxx-rebirth/tar.gz/$MY_COMMIT -> $PN-$PVR.tar.gz"
+	unset KEYWORDS
+elif [[ -n ${MY_COMMIT} ]]; then
+	S="${WORKDIR}/${PN}-${MY_COMMIT}"
+	SRC_URI="https://codeload.github.com/dxx-rebirth/dxx-rebirth/tar.gz/${MY_COMMIT} -> ${PN}-${PVR}.tar.gz"
 	unset MY_COMMIT
-
-	# Other architectures are reported to work, but not tested regularly by
-	# the core team.
-	#
-	# Raspberry Pi support is tested by an outside contributor, and his
-	# fixes are merged into the main source by upstream.
-	#
-	# Cross-compilation to Windows is also supported.
-	KEYWORDS="~amd64 ~x86"
+else
+	S="${WORKDIR}/${PN}_${PV##*_pre}-src"
+	SRC_URI="https://www.dxx-rebirth.com/download/dxx/rebirth/${PN}_${PV##*_pre}-src.tar.xz"
 fi
 
 DESCRIPTION="Descent Rebirth - enhanced Descent 1 & 2 engine"
@@ -43,7 +48,7 @@ IUSE="+d1x +d2x +data debug editor +flac ipv6 +joystick l10n_de +midi +mp3 +musi
 #
 # PNG support enables writing screenshots as PNG instead of TGA (for
 # USE=opengl) or PCX (for USE=-opengl).
-DEPEND="dev-games/physfs[hog,mvl,zip]
+DEPEND=">=dev-games/physfs-3[hog,mvl,zip]
 	opengl? (
 		virtual/opengl
 		virtual/glu )
@@ -83,7 +88,6 @@ DXX_RDEPEND_USE_FREEDATA_FRAGMENT='
 # extras are enabled.
 DXX_RDEPEND_ENGINE_FRAGMENT='
 	d${ENGINE}x? (
-		!<games-action/d${ENGINE}x-rebirth-0.59.100
 		data? (
 			|| (
 				games-action/descent${ENGINE}-data
@@ -127,7 +131,7 @@ unset DXX_RDEPEND_USE_SDL_VERSION_FRAGMENT
 # dependency is only in DEPEND, instead of being in both DEPEND and
 # RDEPEND.
 DEPEND+='
-	valgrind? ( dev-util/valgrind )
+	valgrind? ( dev-debug/valgrind )
 '
 
 # This ebuild builds d1x-rebirth, d2x-rebirth, or both.  Building none
@@ -151,6 +155,8 @@ REQUIRED_USE='
 	sc55-musicpack? ( vorbis )
 	sdl2? ( opengl )
 '
+
+BDEPEND="virtual/pkgconfig"
 
 # As of this writing, IUSE_RUNTIME is a GLEP, but not an implemented
 # feature.  This variable is stored here to be ready to activate when
@@ -214,13 +220,14 @@ dxx_scons() {
 
 src_compile() {
 	tc-export CXX PKG_CONFIG
+	replace-flags -O3 -O2 #831896
 	dxx_scons register_install_target=0 build
 }
 
 src_install() {
 	# Use upstream install target to handle the various combinations of
 	# enabled/disabled engines and optional editor support.
-	dxx_scons register_compile_target=0 register_install_target=1 DESTDIR="$D" "$D"
+	dxx_scons register_compile_target=0 register_install_target=1 DESTDIR="${D}" "${D}"
 	local DV
 	for DV in 1 2; do
 		if ! use d${DV}x; then
@@ -237,7 +244,7 @@ src_install() {
 pkg_postinst() {
 	xdg_pkg_postinst
 	if ! use data; then
-		elog "$PN requires game data to play."
+		elog "${PN} requires game data to play."
 		elog "Game data is not included in this package.  To play the game,"
 		elog "emerge the packages required by USE=data or install the game"
 		elog "data by hand."

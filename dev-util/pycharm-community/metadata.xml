@@ -1,10 +1,14 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE pkgmetadata SYSTEM "http://www.gentoo.org/dtd/metadata.dtd">
+<!DOCTYPE pkgmetadata SYSTEM "https://www.gentoo.org/dtd/metadata.dtd">
 <pkgmetadata>
-<maintainer type="person">
-	<name>Mikle Kolyada</name>
-	<email>zlogene@gentoo.org</email>
-</maintainer>
+	<maintainer type="person" proxied="yes">
+		<email>stefan.cristian+git@rogentos.ro</email>
+		<name>Stefan Cristian B.</name>
+	</maintainer>
+	<maintainer type="project" proxied="proxy">
+		<email>proxy-maint@gentoo.org</email>
+		<name>Proxy Maintainers</name>
+	</maintainer>
 <use>
 	<flag name="bundled-jdk">Use bundled jdk</flag>
 </use>

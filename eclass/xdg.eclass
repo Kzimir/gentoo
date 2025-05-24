@@ -1,4 +1,4 @@
-# Copyright 1999-2019 Gentoo Authors
+# Copyright 1999-2024 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
 # @ECLASS: xdg.eclass
@@ -6,37 +6,52 @@
 # freedesktop-bugs@gentoo.org
 # @AUTHOR:
 # Original author: Gilles Dartiguelongue <eva@gentoo.org>
-# @SUPPORTED_EAPIS: 4 5 6 7
+# @SUPPORTED_EAPIS: 7 8
+# @PROVIDES: xdg-utils
 # @BLURB: Provides phases for XDG compliant packages.
 # @DESCRIPTION:
 # Utility eclass to update the desktop, icon and shared mime info as laid
 # out in the freedesktop specs & implementations
 
-inherit xdg-utils
+if [[ -z ${_XDG_ECLASS} ]]; then
+_XDG_ECLASS=1
 
-case "${EAPI:-0}" in
-	4|5|6|7)
-		EXPORT_FUNCTIONS src_prepare pkg_preinst pkg_postinst pkg_postrm
-		;;
-	*) die "EAPI=${EAPI} is not supported" ;;
+case ${EAPI} in
+	7|8) ;;
+	*) die "${ECLASS}: EAPI ${EAPI:-0} not supported" ;;
 esac
 
+inherit xdg-utils
+
 # Avoid dependency loop as both depend on glib-2
-if [[ ${CATEGORY}/${P} != dev-libs/glib-2.* ]] ; then
-DEPEND="
+[[ ${CATEGORY}/${P} != dev-libs/glib-2.* ]] && _XDG_DEPEND="
 	dev-util/desktop-file-utils
 	x11-misc/shared-mime-info
 "
-fi
 
-# @FUNCTION: xdg_src_prepare
-# @DESCRIPTION:
-# Prepare sources to work with XDG standards.
-xdg_src_prepare() {
-	xdg_environment_reset
+case ${EAPI} in
+	7)
+		# src_prepare is only exported in EAPI < 8.
+		# @FUNCTION: xdg_src_prepare
+		# @DESCRIPTION:
+		# Prepare sources to work with XDG standards.
+		# Note that this function is only defined and exported in EAPIs < 8.
+		xdg_src_prepare() {
+			xdg_environment_reset
+			default
+		}
 
-	[[ ${EAPI:-0} != [45] ]] && default
-}
+		DEPEND="${_XDG_DEPEND}"
+		;;
+	*)
+		xdg_src_prepare() {
+			die "Called xdg_src_prepare in EAPI >= 8"
+		}
+
+		IDEPEND="${_XDG_DEPEND}"
+		;;
+esac
+unset _XDG_DEPEND
 
 # @FUNCTION: xdg_pkg_preinst
 # @DESCRIPTION:
@@ -108,3 +123,14 @@ xdg_pkg_postrm() {
 	fi
 }
 
+fi
+
+case ${EAPI} in
+	6|7)
+		EXPORT_FUNCTIONS src_prepare
+		;;
+	*)
+		;;
+esac
+
+EXPORT_FUNCTIONS pkg_preinst pkg_postinst pkg_postrm

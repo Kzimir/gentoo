@@ -1,7 +1,7 @@
-# Copyright 1999-2020 Gentoo Authors
+# Copyright 1999-2025 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
-EAPI=7
+EAPI=8
 
 inherit cmake xdg-utils
 
@@ -12,7 +12,7 @@ if [[ ${PV} == "9999" ]] ; then
 	inherit git-r3
 	EGIT_REPO_URI="https://github.com/gyunaev/birdtray.git"
 else
-	SRC_URI="https://github.com/gyunaev/${PN}/archive/${PV}.tar.gz -> ${P}.tar.gz"
+	SRC_URI="https://github.com/gyunaev/${PN}/archive/v${PV}.tar.gz -> ${P}.gh.tar.gz"
 	KEYWORDS="~amd64"
 fi
 
@@ -20,16 +20,23 @@ LICENSE="GPL-3"
 SLOT="0"
 
 RDEPEND="dev-db/sqlite:=
-	dev-qt/qtcore:5
-	dev-qt/qtgui:5
-	dev-qt/qtnetwork:5
-	dev-qt/qtsvg:5
-	dev-qt/qtwidgets:5
-	dev-qt/qtx11extras:5
+	dev-qt/qtbase:6
+	dev-qt/qtsvg:6
 	x11-libs/libX11"
 
 DEPEND="${RDEPEND}"
-BDEPEND="dev-qt/linguist-tools:5"
+
+# https://github.com/gyunaev/birdtray/commit/74a97df3a17efd5ef679b8eed6999b97abc23f10
+# translations have been made optional, let's see how we would manage them
+BDEPEND="dev-qt/qttools:6"
+
+src_prepare() {
+	# https://github.com/gyunaev/birdtray/issues/606
+	sed -i 's/Qt5LinguistTools/Qt6LinguistTools/g' CMakeLists.txt || die
+	sed -i 's/qt5_/qt6_/g' CMakeLists.txt || die
+
+	cmake_src_prepare
+}
 
 pkg_postinst() {
 	xdg_icon_cache_update

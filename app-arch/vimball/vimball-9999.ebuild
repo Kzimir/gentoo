@@ -1,9 +1,11 @@
-# Copyright 1999-2020 Gentoo Authors
+# Copyright 1999-2025 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
-EAPI=7
-PYTHON_COMPAT=( python3_{6,7,8} )
-DISTUTILS_USE_SETUPTOOLS=rdepend
+EAPI=8
+
+DISTUTILS_USE_PEP517=setuptools
+PYTHON_COMPAT=( python3_{10..13} )
+
 inherit distutils-r1
 
 if [[ ${PV} == *9999 ]] ; then
@@ -11,19 +13,16 @@ if [[ ${PV} == *9999 ]] ; then
 	inherit git-r3
 else
 	KEYWORDS="~amd64 ~x86"
-	SRC_URI="mirror://pypi/${PN:0:1}/${PN}/${P}.tar.gz"
+	inherit pypi
 fi
 
-DESCRIPTION="a command-line vimball archive extractor"
-HOMEPAGE="https://github.com/radhermit/vimball"
+DESCRIPTION="A command-line vimball archive extractor"
+HOMEPAGE="
+	https://github.com/radhermit/vimball/
+	https://pypi.org/project/vimball/
+"
 
 LICENSE="MIT"
 SLOT="0"
-IUSE="test"
-RESTRICT="!test? ( test )"
 
-DEPEND="test? ( dev-python/pytest[${PYTHON_USEDEP}] )"
-
-python_test() {
-	esetup.py test
-}
+distutils_enable_tests pytest

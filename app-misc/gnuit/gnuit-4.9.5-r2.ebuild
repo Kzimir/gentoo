@@ -1,9 +1,9 @@
-# Copyright 1999-2015 Gentoo Foundation
+# Copyright 1999-2024 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
-EAPI=5
+EAPI=7
 
-inherit eutils
+inherit autotools toolchain-funcs
 
 DESCRIPTION="GNU Interactive Tools - increase speed and efficiency of most daily tasks"
 HOMEPAGE="https://www.gnu.org/software/gnuit/"
@@ -12,13 +12,27 @@ SRC_URI="mirror://gnu/${PN}/${P}.tar.gz"
 LICENSE="GPL-3 FDL-1.3"
 SLOT="0"
 KEYWORDS="amd64 ppc sparc x86"
-IUSE=""
+
+PATCHES=(
+	"${FILESDIR}"/${P}-format-security.patch
+	"${FILESDIR}"/${PN}-4.9.5-respect-AR.patch
+)
+
+QA_CONFIG_IMPL_DECL_SKIP+=(
+	# check for "DEC Alpha running OSF/1", fails safely regardless of -Werror=*.
+	statfs
+)
 
 src_prepare() {
-	epatch "${FILESDIR}"/${P}-format-security.patch
+	default
+
+	# for AR patch
+	eautoreconf
 }
 
 src_configure() {
+	tc-export AR
+
 	# The transition option controls whether a "git" wrapper is installed, it is
 	# disabled explicitly so we don't need to block on dev-vcs/git.
 	econf --disable-transition
@@ -26,8 +40,10 @@ src_configure() {
 
 src_install() {
 	default
+
 	#emake DESTDIR="${D}" htmldir="/usr/share/doc/${PF}/html" install
-	mv "${D}/usr/bin/gitview" "${D}/usr/bin/gnuitview" || die
+
+	mv "${ED}/usr/bin/gitview" "${ED}/usr/bin/gnuitview" || die
 }
 
 pkg_postinst() {

@@ -1,5 +1,5 @@
-<?xml version='1.0' encoding='UTF-8'?>
-<!DOCTYPE pkgmetadata SYSTEM "http://www.gentoo.org/dtd/metadata.dtd">
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE pkgmetadata SYSTEM "https://www.gentoo.org/dtd/metadata.dtd">
 <pkgmetadata>
 	<!-- maintainer-needed -->
 	<longdescription lang="en">
@@ -22,6 +22,6 @@
 		companies and universities. 
 	</longdescription>
 	<upstream>
-		<remote-id type="github">att/ast</remote-id>
+		<remote-id type="github">ksh93/ksh</remote-id>
 	</upstream>
 </pkgmetadata>

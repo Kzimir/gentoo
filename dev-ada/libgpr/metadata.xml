@@ -1,11 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE pkgmetadata SYSTEM "http://www.gentoo.org/dtd/metadata.dtd">
+<!DOCTYPE pkgmetadata SYSTEM "https://www.gentoo.org/dtd/metadata.dtd">
 <pkgmetadata>
 	<maintainer type="project">
 		<email>ada@gentoo.org</email>
 	</maintainer>
 	<use>
-		<flag name="shared">Build shared library</flag>
 		<flag name="static-pic">Build static library with pic code</flag>
 	</use>
 	<longdescription lang="en">
@@ -18,4 +17,7 @@
 		projects of all sizes organized into subsystems and libraries and is
 		particularly well-suited for compiled languages.
 	</longdescription>
+	<upstream>
+		<remote-id type="github">adacore/gprbuild</remote-id>
+	</upstream>
 </pkgmetadata>

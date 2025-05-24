@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE pkgmetadata SYSTEM "http://www.gentoo.org/dtd/metadata.dtd">
+<!DOCTYPE pkgmetadata SYSTEM "https://www.gentoo.org/dtd/metadata.dtd">
 <pkgmetadata>
 	<maintainer type="project">
 		<email>python@gentoo.org</email>
@@ -9,6 +9,6 @@
 	<upstream>
 		<remote-id type="pypi">jeepney</remote-id>
 		<remote-id type="gitlab">takluyver/jeepney</remote-id>
-		<bugs-to>https://gitlab.com/takluyver/jeepney/issues</bugs-to>
+		<bugs-to>https://gitlab.com/takluyver/jeepney/-/issues</bugs-to>
 	</upstream>
 </pkgmetadata>

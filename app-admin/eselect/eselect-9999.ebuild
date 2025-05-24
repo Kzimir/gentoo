@@ -1,7 +1,7 @@
-# Copyright 1999-2020 Gentoo Authors
+# Copyright 1999-2025 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
-EAPI=7
+EAPI=8
 
 EGIT_REPO_URI="https://anongit.gentoo.org/git/proj/eselect.git"
 
@@ -14,11 +14,9 @@ LICENSE="GPL-2+ || ( GPL-2+ CC-BY-SA-4.0 )"
 SLOT="0"
 IUSE="doc emacs vim-syntax"
 
-DEPEND="sys-apps/sed
-	|| (
-		sys-apps/coreutils
-		app-misc/realpath
-	)"
+# coreutils for realpath
+DEPEND="sys-apps/coreutils
+	sys-apps/sed"
 RDEPEND="${DEPEND}
 	sys-apps/file
 	sys-libs/ncurses:0"

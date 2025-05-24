@@ -1,15 +1,15 @@
-# Copyright 1999-2021 Gentoo Authors
+# Copyright 1999-2023 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
-EAPI="7"
+EAPI=8
 
-if [[ ${PV} == "99999999" ]] ; then
+if [[ ${PV} == 99999999 ]] ; then
 	EGIT_REPO_URI="https://git.savannah.gnu.org/r/config.git"
 
 	inherit git-r3
 else
-	SRC_URI="https://dev.gentoo.org/~whissi/dist/${PN}/${P}.tar.bz2"
-	KEYWORDS="~alpha ~amd64 ~arm ~arm64 ~hppa ~ia64 ~m68k ~mips ~ppc ~ppc64 ~riscv ~s390 ~sparc ~x86 ~x64-cygwin ~amd64-linux ~x86-linux ~ppc-macos ~x64-macos ~sparc-solaris ~sparc64-solaris ~x64-solaris ~x86-solaris ~x86-winnt"
+	SRC_URI="https://dev.gentoo.org/~sam/distfiles/${CATEGORY}/${PN}/${P}.tar.xz"
+	KEYWORDS="~alpha ~amd64 ~arm ~arm64 ~hppa ~loong ~m68k ~mips ~ppc ~ppc64 ~riscv ~s390 ~sparc ~x86 ~amd64-linux ~x86-linux ~arm64-macos ~ppc-macos ~x64-macos ~x64-solaris"
 	S="${WORKDIR}"
 fi
 
@@ -18,41 +18,27 @@ HOMEPAGE="https://savannah.gnu.org/projects/config"
 
 LICENSE="GPL-3+-with-autoconf-exception"
 SLOT="0"
-IUSE=""
 
 maint_pkg_create() {
-	cd "${S}"
+	cd "${S}" || die
 
+	emake ChangeLog
 	local ver=$(gawk '{ gsub(/-/, "", $1); print $1; exit }' ChangeLog)
 	[[ ${#ver} != 8 ]] && die "invalid version '${ver}'"
 
-	cp "${FILESDIR}"/${PV}/*.patch . || die
-
-	local tar="${T}/gnuconfig-${ver}.tar.bz2"
-	tar -jcf "${tar}" ./* || die "creating tar failed"
+	local tar="${T}/gnuconfig-${ver}.tar.xz"
+	tar -Jcf "${tar}" ./* || die "creating tar failed"
 	einfo "Packaged tar now available:"
 	einfo "$(du -b "${tar}")"
 }
 
 src_unpack() {
-	if [[ ${PV} == "99999999" ]] ; then
+	if [[ ${PV} == 99999999 ]] ; then
 		git-r3_src_unpack
 		maint_pkg_create
 	else
 		unpack ${A}
 	fi
-}
-
-src_prepare() {
-	default
-	eapply "${S}"/*.patch
-	use elibc_uclibc && sed -i 's:linux-gnu:linux-uclibc:' testsuite/config-guess.data #180637
-}
-
-src_compile() { :;}
-
-src_test() {
-	emake check
 }
 
 src_install() {

@@ -1,17 +1,18 @@
-# Copyright 1999-2016 Gentoo Foundation
+# Copyright 1999-2023 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
-EAPI=6
-inherit eutils
+EAPI=7
 
-DESCRIPTION="A classic role-playing game"
-HOMEPAGE="http://basiliskgames.com/eschalon-book-i"
+inherit desktop wrapper
+
+DESCRIPTION="Classic role-playing game"
+HOMEPAGE="https://basiliskgames.com/eschalon-book-i/"
 SRC_URI="https://dev.gentoo.org/~calchan/distfiles/${P}.tar.gz"
+S="${WORKDIR}/Eschalon Book I Demo"
 
 LICENSE="eschalon-book-1-demo"
 SLOT="0"
 KEYWORDS="~amd64 ~x86"
-IUSE=""
 RESTRICT="strip"
 
 QA_PREBUILT="opt/*"
@@ -22,8 +23,6 @@ RDEPEND="
 	x11-libs/libXxf86vm[abi_x86_32(-)]
 	virtual/glu[abi_x86_32(-)]
 	virtual/opengl[abi_x86_32(-)]"
-
-S="${WORKDIR}/Eschalon Book I Demo"
 
 src_install() {
 	insinto /opt/${PN}

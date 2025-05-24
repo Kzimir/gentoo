@@ -1,16 +1,24 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE pkgmetadata SYSTEM "http://www.gentoo.org/dtd/metadata.dtd">
+<!DOCTYPE pkgmetadata SYSTEM "https://www.gentoo.org/dtd/metadata.dtd">
 <pkgmetadata>
 	<maintainer type="person">
-		<email>zlogene@gentoo.org</email>
-		<name>Mikle Kolyada</name>
+		<email>nex+b-g-o@nexadn.de</email>
+		<name>Adrian Schollmeyer</name>
+	</maintainer>
+	<maintainer type="person">
+		<email>fkobi@pm.me</email>
+		<name>Filip Kobierski</name>
+	</maintainer>
+	<maintainer type="project">
+		<email>proxy-maint@gentoo.org</email>
+		<name>Proxy Maintainers</name>
 	</maintainer>
 	<use>
 		<flag name="clock">Enable clock screen</flag>
 		<flag name="outputs">Enable outputs screen</flag>
 		<flag name="visualizer">Enable visualizer screen with sound wave/frequency spectrum modes</flag>
 	</use>
-	<longdescription lang="en">
+	<longdescription>
 		A featureful <pkg>sys-libs/ncurses</pkg> based <pkg>media-sound/mpd</pkg>
 		client inspired by <pkg>media-sound/ncmpc</pkg>
 
@@ -29,4 +37,8 @@
 		* ability to browse and add files from outside of MPD music directory
 		..and a lot more minor convenient functions.
 	</longdescription>
+	<upstream>
+		<remote-id type="github">ncmpcpp/ncmpcpp</remote-id>
+		<changelog>https://github.com/ncmpcpp/ncmpcpp/blob/master/CHANGELOG.md</changelog>
+	</upstream>
 </pkgmetadata>

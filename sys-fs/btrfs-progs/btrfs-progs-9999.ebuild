@@ -1,129 +1,188 @@
-# Copyright 2008-2020 Gentoo Authors
+# Copyright 2008-2024 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
-EAPI=7
+EAPI=8
 
-PYTHON_COMPAT=( python3_{6,7,8} )
+# Please bump with dev-python/btrfsutil
 
-inherit bash-completion-r1 python-single-r1
+PYTHON_COMPAT=( python3_{10..13} )
+inherit bash-completion-r1 python-any-r1 udev
 
-libbtrfs_soname=0
-
-if [[ ${PV} != 9999 ]]; then
-	MY_PV="v${PV/_/-}"
-	[[ "${PV}" = *_rc* ]] || \
-	KEYWORDS="~alpha ~amd64 ~arm ~arm64 ~ia64 ~mips ~ppc ~ppc64 ~sparc ~x86"
-	SRC_URI="https://www.kernel.org/pub/linux/kernel/people/kdave/${PN}/${PN}-${MY_PV}.tar.xz"
-	S="${WORKDIR}/${PN}-${MY_PV}"
-else
-	WANT_LIBTOOL=none
-	inherit autotools git-r3
+if [[ ${PV} == 9999 ]]; then
 	EGIT_REPO_URI="https://github.com/kdave/btrfs-progs.git"
 	EGIT_BRANCH="devel"
+	WANT_LIBTOOL="none"
+	inherit autotools git-r3
+else
+	VERIFY_SIG_OPENPGP_KEY_PATH=/usr/share/openpgp-keys/dsterba.asc
+	inherit verify-sig
+
+	MY_PV="v${PV/_/-}"
+	MY_P="${PN}-${MY_PV}"
+	SRC_URI="
+		https://mirrors.edge.kernel.org/pub/linux/kernel/people/kdave/${PN}/${MY_P}.tar.xz
+		verify-sig? ( https://mirrors.edge.kernel.org/pub/linux/kernel/people/kdave/${PN}/${MY_P}.tar.sign )
+	"
+	S="${WORKDIR}"/${PN}-${MY_PV}
+
+	if [[ ${PV} != *_rc* ]] ; then
+		KEYWORDS="~alpha ~amd64 ~arm ~arm64 ~loong ~mips ~ppc ~ppc64 ~riscv ~sparc ~x86"
+	fi
 fi
 
 DESCRIPTION="Btrfs filesystem utilities"
-HOMEPAGE="https://btrfs.wiki.kernel.org"
+HOMEPAGE="https://btrfs.readthedocs.io/en/latest/"
 
 LICENSE="GPL-2"
-SLOT="0/${libbtrfs_soname}"
-IUSE="+convert doc python reiserfs static static-libs +zstd"
+SLOT="0/0" # libbtrfs soname
+IUSE="+convert +man experimental reiserfs static static-libs udev +zstd"
+# Could support it with just !systemd => eudev, see mdadm, but let's
+# see if someone asks for it first.
+REQUIRED_USE="static? ( !udev )"
 
-RESTRICT=test # tries to mount repared filesystems
+# Tries to mount repaired filesystems
+RESTRICT="test"
 
 RDEPEND="
 	dev-libs/lzo:2=
-	sys-apps/util-linux:0=[static-libs(+)?]
-	sys-libs/zlib:0=
+	sys-apps/util-linux:=[static-libs(+)?]
+	sys-libs/zlib:=
 	convert? (
-		sys-fs/e2fsprogs:0=
-		sys-libs/e2fsprogs-libs:0=
+		sys-fs/e2fsprogs:=
 		reiserfs? (
 			>=sys-fs/reiserfsprogs-3.6.27
 		)
 	)
-	python? ( ${PYTHON_DEPS} )
-	zstd? ( app-arch/zstd:0= )
+	udev? ( virtual/libudev:= )
+	zstd? ( app-arch/zstd:= )
 "
-DEPEND="${RDEPEND}
+DEPEND="
+	${RDEPEND}
+	>=sys-kernel/linux-headers-5.10
 	convert? ( sys-apps/acl )
-	python? (
-		$(python_gen_cond_dep '
-			dev-python/setuptools[${PYTHON_MULTI_USEDEP}]
-		')
-	)
 	static? (
 		dev-libs/lzo:2[static-libs(+)]
 		sys-apps/util-linux:0[static-libs(+)]
 		sys-libs/zlib:0[static-libs(+)]
 		convert? (
-			sys-fs/e2fsprogs:0[static-libs(+)]
-			sys-libs/e2fsprogs-libs:0[static-libs(+)]
+			sys-fs/e2fsprogs[static-libs(+)]
 			reiserfs? (
 				>=sys-fs/reiserfsprogs-3.6.27[static-libs(+)]
 			)
 		)
-		zstd? ( app-arch/zstd:0[static-libs(+)] )
+		zstd? ( app-arch/zstd[static-libs(+)] )
 	)
 "
 BDEPEND="
-	doc? (
-		|| ( >=app-text/asciidoc-8.6.0 dev-ruby/asciidoctor )
-		app-text/docbook-xml-dtd:4.5
-		app-text/xmlto
+	virtual/pkgconfig
+	man? (
+		$(python_gen_any_dep 'dev-python/sphinx[${PYTHON_USEDEP}]
+			dev-python/sphinx-rtd-theme[${PYTHON_USEDEP}]')
 	)
 "
 
+python_check_deps() {
+	python_has_version "dev-python/sphinx[${PYTHON_USEDEP}]" &&
+	python_has_version "dev-python/sphinx-rtd-theme[${PYTHON_USEDEP}]"
+}
+
 if [[ ${PV} == 9999 ]]; then
-	DEPEND+=" sys-devel/gnuconfig"
+	BDEPEND+=" sys-devel/gnuconfig"
+else
+	BDEPEND+=" verify-sig? ( sec-keys/openpgp-keys-dsterba )"
 fi
 
-REQUIRED_USE="python? ( ${PYTHON_REQUIRED_USE} )"
-
 pkg_setup() {
-	use python && python-single-r1_pkg_setup
+	: # Prevent python-any-r1_python_setup
 }
+
+if [[ ${PV} != 9999 ]]; then
+	src_unpack() {
+		# Upstream sign the decompressed .tar
+		if use verify-sig; then
+			einfo "Unpacking ${MY_P}.tar.xz ..."
+			verify-sig_verify_detached - "${DISTDIR}"/${MY_P}.tar.sign \
+				< <(xz -cd "${DISTDIR}"/${MY_P}.tar.xz | tee >(tar -xf -))
+			assert "Unpack failed"
+		else
+			default
+		fi
+	}
+fi
 
 src_prepare() {
 	default
+
 	if [[ ${PV} == 9999 ]]; then
-		AT_M4DIR=m4 eautoreconf
-		mkdir config || die
+		local AT_M4DIR=config
+		eautoreconf
+
 		local automakedir="$(autotools_run_tool --at-output automake --print-libdir)"
 		[[ -e ${automakedir} ]] || die "Could not locate automake directory"
+
 		ln -s "${automakedir}"/install-sh config/install-sh || die
-		ln -s "${EPREFIX}"/usr/share/gnuconfig/config.guess config/config.guess || die
-		ln -s "${EPREFIX}"/usr/share/gnuconfig/config.sub config/config.sub || die
+		ln -s "${BROOT}"/usr/share/gnuconfig/config.guess config/config.guess || die
+		ln -s "${BROOT}"/usr/share/gnuconfig/config.sub config/config.sub || die
 	fi
 }
 
 src_configure() {
 	local myeconfargs=(
 		--bindir="${EPREFIX}"/sbin
+
+		--enable-lzo
+		$(use_enable experimental)
+		--disable-python
 		$(use_enable convert)
-		$(use_enable doc documentation)
+		$(use_enable man documentation)
 		$(use_enable elibc_glibc backtrace)
-		$(use_enable python)
 		$(use_enable static-libs static)
+		$(use_enable udev libudev)
 		$(use_enable zstd)
-		--with-convert=ext2$(usex reiserfs ',reiserfs' '')
+
+		# Could support libgcrypt, libsodium, libkcapi, openssl, botan
+		--with-crypto=builtin
+		--with-convert=ext2$(usev reiserfs ',reiserfs')
 	)
-	econf "${myeconfargs[@]}"
+
+	export EXTRA_PYTHON_CFLAGS="${CFLAGS}"
+	export EXTRA_PYTHON_LDFLAGS="${LDFLAGS}"
+
+	if use man; then
+		python_setup
+	fi
+
+	# bash as a temporary workaround for https://github.com/kdave/btrfs-progs/pull/721
+	CONFIG_SHELL="${BROOT}"/bin/bash econf "${myeconfargs[@]}"
 }
 
 src_compile() {
 	emake V=1 all $(usev static)
 }
 
+src_test() {
+	emake V=1 -j1 -C tests test
+}
+
 src_install() {
 	local makeargs=(
-		$(usex python install_python '')
-		$(usex static install-static '')
+		$(usev static install-static)
 	)
-	emake V=1 DESTDIR="${D}" install "${makeargs[@]}"
-	newbashcomp btrfs-completion btrfs
-	use python && python_optimize
 
-	# install prebuilt subset of manuals
-	use doc || doman Documentation/*.[58]
+	emake V=1 DESTDIR="${D}" install "${makeargs[@]}"
+
+	if use experimental; then
+		exeinto /sbin
+		doexe btrfs-corrupt-block
+	fi
+
+	newbashcomp btrfs-completion btrfs
+}
+
+pkg_postinst() {
+	udev_reload
+}
+
+pkg_postrm() {
+	udev_reload
 }

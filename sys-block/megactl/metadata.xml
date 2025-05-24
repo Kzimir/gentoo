@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE pkgmetadata SYSTEM "http://www.gentoo.org/dtd/metadata.dtd">
+<!DOCTYPE pkgmetadata SYSTEM "https://www.gentoo.org/dtd/metadata.dtd">
 <pkgmetadata>
 	<!-- used by infra, please do not non-maintainer drop -->
 	<maintainer type="project">
@@ -7,10 +7,10 @@
 		<name>Gentoo Sysadmin Project</name>
 	</maintainer>
 	<longdescription>
-This project is a small collection of programs for examining configuration and
-status of LSI megaraid adapters, especially Dell PERC RAID adapters, and
-attached storage devices.
-</longdescription>
+	This project is a small collection of programs for examining configuration and
+	status of LSI megaraid adapters, especially Dell PERC RAID adapters, and
+	attached storage devices.
+	</longdescription>
 	<upstream>
 		<remote-id type="sourceforge">megactl</remote-id>
 	</upstream>

@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE pkgmetadata SYSTEM "http://www.gentoo.org/dtd/metadata.dtd">
+<!DOCTYPE pkgmetadata SYSTEM "https://www.gentoo.org/dtd/metadata.dtd">
 <pkgmetadata>
   <maintainer type="person">
     <email>prometheanfire@gentoo.org</email>
@@ -24,4 +24,7 @@
     dedicated service (nslcd) that queries the LDAP server with persistent
     connections, authentication, attribute translation, etc.
   </longdescription>
+  <upstream>
+    <remote-id type="github">arthurdejong/nss-pam-ldapd</remote-id>
+  </upstream>
 </pkgmetadata>

@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE pkgmetadata SYSTEM "http://www.gentoo.org/dtd/metadata.dtd">
+<!DOCTYPE pkgmetadata SYSTEM "https://www.gentoo.org/dtd/metadata.dtd">
 <pkgmetadata>
   <maintainer type="project">
     <email>sci@gentoo.org</email>
@@ -16,7 +16,7 @@
    6. Creating encrypted PDF files.
    7. Using various character sets (ISO8859-1~16, MSCP1250~8, KOI8-R).
    8. Supporting CJK fonts and encodings. 
-</longdescription>
+  </longdescription>
   <upstream>
     <remote-id type="github">libharu/libharu</remote-id>
   </upstream>

@@ -1,15 +1,19 @@
-<?xml version='1.0' encoding='UTF-8'?>
-<!DOCTYPE pkgmetadata SYSTEM "http://www.gentoo.org/dtd/metadata.dtd">
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE pkgmetadata SYSTEM "https://www.gentoo.org/dtd/metadata.dtd">
 <pkgmetadata>
-	<maintainer type="person">
+	<maintainer type="person" proxied="yes">
 		<email>gio@eigenlab.org</email>
 		<name>Gioacchino Mazzurco</name>
 	</maintainer>
-	<maintainer type="project">
+	<maintainer type="person" proxied="yes">
+		<email>fkobi@pm.me</email>
+		<name>Filip Kobierski</name>
+	</maintainer>
+	<maintainer type="project" proxied="proxy">
 		<email>proxy-maint@gentoo.org</email>
 		<name>Proxy Maintainers</name>
 	</maintainer>
-	<longdescription lang="en">
+	<longdescription>
 		RetroShare is a Free and Open Source cross-platform, Friend-2-Friend
 		secure decentralised communication platform.
 		It lets you to securely chat and share files with your friends, family
@@ -18,17 +22,18 @@
 		RetroShare provides filesharing, chat, mails, forums and channels.
 	</longdescription>
 	<use>
-		<flag name="cli">Enables the CLI version of RetroShare</flag>
-		<flag name="control-socket">Enables API via Unix socket support</flag>
-		<flag name="gnome-keyring">Enables potentially insecure autologin capability via Gnome Keyring</flag>
+		<flag name="cli">Enables terminal login support for retroshare-service</flag>
 		<flag name="jsonapi">Enables the new RetroShare JSON API</flag>
-		<flag name="service">Enables the new RetroShare service controllable only through JSON API</flag>
+		<flag name="libupnp">Enables UPnP port forwarding via <pkg>net-libs/libupnp</pkg></flag>
+		<flag name="miniupnp">Enables UPnP port forwarding via <pkg>net-libs/miniupnpc</pkg></flag>
+		<flag name="plugins">Enables plugin support</flag>
+		<flag name="service">Enables the new RetroShare service</flag>
 		<flag name="sqlcipher">Enables GXS database encryption via SQLCipher</flag>
-		<flag name="webui">Enables Web interface and API support</flag>
-		<flag name="xapian">Enables GXS content indexing and search through Xapian</flag>
 	</use>
 	<upstream>
 		<bugs-to>https://github.com/RetroShare/RetroShare/issues</bugs-to>
+		<!-- NOTE: for core functionalities check cout RetroShare/libretroshare -->
+		<doc>https://retrosharedocs.readthedocs.io/en/latest/</doc>
 		<remote-id type="github">RetroShare/RetroShare</remote-id>
 	</upstream>
 </pkgmetadata>

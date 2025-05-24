@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE pkgmetadata SYSTEM "http://www.gentoo.org/dtd/metadata.dtd">
+<!DOCTYPE pkgmetadata SYSTEM "https://www.gentoo.org/dtd/metadata.dtd">
 <pkgmetadata>
   <maintainer type="project">
     <email>perl@gentoo.org</email>
@@ -19,5 +19,6 @@
     <remote-id type="cpan-module">User::Identity::Item</remote-id>
     <remote-id type="cpan-module">User::Identity::Location</remote-id>
     <remote-id type="cpan-module">User::Identity::System</remote-id>
+    <remote-id type="github">markov2/perl5-User-Identity</remote-id>
   </upstream>
 </pkgmetadata>

@@ -1,32 +1,45 @@
-# Copyright 1999-2016 Gentoo Foundation
+# Copyright 1999-2025 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
-EAPI=5
+EAPI=8
 
-inherit eutils toolchain-funcs
+inherit autotools flag-o-matic toolchain-funcs
 
-DESCRIPTION="top like program for network activity"
-SRC_URI="mirror://gentoo/${P}.tar.gz"
-HOMEPAGE="https://wiki.gentoo.org/wiki/No_homepage"
+DESCRIPTION="top-like program for network activity"
+HOMEPAGE="https://web.archive.org/web/20060615083852/http://srparish.net/software/"
+SRC_URI="https://web.archive.org/web/20060705095248if_/http://srparish.net:80/software/nettop-0.2.3.tar.gz"
 
-SLOT="0"
 LICENSE="BSD"
-KEYWORDS="amd64 ~arm ppc x86"
+SLOT="0"
+KEYWORDS="amd64 ~arm ~arm64 ppc x86"
 
-DEPEND="
+RDEPEND="
 	sys-libs/slang
-	net-libs/libpcap
-"
-RDEPEND="${DEPEND}"
+	net-libs/libpcap"
+DEPEND="${RDEPEND}"
+
+PATCHES=(
+	"${FILESDIR}"/${P}-gcc411.patch
+	"${FILESDIR}"/${P}-offbyone.patch
+)
 
 src_prepare() {
-	epatch \
-		"${FILESDIR}"/${P}-gcc411.patch \
-		"${FILESDIR}"/${P}-offbyone.patch
+	default
+
+	eautoreconf #871408
+	sed -i 's/configure.in/configure.ac/' Makefile.in || die
+
 	tc-export CC
+}
+
+src_configure() {
+	# bug #944911
+	append-cflags -std=gnu17
+
+	econf
 }
 
 src_install() {
 	dosbin nettop
-	dodoc ChangeLog README THANKS
+	einstalldocs
 }

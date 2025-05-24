@@ -1,7 +1,8 @@
-# Copyright 1999-2020 Gentoo Authors
+# Copyright 1999-2024 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
 EAPI=7
+
 inherit flag-o-matic toolchain-funcs udev
 
 MY_PV="$(ver_rs 2 -)"
@@ -12,13 +13,13 @@ SRC_URI="https://dev.gentoo.org/~slashbeast/distfiles/gradm/${PN}-${MY_PV}.tar.g
 LICENSE="GPL-2"
 
 SLOT="0"
-KEYWORDS="~alpha ~amd64 ~arm ~hppa ~ia64 ~mips ~ppc ~ppc64 ~sparc ~x86"
+KEYWORDS="~alpha amd64 ~arm ~hppa ~mips ~ppc ~ppc64 ~sparc x86"
 IUSE="pam"
 
 RDEPEND=""
 DEPEND="
-	sys-devel/bison
-	sys-devel/flex
+	app-alternatives/yacc
+	app-alternatives/lex
 	pam? ( sys-libs/pam )"
 
 S=${WORKDIR}/${PN}
@@ -35,6 +36,9 @@ src_prepare() {
 src_compile() {
 	local target
 	use pam || target="nopam"
+
+	# bug #863569
+	filter-lto
 
 	emake ${target} CC="$(tc-getCC)" OPT_FLAGS="${CFLAGS}"
 }

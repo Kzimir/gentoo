@@ -1,12 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE pkgmetadata SYSTEM "http://www.gentoo.org/dtd/metadata.dtd">
-<pkgmetadata>
-	<maintainer type="person">
-		<email>slyfox@gentoo.org</email>
-		<name>Sergei Trofimovich</name>
-	</maintainer>
-	<upstream>
-		<remote-id type="github">ysbaddaden/shards</remote-id>
-	</upstream>
-</pkgmetadata>
+<!DOCTYPE pkgmetadata SYSTEM "https://www.gentoo.org/dtd/metadata.dtd">
 
+<pkgmetadata>
+  <maintainer type="person">
+    <email>xgqt@gentoo.org</email>
+    <name>Maciej Barć</name>
+  </maintainer>
+  <upstream>
+    <bugs-to>https://github.com/crystal-lang/crystal/issues/</bugs-to>
+    <remote-id type="github">crystal-lang/shards</remote-id>
+  </upstream>
+</pkgmetadata>

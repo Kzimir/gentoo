@@ -1,9 +1,10 @@
-# Copyright 1999-2020 Gentoo Authors
+# Copyright 1999-2024 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
 # @ECLASS: fcaps.eclass
 # @MAINTAINER:
 # base-system@gentoo.org
+# @SUPPORTED_EAPIS: 7 8
 # @BLURB: function to set POSIX file-based capabilities
 # @DESCRIPTION:
 # This eclass provides a function to set file-based capabilities on binaries.
@@ -28,23 +29,24 @@
 # )
 # @CODE
 
+case ${EAPI} in
+	7|8) ;;
+	*) die "${ECLASS}: EAPI ${EAPI:-0} not supported" ;;
+esac
+
 if [[ -z ${_FCAPS_ECLASS} ]]; then
 _FCAPS_ECLASS=1
 
 IUSE="+filecaps"
 
-# Since it is needed in pkg_postinst() it must be in RDEPEND
-case "${EAPI:-0}" in
-	[0-6])
-		RDEPEND="filecaps? ( sys-libs/libcap )"
-	;;
-	*)
-		BDEPEND="filecaps? ( sys-libs/libcap )"
-		RDEPEND="${BDEPEND}"
-	;;
+# Since it is needed in pkg_postinst() it must be in IDEPEND
+case ${EAPI} in
+	7) BDEPEND="filecaps? ( sys-libs/libcap )"
+	   RDEPEND="filecaps? ( sys-libs/libcap )" ;;
+	*) IDEPEND="filecaps? ( sys-libs/libcap )" ;;
 esac
 
-# @ECLASS-VARIABLE: FILECAPS
+# @ECLASS_VARIABLE: FILECAPS
 # @DEFAULT_UNSET
 # @DESCRIPTION:
 # An array of fcap arguments to use to automatically execute fcaps.  See that
@@ -64,6 +66,12 @@ esac
 #
 # Note: If you override pkg_postinst, you must call fcaps_pkg_postinst yourself.
 
+# @ECLASS_VARIABLE: FCAPS_DENY_WORLD_READ
+# @USER_VARIABLE
+# @DEFAULT_UNSET
+# @DESCRIPTION:
+# When set, deny read access on files updated by the fcaps function.
+
 # @FUNCTION: fcaps
 # @USAGE: [-o <owner>] [-g <group>] [-m <mode>] [-M <caps mode>] <capabilities> <file[s]>
 # @DESCRIPTION:
@@ -81,21 +89,26 @@ esac
 #
 # If the system is unable to set capabilities, it will use the specified user,
 # group, and mode (presumably to make the binary set*id).  The defaults there
-# are root:0 and 4711.  Otherwise, the ownership and permissions will be
+# are 0:0 and 4711.  Otherwise, the ownership and permissions will be
 # unchanged.
 fcaps() {
 	debug-print-function ${FUNCNAME} "$@"
 
-	if [[ ${EUID} != 0 ]] ; then
+	if [[ ${EUID} -ne 0 ]] ; then
 		einfo "Insufficient privileges to execute ${FUNCNAME}, skipping."
 		return 0
 	fi
 
 	# Process the user options first.
-	local owner='root'
+	local owner='0'
 	local group='0'
-	local mode='4711'
-	local caps_mode='711'
+	local mode=u+s
+	local caps_mode=
+
+	if [[ -n ${FCAPS_DENY_WORLD_READ} ]]; then
+		mode=u+s,go-r
+		caps_mode=go-r
+	fi
 
 	while [[ $# -gt 0 ]] ; do
 		case $1 in
@@ -135,9 +148,10 @@ fcaps() {
 			# fs doesn't support it, but abort on all others.
 			debug-print "${FUNCNAME}: setting caps '${caps}' on '${file}'"
 
-			# If everything goes well, we don't want the file to be readable
-			# by people.
-			chmod ${caps_mode} "${file}" || die
+			# Remove the read bits if requested.
+			if [[ -n ${caps_mode} ]]; then
+				chmod ${caps_mode} "${file}" || die
+			fi
 
 			if ! out=$(LC_ALL=C setcap "${caps}" "${file}" 2>&1) ; then
 				case ${out} in
@@ -168,9 +182,14 @@ fcaps() {
 		fi
 
 		# If we're still here, setcaps failed.
-		debug-print "${FUNCNAME}: setting owner/mode on '${file}'"
-		chown "${owner}:${group}" "${file}" || die
-		chmod ${mode} "${file}" || die
+		if [[ -n ${owner} || -n ${group} ]]; then
+			debug-print "${FUNCNAME}: setting owner on '${file}'"
+			chown "${owner}:${group}" "${file}" || die
+		fi
+		if [[ -n ${mode} ]]; then
+			debug-print "${FUNCNAME}: setting mode on '${file}'"
+			chmod ${mode} "${file}" || die
+		fi
 	done
 }
 
@@ -189,6 +208,6 @@ fcaps_pkg_postinst() {
 	done
 }
 
-EXPORT_FUNCTIONS pkg_postinst
-
 fi
+
+EXPORT_FUNCTIONS pkg_postinst

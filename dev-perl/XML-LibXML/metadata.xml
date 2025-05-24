@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE pkgmetadata SYSTEM "http://www.gentoo.org/dtd/metadata.dtd">
+<!DOCTYPE pkgmetadata SYSTEM "https://www.gentoo.org/dtd/metadata.dtd">
 <pkgmetadata>
   <maintainer type="project">
     <email>perl@gentoo.org</email>
@@ -43,5 +43,6 @@
     <remote-id type="cpan-module">XML::LibXML::XPathContext</remote-id>
     <remote-id type="cpan-module">XML::LibXML::XPathExpression</remote-id>
     <remote-id type="cpan-module">XML::LibXML::_SAXParser</remote-id>
+    <remote-id type="github">shlomif/perl-XML-LibXML</remote-id>
   </upstream>
 </pkgmetadata>

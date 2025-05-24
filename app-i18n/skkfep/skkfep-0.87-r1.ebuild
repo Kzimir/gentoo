@@ -1,4 +1,4 @@
-# Copyright 1999-2020 Gentoo Authors
+# Copyright 1999-2024 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
 EAPI="7"
@@ -17,8 +17,8 @@ IUSE=""
 DEPEND="sys-libs/ncurses:="
 RDEPEND="${DEPEND}
 	app-i18n/skk-jisyo"
-BDEPEND="sys-apps/sed
-	virtual/awk
+BDEPEND="
+	app-alternatives/awk
 	virtual/pkgconfig"
 
 PATCHES=(
@@ -26,17 +26,16 @@ PATCHES=(
 	"${FILESDIR}"/${PN}-system-dic.patch
 	"${FILESDIR}"/${PN}-annotation.patch
 )
+
 DOCS=( README HISTORY TODO )
 
 src_prepare() {
 	sed -i "/SYSTEM_DIC_NAME/a#define SYSTEM_DIC_NAME \"${EPREFIX}/usr/share/skk/SKK-JISYO.L\"" config.h
 
 	default
+
 	# written in K&R C
-	append-flags \
-		-Wno-implicit-function-declaration \
-		-Wno-implicit-int \
-		-Wno-return-type
+	append-flags -std=gnu89
 }
 
 src_compile() {

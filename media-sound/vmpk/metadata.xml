@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE pkgmetadata SYSTEM "http://www.gentoo.org/dtd/metadata.dtd">
+<!DOCTYPE pkgmetadata SYSTEM "https://www.gentoo.org/dtd/metadata.dtd">
 <pkgmetadata>
 	<maintainer type="project">
 		<email>proaudio@gentoo.org</email>
@@ -13,7 +13,7 @@
 	the Virtual MIDI Piano Keyboard to display the played MIDI notes from
 	another instrument or MIDI file player. To do so, connect the other MIDI
 	port to the input port of VMPK.
-</longdescription>
+	</longdescription>
 	<upstream>
 		<remote-id type="sourceforge">vmpk</remote-id>
 	</upstream>

@@ -1,4 +1,4 @@
-# Copyright 1999-2020 Gentoo Authors
+# Copyright 1999-2024 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
 EAPI=7
@@ -7,7 +7,7 @@ inherit autotools
 DESCRIPTION="Alarm Pinger"
 HOMEPAGE="https://github.com/Jajcus/apinger/"
 SRC_URI="
-	https://dev.gentoo.org/~jer/${P}.tar.gz
+	https://dev.gentoo.org/~jsmolic/distfiles/${P}.tar.gz
 "
 
 LICENSE="GPL-2"
@@ -15,8 +15,8 @@ SLOT="0"
 KEYWORDS="~amd64"
 
 DEPEND="
-	sys-devel/flex
-	virtual/yacc
+	app-alternatives/lex
+	app-alternatives/yacc
 "
 DOCS=( AUTHORS ChangeLog NEWS README TODO )
 PATCHES=(

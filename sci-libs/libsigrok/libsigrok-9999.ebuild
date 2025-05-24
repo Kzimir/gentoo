@@ -1,20 +1,21 @@
-# Copyright 1999-2020 Gentoo Authors
+# Copyright 1999-2024 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
-EAPI="7"
+EAPI="8"
 
-PYTHON_COMPAT=( python3_{6,7,8,9} )
-USE_RUBY="ruby26 ruby25"
+PYTHON_COMPAT=( python3_{10..13} )
+
+USE_RUBY="ruby31 ruby32"
 RUBY_OPTIONAL="yes"
 
 inherit python-r1 java-pkg-opt-2 ruby-ng udev xdg-utils
 
 if [[ ${PV} == *9999* ]]; then
-	EGIT_REPO_URI="git://sigrok.org/${PN}"
+	EGIT_REPO_URI="https://github.com/sigrokproject/${PN}.git"
 	inherit git-r3 autotools
 else
 	SRC_URI="https://sigrok.org/download/source/${PN}/${P}.tar.gz"
-	KEYWORDS="~amd64 ~x86"
+	KEYWORDS="~amd64 ~arm ~arm64 ~x86"
 fi
 
 DESCRIPTION="Basic hardware drivers for logic analyzers and input/output file format support"
@@ -22,7 +23,7 @@ HOMEPAGE="https://sigrok.org/wiki/Libsigrok"
 
 LICENSE="GPL-3"
 SLOT="0/9999"
-IUSE="+cxx ftdi java parport python ruby serial static-libs test +udev usb"
+IUSE="bluetooth +cxx ftdi hidapi java nettle parport python ruby serial static-libs test +udev usb"
 REQUIRED_USE="java? ( cxx )
 	python? ( cxx ${PYTHON_REQUIRED_USE} )
 	ruby? ( cxx || ( $(ruby_get_use_targets) ) )"
@@ -33,8 +34,11 @@ RESTRICT="!test? ( test )"
 LIB_DEPEND="
 	>=dev-libs/glib-2.32.0[static-libs(+)]
 	>=dev-libs/libzip-0.8:=[static-libs(+)]
+	bluetooth? ( >=net-wireless/bluez-4.0:= )
 	cxx? ( dev-cpp/glibmm:2[static-libs(+)] )
 	ftdi? ( dev-embedded/libftdi:1[static-libs(+)] )
+	hidapi? ( >=dev-libs/hidapi-0.8.0 )
+	nettle? ( dev-libs/nettle:=[static-libs(+)] )
 	parport? ( sys-libs/libieee1284[static-libs(+)] )
 	python? (
 		${PYTHON_DEPS}
@@ -45,15 +49,15 @@ LIB_DEPEND="
 	usb? ( virtual/libusb:1[static-libs(+)] )
 "
 RDEPEND="
-	java? ( >=virtual/jre-1.4 )
+	java? ( >=virtual/jre-1.8:* )
 	!static-libs? ( ${LIB_DEPEND//\[static-libs(+)]} )
 	static-libs? ( ${LIB_DEPEND} )
 "
 DEPEND="${LIB_DEPEND//\[static-libs(+)]}
-	cxx? ( app-doc/doxygen )
+	cxx? ( app-text/doxygen )
 	java? (
 		>=dev-lang/swig-3.0.6
-		>=virtual/jdk-1.4
+		>=virtual/jdk-1.8:*
 	)
 	python? (
 		>=dev-lang/swig-3.0.6
@@ -87,7 +91,9 @@ each_ruby_prepare() {
 
 src_prepare() {
 	if use ruby; then
+		# copy source to where ruby-ng_src_unpack puts it
 		cp -rl "${S}" "${WORKDIR}"/all || die
+		# ruby-ng_src_prepare calls default by itself
 		ruby-ng_src_prepare
 	fi
 	default
@@ -97,7 +103,12 @@ src_prepare() {
 
 sigrok_src_configure() {
 	econf \
+		--disable-python \
+		--disable-ruby \
+		$(use_with bluetooth libbluez) \
 		$(use_with ftdi libftdi) \
+		$(use_with hidapi libhidapi) \
+		$(use_with nettle libnettle) \
 		$(use_with parport libieee1284) \
 		$(use_with serial libserialport) \
 		$(use_with usb libusb) \
@@ -107,23 +118,19 @@ sigrok_src_configure() {
 		"${@}"
 }
 
-each_ruby_configure() {
-	RUBY="${RUBY}" sigrok_src_configure --enable-ruby --disable-python
-}
-
 each_python_configure() {
 	cd "${BUILD_DIR}"
-	sigrok_src_configure --disable-ruby --enable-python
+	sigrok_src_configure --enable-python
+}
+
+each_ruby_configure() {
+	RUBY="${RUBY}" sigrok_src_configure --enable-ruby
 }
 
 src_configure() {
-	sigrok_src_configure --disable-ruby --disable-python
-	use ruby && ruby-ng_src_configure
+	sigrok_src_configure
 	use python && python_foreach_impl each_python_configure
-}
-
-each_ruby_compile() {
-	emake ruby-build
+	use ruby && ruby-ng_src_configure
 }
 
 each_python_compile() {
@@ -131,24 +138,28 @@ each_python_compile() {
 	emake python-build
 }
 
+each_ruby_compile() {
+	emake ruby-build
+}
+
 src_compile() {
 	default
-	use ruby && ruby-ng_src_compile
 	use python && python_foreach_impl each_python_compile
+	use ruby && ruby-ng_src_compile
 }
 
 src_test() {
 	emake check
 }
 
-each_ruby_install() {
-	emake ruby-install DESTDIR="${D}"
-}
-
 each_python_install() {
 	cd "${BUILD_DIR}"
 	emake python-install DESTDIR="${D}"
 	python_optimize
+}
+
+each_ruby_install() {
+	emake ruby-install DESTDIR="${D}"
 }
 
 src_install() {
@@ -162,9 +173,11 @@ src_install() {
 pkg_postinst() {
 	xdg_icon_cache_update
 	xdg_mimeinfo_database_update
+	udev_reload
 }
 
 pkg_postrm() {
 	xdg_icon_cache_update
 	xdg_mimeinfo_database_update
+	udev_reload
 }

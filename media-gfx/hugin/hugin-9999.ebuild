@@ -1,10 +1,10 @@
-# Copyright 1999-2020 Gentoo Authors
+# Copyright 1999-2025 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
-EAPI=7
+EAPI=8
 
-WX_GTK_VER="3.0-gtk3"
-PYTHON_COMPAT=( python3_{6,7,8} )
+WX_GTK_VER="3.2-gtk3"
+PYTHON_COMPAT=( python3_{10..13} )
 
 inherit mercurial python-single-r1 wxwidgets cmake xdg
 
@@ -14,6 +14,8 @@ SRC_URI=""
 EHG_REPO_URI="http://hg.code.sf.net/p/hugin/hugin"
 EHG_PROJECT="${PN}-${PN}"
 
+S=${WORKDIR}/${PN}-$(ver_cut 1-2).0
+
 LICENSE="GPL-2+ BSD BSD-2 MIT wxWinLL-3 ZLIB FDL-1.2"
 SLOT="0"
 KEYWORDS=""
@@ -22,24 +24,22 @@ LANGS=" ca ca-valencia cs da de en-GB es eu fi fr hu it ja nl pl pt-BR ro ru sk 
 IUSE="debug lapack python raw sift $(echo ${LANGS//\ /\ l10n_})"
 
 CDEPEND="
-	!!dev-util/cocom
 	dev-db/sqlite:3
 	dev-libs/boost:=
-	dev-libs/zthread
 	>=media-gfx/enblend-4.0
 	media-gfx/exiv2:=
 	media-libs/freeglut
 	media-libs/glew:=
-	>=media-libs/libpano13-2.9.19_beta1:0=
-	media-libs/libpng:0=
+	media-libs/libjpeg-turbo:=
+	>=media-libs/libpano13-2.9.19_beta1:=
+	media-libs/libpng:=
 	media-libs/openexr:=
-	media-libs/tiff:0
-	>=media-libs/vigra-1.11.0[openexr]
+	media-libs/tiff:=
+	>=media-libs/vigra-1.11.1-r5[openexr]
 	sci-libs/fftw:3.0=
 	sci-libs/flann
 	sys-libs/zlib
 	virtual/glu
-	virtual/jpeg:0
 	virtual/opengl
 	x11-libs/wxGTK:${WX_GTK_VER}=[X,opengl]
 	lapack? ( virtual/blas virtual/lapack )
@@ -58,11 +58,8 @@ REQUIRED_USE="python? ( ${PYTHON_REQUIRED_USE} )"
 
 DOCS=( authors.txt README TODO )
 
-S=${WORKDIR}/${PN}-$(ver_cut 1-2).0
-
 pkg_setup() {
 	use python && python-single-r1_pkg_setup
-	setup-wxwidgets
 }
 
 src_prepare() {
@@ -74,6 +71,7 @@ src_configure() {
 		-DBUILD_HSI=$(usex python)
 		-DENABLE_LAPACK=$(usex lapack)
 	)
+	setup-wxwidgets
 	cmake_src_configure
 }
 
@@ -90,7 +88,7 @@ src_install() {
 			*) dir=${lang/-/_};;
 		esac
 		if ! use l10n_${lang} ; then
-			rm -r "${ED%/}"/usr/share/locale/${dir} || die
+			rm -r "${ED}"/usr/share/locale/${dir} || die
 		fi
 	done
 }

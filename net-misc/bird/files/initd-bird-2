@@ -1,23 +1,29 @@
 #!/sbin/openrc-run
-# Copyright 1999-2019 Gentoo Authors
+# Copyright 1999-2021 Gentoo Authors
 # Copyright 2019 Alarig Le Lay <alarig@grifon.fr>
 # Distributed under the terms of the GNU General Public License v2
 
 extra_started_commands="reload"
 
-pidfile="/run/${RC_SVCNAME}.pid"
+pidfile="/run/${RC_SVCNAME}/${RC_SVCNAME}.pid"
 command="/usr/sbin/${RC_SVCNAME}"
 retry=15
 
 CONF_FILE="/etc/${RC_SVCNAME}.conf"
-SOCK="/run/${RC_SVCNAME}.ctl"
+SOCK="/run/${RC_SVCNAME}/${RC_SVCNAME}.ctl"
+
+if [ ${BIRD_GROUP} ]; then
+	BIRD_OPTS="${BIRD_OPTS} -g ${BIRD_GROUP}"
+fi
+if [ ${BIRD_USER} ]; then
+	BIRD_OPTS="${BIRD_OPTS} -u ${BIRD_USER}"
+fi
 
 client_args="-s ${SOCK}"
-command_args="${client_args} -c ${CONF_FILE} -P ${pidfile}"
-client_args="${client_args} -r"
+command_args="${client_args} -c ${CONF_FILE} -P ${pidfile} ${BIRD_OPTS}"
 
 depend() {
-	need net
+	use net
 	use logger
 }
 
@@ -42,6 +48,14 @@ reload() {
 	ebegin "Reloading BIRD"
 	start-stop-daemon --signal HUP --pidfile "${pidfile}"
 	eend $?
+}
+
+start_pre() {
+	checkpath -d -m 0755 -o bird:bird "/run/${RC_SVCNAME}"
+}
+
+start_post() {
+	ln -sf "${SOCK}" /run
 }
 
 stop_pre() {

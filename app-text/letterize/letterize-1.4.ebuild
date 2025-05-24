@@ -1,7 +1,7 @@
-# Copyright 1999-2011 Gentoo Foundation
+# Copyright 1999-2022 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
-EAPI=5
+EAPI=7
 
 inherit toolchain-funcs
 
@@ -12,10 +12,14 @@ SRC_URI="http://www.catb.org/~esr/letterize/${P}.tar.gz"
 LICENSE="BSD"
 SLOT="0"
 KEYWORDS="~amd64 ~x86"
-IUSE=""
 
-src_prepare() {
+PATCHES=(
+	"${FILESDIR}"/${P}-clang16.patch
+)
+
+src_configure() {
 	tc-export CC
+	default
 }
 
 src_install() {

@@ -1,33 +1,35 @@
-# Copyright 1999-2020 Gentoo Authors
+# Copyright 1999-2025 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
-EAPI=7
+EAPI=8
 
-PYTHON_COMPAT=( python3_{6,7,8,9} )
+PYTHON_COMPAT=( python3_{10..13} )
 PYTHON_REQ_USE="tk?"
-inherit cmake desktop flag-o-matic python-single-r1 subversion xdg
+inherit cmake desktop flag-o-matic optfeature python-single-r1 xdg
 
 DESCRIPTION="Desktop publishing (DTP) and layout program"
 HOMEPAGE="https://www.scribus.net/"
-SRC_URI=""
-ESVN_REPO_URI="svn://scribus.net/trunk/Scribus"
-ESVN_PROJECT=Scribus-1.5
+
+if [[ ${PV} == *9999* ]] ; then
+	EGIT_REPO_URI="https://github.com/scribusproject/scribus"
+	inherit git-r3
+else
+	SRC_URI="https://downloads.sourceforge.net/project/${PN}/${PN}/${PV}/${P}.tar.xz"
+	S="${WORKDIR}/${P}"
+	KEYWORDS="~amd64 ~ppc ~ppc64 ~x86"
+fi
 
 LICENSE="GPL-2"
-SLOT="0"
-KEYWORDS=""
-IUSE="+boost debug examples graphicsmagick hunspell +minimal osg +pdf scripts +templates tk"
+SLOT="$(ver_cut 1-2)"
+IUSE="+boost debug examples graphicsmagick +minimal osg +pdf scripts +templates tk"
 
 REQUIRED_USE="${PYTHON_REQUIRED_USE}
 	tk? ( scripts )"
 
 # osg
 # couple of third_party libs bundled
-BDEPEND="
-	dev-qt/linguist-tools:5
-	virtual/pkgconfig
-"
 DEPEND="${PYTHON_DEPS}
+	app-text/hunspell:=
 	app-text/libmspub
 	app-text/libqxp
 	app-text/poppler:=
@@ -35,71 +37,56 @@ DEPEND="${PYTHON_DEPS}
 	dev-libs/icu:0=
 	dev-libs/librevenge
 	dev-libs/libxml2
-	dev-qt/qtcore:5
-	dev-qt/qtgui:5[-gles2-only]
-	dev-qt/qtnetwork:5
-	dev-qt/qtopengl:5
-	dev-qt/qtprintsupport:5
-	dev-qt/qtwidgets:5
-	dev-qt/qtxml:5
+	dev-qt/qt5compat:6
+	dev-qt/qtbase:6[gui,network,opengl,X,xml,widgets]
+	dev-qt/qtsvg:6
 	media-libs/fontconfig
 	media-libs/freetype:2
 	media-libs/harfbuzz:0=[icu]
 	media-libs/lcms:2
 	media-libs/libcdr
 	media-libs/libfreehand
+	media-libs/libjpeg-turbo:=
 	media-libs/libpagemaker
 	media-libs/libpng:0=
 	media-libs/libvisio
 	media-libs/libzmf
-	media-libs/tiff:0
+	media-libs/tiff:=
 	net-print/cups
 	sys-libs/zlib[minizip]
-	virtual/jpeg:0=
-	x11-libs/cairo[X,svg]
+	x11-libs/cairo[X,svg(+)]
+	x11-libs/libxcb
 	boost? ( dev-libs/boost:= )
 	graphicsmagick? ( media-gfx/graphicsmagick:= )
-	hunspell? ( app-text/hunspell:= )
 	osg? ( dev-games/openscenegraph:= )
 	pdf? ( app-text/podofo:0= )
 	scripts? (
 		$(python_gen_cond_dep '
-			dev-python/pillow[tk?,${PYTHON_MULTI_USEDEP}]
+			dev-python/pillow[tk?,${PYTHON_USEDEP}]
 		')
 	)
 "
 RDEPEND="${DEPEND}
 	app-text/ghostscript-gpl
 "
+BDEPEND="
+	dev-qt/qttools:6[linguist]
+	virtual/pkgconfig
+"
 
 PATCHES=(
-	# non(?)-upstreamable
+	"${FILESDIR}"/${PN}-1.5.8-cmake.patch # bug 886251
 	"${FILESDIR}"/${PN}-1.5.3-fpic.patch
-	"${FILESDIR}"/${PN}-1.5.6-docdir.patch
-	"${FILESDIR}"/${PN}-1.5.5-findhyphen-1.patch
-	"${FILESDIR}"/${PN}-1.5.6-findhyphen.patch
+	"${FILESDIR}"/${PN}-1.7.0-findhyphen.patch
+	"${FILESDIR}"/${PN}-1.7.0-dont-install-thirdparty-license.patch
+	"${FILESDIR}"/${PN}-1.7.0-fix-icon-version.patch
 )
-
-CMAKE_BUILD_TYPE="Release"
 
 src_prepare() {
 	cmake_src_prepare
 
-	rm -r codegen/cheetah scribus/third_party/hyphen || die
-
-	sed \
-		-e "/^\s*unzip\.[ch]/d" \
-		-e "/^\s*ioapi\.[ch]/d" \
-		-i scribus/CMakeLists.txt Scribus.pro || die
-	rm scribus/ioapi.[ch] || die
-
-	sed \
-		-e 's:\(${CMAKE_INSTALL_PREFIX}\):./\1:g' \
-		-i resources/templates/CMakeLists.txt || die
-
-	sed \
-		-e "/^add_subdirectory(ui\/qml)/s/^/#DONT/" \
-		-i scribus/CMakeLists.txt || die # nothing but a bogus Hello World test
+	# for safety remove files that we patched out
+	rm -r scribus/third_party/hyphen || die
 }
 
 src_configure() {
@@ -107,15 +94,16 @@ src_configure() {
 	append-cppflags -DHAVE_MEMRCHR
 
 	local mycmakeargs=(
+		-DTAG_VERSION="-${SLOT}"
 		-DHAVE_PYTHON=ON
 		-DWANT_DISTROBUILD=ON
+		-DWANT_CPP17=ON
 		-DDOCDIR="${EPREFIX}"/usr/share/doc/${PF}/
 		-DPython3_EXECUTABLE="${PYTHON}"
 		-DWITH_BOOST=$(usex boost)
 		-DWANT_DEBUG=$(usex debug)
 		-DWANT_NOEXAMPLES=$(usex !examples)
 		-DWANT_GRAPHICSMAGICK=$(usex graphicsmagick)
-		-DWANT_HUNSPELL=$(usex hunspell)
 		-DWANT_HEADERINSTALL=$(usex !minimal)
 		-DWANT_NOOSG=$(usex !osg)
 		-DWITH_PODOFO=$(usex pdf)
@@ -128,13 +116,13 @@ src_install() {
 	cmake_src_install
 
 	if ! use tk; then
-		rm "${ED}"/usr/share/scribus/scripts/{FontSample,CalendarWizard}.py || die
+		rm "${ED}"/usr/share/scribus-${SLOT}/scripts/{FontSample,CalendarWizard}.py || die
 	fi
 	if use scripts; then
-		python_fix_shebang "${ED}"/usr/share/scribus/scripts
-		python_optimize "${ED}"/usr/share/scribus/scripts
+		python_fix_shebang "${ED}"/usr/share/scribus-${SLOT}/scripts
+		python_optimize "${ED}"/usr/share/scribus-${SLOT}/scripts
 	else
-		rm "${ED}"/usr/share/scribus/scripts/*.py || die
+		rm "${ED}"/usr/share/scribus-${SLOT}/scripts/*.py || die
 	fi
 
 	mv "${ED}"/usr/share/doc/${PF}/{en,html} || die
@@ -150,9 +138,15 @@ src_install() {
 
 	local size
 	for size in 16 32 128 256 512; do
-		newicon -s $size resources/iconsets/artwork/icon_${size}x${size}.png scribus.png
+		newicon -s $size resources/iconsets/artwork/icon_${size}x${size}.png scribus-${SLOT}.png
 	done
-	newicon -s 64 resources/iconsets/artwork/icon_32x32@2x.png scribus.png
-	doicon resources/iconsets/*/scribus.png
-	domenu scribus.desktop
+	newicon -s 64 resources/iconsets/artwork/icon_32x32@2x.png scribus-${SLOT}.png
+	newicon resources/iconsets/1_7_0/scribus-icon.svg scribus-${SLOT}.png
+	newmenu scribus.desktop scribus-${SLOT}.desktop
+}
+
+pkg_postinst() {
+	xdg_pkg_postinst
+
+	optfeature "MS Word .doc file import filter support" app-text/antiword
 }

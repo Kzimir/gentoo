@@ -1,18 +1,15 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE pkgmetadata SYSTEM "http://www.gentoo.org/dtd/metadata.dtd">
+<!DOCTYPE pkgmetadata SYSTEM "https://www.gentoo.org/dtd/metadata.dtd">
 <pkgmetadata>
 	<maintainer type="project">
 		<email>qt@gentoo.org</email>
 		<name>Gentoo Qt Project</name>
 	</maintainer>
+	<stabilize-allarches/>
 	<upstream>
-		<maintainer status="active">
-			<email>phil@riverbankcomputing.com</email>
-			<name>Phil Thompson</name>
-		</maintainer>
-		<changelog>https://www.riverbankcomputing.com/hg/sip/raw-file/tip/NEWS</changelog>
-		<doc>https://www.riverbankcomputing.com/static/Docs/sip/</doc>
-		<bugs-to>mailto:pyqt@riverbankcomputing.com</bugs-to>
-		<remote-id type="pypi">SIP</remote-id>
+		<changelog>https://github.com/Python-SIP/sip/blob/main/NEWS</changelog>
+		<doc>https://python-sip.readthedocs.io/en/latest/</doc>
+		<remote-id type="github">Python-SIP/sip</remote-id>
+		<remote-id type="pypi">sip</remote-id>
 	</upstream>
 </pkgmetadata>

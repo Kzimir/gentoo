@@ -1,36 +1,61 @@
-# Copyright 1999-2020 Gentoo Authors
+# Copyright 1999-2025 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
-EAPI=7
+EAPI=8
+
+# This ebuild uses 3 special global variables:
+# GRUB_BOOTSTRAP: Invoke bootstrap (gnulib)
+# GRUB_AUTOGEN: Invoke autogen.sh
+# GRUB_AUTORECONF: Inherit autotools and invoke eautoreconf
+#
+# When applying patches:
+# If gnulib is updated, set GRUB_BOOTSTRAP=1
+# If gentpl.py or *.def is updated, set GRUB_AUTOGEN=1
+# If gnulib, gentpl.py, *.def, or any autotools files are updated, set GRUB_AUTORECONF=1
+#
+# If any of the above applies to a user patch, the user should set the
+# corresponding variable in make.conf or the environment.
 
 if [[ ${PV} == 9999  ]]; then
 	GRUB_AUTORECONF=1
 	GRUB_BOOTSTRAP=1
 fi
 
-if [[ -n ${GRUB_AUTOGEN} || -n ${GRUB_BOOTSTRAP} ]]; then
-	PYTHON_COMPAT=( python{2_7,3_{6,7,8}} )
-	inherit python-any-r1
-fi
+PYTHON_COMPAT=( python3_{10..13} )
+WANT_LIBTOOL=none
+VERIFY_SIG_OPENPGP_KEY_PATH=/usr/share/openpgp-keys/dkiper.gpg
 
 if [[ -n ${GRUB_AUTORECONF} ]]; then
-	WANT_LIBTOOL=none
 	inherit autotools
 fi
 
-inherit bash-completion-r1 flag-o-matic multibuild optfeature pax-utils toolchain-funcs
+inherit bash-completion-r1 eapi9-ver flag-o-matic multibuild optfeature
+inherit python-any-r1 secureboot toolchain-funcs
 
+DESCRIPTION="GNU GRUB boot loader"
+HOMEPAGE="https://www.gnu.org/software/grub/"
+
+MY_P=${P}
 if [[ ${PV} != 9999 ]]; then
+	inherit verify-sig
+
 	if [[ ${PV} == *_alpha* || ${PV} == *_beta* || ${PV} == *_rc* ]]; then
 		# The quote style is to work with <=bash-4.2 and >=bash-4.3 #503860
 		MY_P=${P/_/'~'}
-		SRC_URI="mirror://gnu-alpha/${PN}/${MY_P}.tar.xz"
+		SRC_URI="
+			https://alpha.gnu.org/gnu/${PN}/${MY_P}.tar.xz
+			verify-sig? ( https://alpha.gnu.org/gnu/${PN}/${MY_P}.tar.xz.sig )
+		"
 		S=${WORKDIR}/${MY_P}
 	else
-		SRC_URI="mirror://gnu/${PN}/${P}.tar.xz"
+		SRC_URI="
+			mirror://gnu/${PN}/${P}.tar.xz
+			verify-sig? ( mirror://gnu/${PN}/${P}.tar.xz.sig )
+		"
 		S=${WORKDIR}/${P%_*}
 	fi
-	KEYWORDS="~amd64 ~arm ~arm64 ~ia64 ~ppc ~ppc64 ~sparc ~x86"
+	BDEPEND="verify-sig? ( sec-keys/openpgp-keys-danielkiper )"
+	KEYWORDS="~amd64 ~arm ~arm64 ~loong ~ppc ~ppc64 ~riscv ~sparc ~x86"
 else
 	inherit git-r3
 	EGIT_REPO_URI="https://git.savannah.gnu.org/git/grub.git"
@@ -39,22 +64,24 @@ fi
 PATCHES=(
 	"${FILESDIR}"/gfxpayload.patch
 	"${FILESDIR}"/grub-2.02_beta2-KERNEL_GLOBS.patch
+	"${FILESDIR}"/grub-2.06-test-words.patch
 )
 
-DEJAVU=dejavu-sans-ttf-2.37
-UNIFONT=unifont-12.1.02
-SRC_URI+=" fonts? ( mirror://gnu/unifont/${UNIFONT}/${UNIFONT}.pcf.gz )
-	themes? ( mirror://sourceforge/dejavu/${DEJAVU}.zip )"
-
-DESCRIPTION="GNU GRUB boot loader"
-HOMEPAGE="https://www.gnu.org/software/grub/"
+DEJAVU_VER=2.37
+DEJAVU=dejavu-fonts-ttf-${DEJAVU_VER}
+UNIFONT=unifont-16.0.02
+SRC_URI+="
+	fonts? ( mirror://gnu/unifont/${UNIFONT}/${UNIFONT}.pcf.gz )
+	themes? ( https://downloads.sourceforge.net/project/dejavu/dejavu/${DEJAVU_VER}/${DEJAVU}.tar.bz2 )
+"
 
 # Includes licenses for dejavu and unifont
 LICENSE="GPL-3+ BSD MIT fonts? ( GPL-2-with-font-exception ) themes? ( CC-BY-SA-3.0 BitstreamVera )"
 SLOT="2/${PVR}"
-IUSE="device-mapper doc efiemu +fonts mount nls sdl test +themes truetype libzfs"
+IUSE="+device-mapper doc efiemu +fonts mount nls sdl test +themes truetype libzfs"
 
-GRUB_ALL_PLATFORMS=( coreboot efi-32 efi-64 emu ieee1275 loongson multiboot qemu qemu-mips pc uboot xen xen-32 xen-pvh )
+GRUB_ALL_PLATFORMS=( coreboot efi-32 efi-64 emu ieee1275 loongson multiboot
+	qemu qemu-mips pc uboot xen xen-32 xen-pvh )
 IUSE+=" ${GRUB_ALL_PLATFORMS[@]/#/grub_platforms_}"
 
 REQUIRED_USE="
@@ -64,10 +91,9 @@ REQUIRED_USE="
 	grub_platforms_loongson? ( fonts )
 "
 
-BDEPEND="
+BDEPEND+="
 	${PYTHON_DEPS}
-	app-misc/pax-utils
-	sys-devel/flex
+	>=sys-devel/flex-2.5.35
 	sys-devel/bison
 	sys-apps/help2man
 	sys-apps/texinfo
@@ -77,7 +103,7 @@ BDEPEND="
 	)
 	test? (
 		app-admin/genromfs
-		app-arch/cpio
+		app-alternatives/cpio
 		app-arch/lzop
 		app-emulation/qemu
 		dev-libs/libisoburn
@@ -86,7 +112,6 @@ BDEPEND="
 		sys-fs/squashfs-tools
 	)
 	themes? (
-		app-arch/unzip
 		media-libs/freetype:2
 		virtual/pkgconfig
 	)
@@ -96,11 +121,11 @@ DEPEND="
 	app-arch/xz-utils
 	>=sys-libs/ncurses-5.2-r5:0=
 	grub_platforms_emu? (
-		sdl? ( media-libs/libsdl )
+		sdl? ( media-libs/libsdl2 )
 	)
 	device-mapper? ( >=sys-fs/lvm2-2.02.45 )
 	libzfs? ( sys-fs/zfs:= )
-	mount? ( sys-fs/fuse:0 )
+	mount? ( sys-fs/fuse:3= )
 	truetype? ( media-libs/freetype:2= )
 	ppc? ( >=sys-apps/ibm-powerpc-utils-1.3.5 )
 	ppc64? ( >=sys-apps/ibm-powerpc-utils-1.3.5 )
@@ -110,16 +135,20 @@ RDEPEND="${DEPEND}
 		grub_platforms_efi-32? ( sys-boot/efibootmgr )
 		grub_platforms_efi-64? ( sys-boot/efibootmgr )
 	)
-	!sys-boot/grub:0 !sys-boot/grub-static
+	!sys-boot/grub:0
 	nls? ( sys-devel/gettext )
 "
 
-RESTRICT="!test? ( test )"
+RESTRICT="!test? ( test ) test? ( userpriv )"
 
 QA_EXECSTACK="usr/bin/grub-emu* usr/lib/grub/*"
 QA_PRESTRIPPED="usr/lib/grub/.*"
 QA_MULTILIB_PATHS="usr/lib/grub/.*"
 QA_WX_LOAD="usr/lib/grub/*"
+
+pkg_setup() {
+	:
+}
 
 src_unpack() {
 	if [[ ${PV} == 9999 ]]; then
@@ -130,6 +159,8 @@ src_unpack() {
 		git-r3_fetch "${GNULIB_URI}" "${GNULIB_REVISION}"
 		git-r3_checkout "${GNULIB_URI}" gnulib
 		popd >/dev/null || die
+	elif use verify-sig; then
+		verify-sig_verify_detached "${DISTDIR}"/${MY_P}.tar.xz{,.sig}
 	fi
 	default
 }
@@ -137,25 +168,13 @@ src_unpack() {
 src_prepare() {
 	default
 
-	sed -i -e /autoreconf/d autogen.sh || die
-
-	# Nothing in Gentoo packages 'american-english' in the exact path
-	# wanted for the test, but all that is needed is a compressible text
-	# file, and we do have 'words' from miscfiles in the same path.
-	sed -i \
-		-e '/CFILESSRC.*=/s,american-english,words,' \
-		tests/util/grub-fs-tester.in \
-		|| die
-
-	if [[ -n ${GRUB_AUTOGEN} || -n ${GRUB_BOOTSTRAP} ]]; then
-		python_setup
-	fi
+	python_setup
 
 	if [[ -n ${GRUB_BOOTSTRAP} ]]; then
 		eautopoint --force
 		AUTOPOINT=: AUTORECONF=: ./bootstrap || die
 	elif [[ -n ${GRUB_AUTOGEN} ]]; then
-		./autogen.sh || die
+		FROM_BOOTSTRAP=1 ./autogen.sh || die
 	fi
 
 	if [[ -n ${GRUB_AUTORECONF} ]]; then
@@ -205,7 +224,8 @@ grub_configure() {
 		$(use_enable themes grub-themes)
 		$(use_enable truetype grub-mkfont)
 		$(use_enable libzfs)
-		$(use_enable sdl grub-emu-sdl)
+		--enable-grub-emu-sdl=no
+		$(use_enable sdl grub-emu-sdl2)
 		${platform:+--with-platform=}${platform}
 
 		# Let configure detect this where supported
@@ -213,11 +233,11 @@ grub_configure() {
 	)
 
 	if use fonts; then
-		ln -rs "${WORKDIR}/${UNIFONT}.pcf" unifont.pcf || die
+		cp "${WORKDIR}/${UNIFONT}.pcf" unifont.pcf || die
 	fi
 
 	if use themes; then
-		ln -rs "${WORKDIR}/${DEJAVU}/ttf/DejaVuSans.ttf" DejaVuSans.ttf || die
+		cp "${WORKDIR}/${DEJAVU}/ttf/DejaVuSans.ttf" DejaVuSans.ttf || die
 	fi
 
 	local ECONF_SOURCE="${S}"
@@ -227,6 +247,9 @@ grub_configure() {
 src_configure() {
 	# Bug 508758.
 	replace-flags -O3 -O2
+
+	# Workaround for bug 829165.
+	filter-ldflags -pie
 
 	# We don't want to leak flags onto boot code.
 	export HOST_CCASFLAGS=${CCASFLAGS}
@@ -240,7 +263,11 @@ src_configure() {
 	unset LDFLAGS
 
 	tc-export CC NM OBJCOPY RANLIB STRIP
-	tc-export BUILD_CC # Bug 485592
+	tc-export BUILD_CC BUILD_PKG_CONFIG
+
+	# Force configure to use flex & bison, bug 887211.
+	export LEX=flex
+	unset YACC
 
 	MULTIBUILD_VARIANTS=()
 	local p
@@ -253,7 +280,7 @@ src_configure() {
 
 src_compile() {
 	# Sandbox bug 404013.
-	use libzfs && addpredict /etc/dfs:/dev/zfs
+	use libzfs && { addpredict /etc/dfs; addpredict /dev/zfs; }
 
 	grub_do emake
 	use doc && grub_do_once emake -C docs html
@@ -262,7 +289,73 @@ src_compile() {
 src_test() {
 	# The qemu dependency is a bit complex.
 	# You will need to adjust QEMU_SOFTMMU_TARGETS to match the cpu/platform.
-	grub_do emake check
+	local SANDBOX_WRITE=${SANDBOX_WRITE}
+	addwrite /dev
+	grub_do emake -j1 check
+}
+
+grub_mkstandalone_secureboot() {
+	use secureboot || return
+
+	if tc-is-cross-compiler; then
+		ewarn "USE=secureboot is not supported when cross-compiling."
+		ewarn "No standalone EFI executable will be built."
+		return 1
+	fi
+
+	local standalone_targets
+
+	case ${CTARGET:-${CHOST}} in
+		i?86* | x86_64*)
+			use grub_platforms_efi-32 && standalone_targets+=( i386-efi )
+			use grub_platforms_efi-64 && standalone_targets+=( x86_64-efi )
+			;;
+		arm* | aarch64*)
+			use grub_platforms_efi-32 && standalone_targets+=( arm-efi )
+			use grub_platforms_efi-64 && standalone_targets+=( arm64-efi )
+			;;
+		riscv*)
+			use grub_platforms_efi-32 && standalone_targets+=( riscv32-efi )
+			use grub_platforms_efi-64 && standalone_targets+=( riscv64-efi )
+			;;
+		ia64*)
+			use grub_platforms_efi-64 && standalone_targets+=( ia64-efi )
+			;;
+		loongarch64*)
+			use grub_platforms_efi-64 && standalone_targets+=( loongarch64-efi )
+			;;
+	esac
+
+	if [[ ${#standalone_targets[@]} -eq 0 ]]; then
+		ewarn "USE=secureboot is enabled, but no suitable EFI target in GRUB_PLATFORMS."
+		ewarn "No standalone EFI executable will be built."
+		return 1
+	fi
+
+	local target mkstandalone_args
+
+	# grub-mkstandalone embeds a config file, make this config file chainload
+	# a config file in the same directory grub is installed in. This requires
+	# pre-loading the part_gpt and part_msdos modules.
+	echo 'configfile ${cmdpath}/grub.cfg' > "${T}/grub.cfg" || die
+	for target in "${standalone_targets[@]}"; do
+		ebegin "Building standalone EFI executable for ${target}"
+		mkstandalone_args=(
+			--verbose
+			--directory="${ED}/usr/lib/grub/${target}"
+			--locale-directory="${ED}/usr/share/locale"
+			--format="${target}"
+			--modules="part_gpt part_msdos"
+			--sbat="${ED}/usr/share/grub/sbat.csv"
+			--output="${ED}/usr/lib/grub/grub-${target%-efi}.efi"
+			"boot/grub/grub.cfg=${T}/grub.cfg"
+		)
+
+		"${ED}/usr/bin/grub-mkstandalone" "${mkstandalone_args[@]}"
+		eend ${?} || die "grub-mkstandalone failed to build EFI executable"
+	done
+
+	secureboot_auto_sign
 }
 
 src_install() {
@@ -272,26 +365,64 @@ src_install() {
 	einstalldocs
 
 	insinto /etc/default
-	newins "${FILESDIR}"/grub.default-3 grub
+	newins "${FILESDIR}"/grub.default-4 grub
 
 	# https://bugs.gentoo.org/231935
 	dostrip -x /usr/lib/grub
+
+	sed -e "s/%PV%/${PV}/" "${FILESDIR}/sbat.csv" > "${T}/sbat.csv" || die
+	insinto /usr/share/grub
+	doins "${T}/sbat.csv"
+
+	if use elibc_musl; then
+		# https://bugs.gentoo.org/900348
+		QA_CONFIG_IMPL_DECL_SKIP=( re_{compile_pattern,match,search,set_syntax} )
+	fi
+
+	grub_mkstandalone_secureboot
 }
 
 pkg_postinst() {
 	elog "For information on how to configure GRUB2 please refer to the guide:"
 	elog "    https://wiki.gentoo.org/wiki/GRUB2_Quick_Start"
 
+	if [[ -z ${REPLACING_VERSIONS} ]]; then
+		elog
+		optfeature "detecting other operating systems (grub-mkconfig)" sys-boot/os-prober
+		optfeature "creating rescue media (grub-mkrescue)" dev-libs/libisoburn sys-fs/mtools
+		optfeature "enabling RAID device detection" sys-fs/mdadm
+		optfeature "automatically updating GRUB's configuration on each kernel installation" "sys-kernel/installkernel[grub]"
+	elif ver_replacing -lt ${PVR}; then
+		ewarn
+		ewarn "Re-run grub-install to update installed boot code!"
+		ewarn "Re-run grub-mkconfig to update grub.cfg!"
+		ewarn
+	fi
+
 	if has_version 'sys-boot/grub:0'; then
 		elog "A migration guide for GRUB Legacy users is available:"
 		elog "    https://wiki.gentoo.org/wiki/GRUB2_Migration"
 	fi
 
-	if [[ -z ${REPLACING_VERSIONS} ]]; then
+	if has_version sys-boot/os-prober; then
+		ewarn "Due to security concerns, os-prober is disabled by default."
+		ewarn "Set GRUB_DISABLE_OS_PROBER=false in /etc/default/grub to enable it."
+	fi
+
+	if use secureboot; then
 		elog
-		elog "You may consider installing the following optional packages:"
-		optfeature "Detect other operating systems (grub-mkconfig)" sys-boot/os-prober
-		optfeature "Create rescue media (grub-mkrescue)" dev-libs/libisoburn
-		optfeature "Enable RAID device detection" sys-fs/mdadm
+		elog "The signed standalone grub EFI executable(s) are available in:"
+		elog "    /usr/lib/grub/grub-<target>.efi(.signed)"
+		elog "These EFI executables should be copied to the usual location at:"
+		elog "    ESP/EFI/Gentoo/grub<arch>.efi"
+		elog "Note that 'grub-install' does not install these images."
+		elog
+		elog "These standalone grub executables read the grub config file from"
+		elog "the grub.cfg in the same directory instead of the default"
+		elog "/boot/grub/grub.cfg. When sys-kernel/installkernel[grub] is used,"
+		elog "the location of the grub.cfg may be overridden by setting the"
+		elog "GRUB_CFG environment variable:"
+		elog "     GRUB_CFG=ESP/EFI/Gentoo/grub.cfg"
+		elog
 	fi
 }

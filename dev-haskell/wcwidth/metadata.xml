@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE pkgmetadata SYSTEM "http://www.gentoo.org/dtd/metadata.dtd">
+<!DOCTYPE pkgmetadata SYSTEM "https://www.gentoo.org/dtd/metadata.dtd">
 <pkgmetadata>
 	<maintainer type="project">
 		<email>haskell@gentoo.org</email>
@@ -15,4 +15,7 @@
 		the widths assigned by it. The command line tool can compile a width table
 		to Haskell code that assigns widths to the Char type.
 	</longdescription>
+	<upstream>
+		<remote-id type="github">solidsnack/wcwidth</remote-id>
+	</upstream>
 </pkgmetadata>

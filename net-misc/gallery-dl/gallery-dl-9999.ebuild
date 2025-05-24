@@ -1,45 +1,49 @@
-# Copyright 1999-2020 Gentoo Authors
+# Copyright 1999-2024 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
-EAPI=7
+EAPI=8
 
-PYTHON_COMPAT=(python3_{7..9})
-PYTHON_REQ_USE="sqlite,ssl,xml"
-DISTUTILS_USE_SETUPTOOLS=rdepend
+DISTUTILS_USE_PEP517=setuptools
+PYTHON_COMPAT=( python3_{10..13} )
+PYTHON_REQ_USE="sqlite,ssl,xml(+)"
 
 inherit distutils-r1 optfeature
 
 DESCRIPTION="Download image galleries and collections from several image hosting sites"
-HOMEPAGE="https://github.com/mikf/gallery-dl"
+HOMEPAGE="https://github.com/mikf/gallery-dl/"
 
-if [[ ${PV} == *9999 ]]; then
+if [[ "${PV}" == *9999* ]]; then
 	inherit git-r3
+
 	EGIT_REPO_URI="https://github.com/mikf/${PN}.git"
 else
-	SRC_URI="https://github.com/mikf/${PN}/archive/v${PV}.tar.gz -> ${P}.tar.gz"
-	KEYWORDS="~amd64"
+	SRC_URI="https://github.com/mikf/${PN}/archive/v${PV}.tar.gz
+		-> ${P}.gh.tar.gz"
+
+	KEYWORDS="~amd64 ~arm ~arm64 ~hppa ~ppc ~ppc64 ~riscv ~x86"
 fi
 
-# tests require network access
-RESTRICT="test"
 LICENSE="GPL-2"
 SLOT="0"
 
-RDEPEND=">=dev-python/requests-2.11.0[${PYTHON_USEDEP}]"
+RDEPEND="
+	>=dev-python/requests-2.11.0[${PYTHON_USEDEP}]
+"
 
-distutils_enable_tests setup.py
+distutils_enable_tests unittest
 
-src_compile() {
-	emake data/completion/gallery-dl
-	emake data/completion/_gallery-dl
-	emake man
-	distutils-r1_src_compile
+src_prepare() {
+	# Tests against real servers, some tests always fail and some are subject to change.
+	rm test/test_extractor.py test/test_results.py || die
+
+	distutils-r1_src_prepare
+}
+
+python_compile_all() {
+	emake PYTHON="${EPYTHON}" data/completion/{,_}gallery-dl man
 }
 
 pkg_postinst() {
-	elog "To get additional features, some optional runtime dependencies"
-	elog "may be installed:"
-	elog ""
 	optfeature "Pixiv Ugoira to WebM conversion" media-video/ffmpeg
-	optfeature "video downloads" net-misc/youtube-dl
+	optfeature "video downloads" net-misc/yt-dlp
 }

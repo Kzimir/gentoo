@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE pkgmetadata SYSTEM "http://www.gentoo.org/dtd/metadata.dtd">
+<!DOCTYPE pkgmetadata SYSTEM "https://www.gentoo.org/dtd/metadata.dtd">
 <pkgmetadata>
 	<maintainer type="person">
 		<email>bkohler@gentoo.org</email>
@@ -11,4 +11,8 @@
 		<flag name="upstream-proxy">Enable upstream proxying</flag>
 		<flag name="xtinyproxy-header">Include the X-Tinyproxy header</flag>
 	</use>
+	<upstream>
+		<remote-id type="github">tinyproxy/tinyproxy</remote-id>
+		<remote-id type="cpe">cpe:/a:tinyproxy_project:tinyproxy</remote-id>
+	</upstream>
 </pkgmetadata>

@@ -1,15 +1,18 @@
-<?xml version='1.0' encoding='UTF-8'?>
-<!DOCTYPE pkgmetadata SYSTEM "http://www.gentoo.org/dtd/metadata.dtd">
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE pkgmetadata SYSTEM "https://www.gentoo.org/dtd/metadata.dtd">
 <pkgmetadata>
-	<maintainer type="person">
-		<email>NP-Hardass@gentoo.org</email>
-		<name>NP-Hardass</name>
+	<maintainer type="project">
+		<email>wine@gentoo.org</email>
+		<name>Wine</name>
 	</maintainer>
-	<maintainer type="person">
-		<email>gentoo@eroen.eu</email>
-		<name>eroen</name>
-	</maintainer>
+	<stabilize-allarches/>
+	<use>
+		<flag name="xdg">
+			Set XDG_DATA_DIRS to use the selected wine.desktop,
+			allows e.g. 'xdg-open my.exe' for file managers
+		</flag>
+	</use>
 	<upstream>
-		<remote-id type="bitbucket">NP-Hardass/eselect-wine</remote-id>
+		<remote-id type="gentoo">proj/eselect-wine</remote-id>
 	</upstream>
 </pkgmetadata>

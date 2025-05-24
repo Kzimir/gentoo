@@ -1,78 +1,107 @@
-# Copyright 1999-2020 Gentoo Authors
+# Copyright 1999-2025 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
-EAPI=7
+EAPI=8
 
-inherit fcaps meson
+inherit meson
 
 DESCRIPTION="Pluggable, composable, unopinionated modules for building a Wayland compositor"
-HOMEPAGE="https://github.com/swaywm/wlroots"
+HOMEPAGE="https://gitlab.freedesktop.org/wlroots/wlroots"
 
 if [[ ${PV} == 9999 ]]; then
-	EGIT_REPO_URI="https://github.com/swaywm/${PN}.git"
+	EGIT_REPO_URI="https://gitlab.freedesktop.org/${PN}/${PN}.git"
 	inherit git-r3
+	SLOT="0.20"
 else
-	SRC_URI="https://github.com/swaywm/${PN}/archive/${PV}.tar.gz -> ${P}.tar.gz"
-	KEYWORDS="~amd64 ~arm64 ~ppc64 ~x86"
+	SRC_URI="https://gitlab.freedesktop.org/${PN}/${PN}/-/releases/${PV}/downloads/${P}.tar.gz"
+	KEYWORDS="~amd64 ~arm ~arm64 ~loong ~ppc64 ~riscv ~x86"
+	SLOT="$(ver_cut 1-2)"
 fi
 
 LICENSE="MIT"
-SLOT="0/9999"
-IUSE="elogind icccm seatd systemd x11-backend X"
-REQUIRED_USE="?? ( elogind systemd )"
+IUSE="liftoff +libinput +drm +session lcms vulkan x11-backend xcb-errors X"
+REQUIRED_USE="
+	drm? ( session )
+	libinput? ( session )
+	liftoff? ( drm )
+	xcb-errors? ( || ( x11-backend X ) )
+"
 
 DEPEND="
-	>=dev-libs/libinput-1.9.0:0=
-	>=dev-libs/wayland-1.18.0
-	>=dev-libs/wayland-protocols-1.17.0
-	media-libs/mesa[egl,gles2,gbm]
-	virtual/libudev
-	x11-libs/libdrm
-	x11-libs/libxkbcommon
-	x11-libs/pixman
-	elogind? ( >=sys-auth/elogind-237 )
-	icccm? ( x11-libs/xcb-util-wm )
-	seatd? ( sys-auth/seatd:= )
-	systemd? ( >=sys-apps/systemd-237 )
-	x11-backend? ( x11-libs/libxcb:0= )
+	>=dev-libs/wayland-1.23.1
+	media-libs/libglvnd
+	>=media-libs/mesa-24.1.0_rc1[opengl]
+	>=x11-libs/libdrm-2.4.122
+	>=x11-libs/libxkbcommon-1.8.0
+	>=x11-libs/pixman-0.43.0
+	drm? (
+		media-libs/libdisplay-info:=
+		sys-apps/hwdata
+		liftoff? ( >=dev-libs/libliftoff-0.4 )
+	)
+	lcms? ( media-libs/lcms:2 )
+	libinput? ( >=dev-libs/libinput-1.19.0:= )
+	session? (
+		sys-auth/seatd:=
+		virtual/libudev
+	)
+	vulkan? (
+		dev-util/glslang:=
+		dev-util/vulkan-headers
+		media-libs/vulkan-loader
+	)
+	xcb-errors? ( x11-libs/xcb-util-errors )
+	x11-backend? (
+		x11-libs/libxcb:=
+		x11-libs/xcb-util-renderutil
+	)
 	X? (
-		x11-base/xorg-server[wayland]
-		x11-libs/libxcb:0=
-		x11-libs/xcb-util-image
+		x11-libs/libxcb:=
+		x11-libs/xcb-util-wm
+		x11-base/xwayland
 	)
 "
 RDEPEND="
 	${DEPEND}
 "
 BDEPEND="
-	>=dev-libs/wayland-protocols-1.17
-	>=dev-util/meson-0.54.0
+	>=dev-libs/wayland-protocols-1.41
+	dev-util/wayland-scanner
 	virtual/pkgconfig
 "
 
 src_configure() {
-	# xcb-util-errors is not on Gentoo Repository (and upstream seems inactive?)
-	local emesonargs=(
-		"-Dxcb-errors=disabled"
-		-Dxcb-icccm=$(usex icccm enabled disabled)
-		-Dxwayland=$(usex X enabled disabled)
-		-Dx11-backend=$(usex x11-backend enabled disabled)
-		"-Dexamples=false"
-		"-Dwerror=false"
-		-Dlibseat=$(usex seatd enabled disabled)
+	# assert SLOT matches the version
+	grep -q -e "version.*${SLOT}" meson.build || die "SLOT ${SLOT} does not match the version in meson.build"
+
+	local backends=(
+		$(usev drm)
+		$(usev libinput)
+		$(usev x11-backend 'x11')
 	)
-	if use systemd; then
-		emesonargs+=("-Dlogind=enabled" "-Dlogind-provider=systemd")
-	elif use elogind; then
-		emesonargs+=("-Dlogind=enabled" "-Dlogind-provider=elogind")
-	else
-		emesonargs+=("-Dlogind=disabled")
-	fi
+	local meson_backends=$(IFS=','; echo "${backends[*]}")
+	local emesonargs=(
+		$(meson_feature xcb-errors)
+		-Dexamples=false
+		-Drenderers=$(usex vulkan 'gles2,vulkan' gles2)
+		$(meson_feature X xwayland)
+		-Dbackends=${meson_backends}
+		$(meson_feature session)
+		$(meson_feature lcms color-management)
+		$(meson_feature liftoff libliftoff)
+	)
 
 	meson_src_configure
 }
 
+src_install() {
+	meson_src_install
+	dodoc docs/*
+}
+
 pkg_postinst() {
-	elog "You must be in the input group to allow your compositor"
-	elog "to access input devices via libinput."
+	if use !session; then
+		elog "You must be in the input group to allow your compositor"
+		elog "to access input devices via libinput."
+	fi
 }

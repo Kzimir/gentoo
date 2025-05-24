@@ -1,7 +1,7 @@
-# Copyright 1999-2020 Gentoo Authors
+# Copyright 1999-2024 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
-EAPI="6"
+EAPI="8"
 
 inherit autotools elisp-common
 
@@ -9,7 +9,7 @@ DESCRIPTION="Namazu is a full-text search engine"
 HOMEPAGE="http://www.namazu.org/"
 SRC_URI="http://www.namazu.org/stable/${P}.tar.gz"
 
-LICENSE="GPL-2"
+LICENSE="GPL-2+"
 SLOT="0"
 KEYWORDS="amd64 ~ppc ~ppc64 x86"
 IUSE="emacs l10n_ja nls static-libs tk"
@@ -30,21 +30,25 @@ RDEPEND="dev-perl/File-MMagic
 		dev-lang/tk:0
 		www-client/lynx
 	)"
-DEPEND="${RDEPEND}
-	nls? ( sys-devel/gettext )"
+DEPEND="${RDEPEND}"
+BDEPEND="nls? ( sys-devel/gettext )"
 
 PATCHES=(
 	"${FILESDIR}"/${PN}-gentoo.patch
+	"${FILESDIR}"/${PN}-configure.patch
+	"${FILESDIR}"/${PN}-emacs-27.patch
 	"${FILESDIR}"/${PN}-perl-5.18.patch
 	"${FILESDIR}"/${PN}-perl-5.26.patch
+	"${FILESDIR}"/${PN}-tests.patch
+	"${FILESDIR}"/${PN}-underlinking.patch
 	"${FILESDIR}"/${P}-memmove.patch
 )
 
 src_prepare() {
 	default
 
-	mv configure.{in,ac}
-	mv tk${PN}/configure.{in,ac}
+	mv configure.{in,ac} || die
+	mv tk${PN}/configure.{in,ac} || die
 	eautoreconf
 }
 
@@ -64,7 +68,7 @@ src_configure() {
 }
 
 src_compile() {
-	emake
+	default
 
 	if use emacs; then
 		cd lisp
@@ -73,13 +77,11 @@ src_compile() {
 	fi
 }
 
-src_test() {
-	emake -j1 check
-}
-
 src_install() {
 	default
 	find "${ED}" -name '*.la' -delete || die
+
+	keepdir /var/lib/${PN}/index
 
 	if use emacs; then
 		elisp-install ${PN} lisp/*.el*

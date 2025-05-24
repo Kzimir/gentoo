@@ -1,10 +1,19 @@
-# Copyright 1999-2020 Gentoo Authors
+# Copyright 1999-2023 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
 # @ECLASS: qmail.eclass
 # @MAINTAINER:
-# qmail-bugs@gentoo.org
+# Rolf Eike Beer <eike@sf-mail.de>
+# @SUPPORTED_EAPIS: 7 8
 # @BLURB: common qmail functions
+
+case ${EAPI} in
+	7|8) ;;
+	*) die "${ECLASS}: EAPI ${EAPI:-0} not supported" ;;
+esac
+
+if [[ -z ${_QMAIL_ECLASS} ]]; then
+_QMAIL_ECLASS=1
 
 inherit flag-o-matic toolchain-funcs fixheadtails
 
@@ -20,52 +29,36 @@ GENQMAIL_S="${WORKDIR}"/genqmail-${GENQMAIL_PV}
 QMAIL_SPP_F=qmail-spp-${QMAIL_SPP_PV}.tar.gz
 QMAIL_SPP_S="${WORKDIR}"/qmail-spp-${QMAIL_SPP_PV}
 
-# @FUNCTION: primes
-# @USAGE: <min> <max>
+# @FUNCTION: is_prime
+# @USAGE: <number>
 # @DESCRIPTION:
-# Prints a list of primes between min and max inclusive
-# Note: this functions gets very slow when used with large numbers.
-primes() {
-	local min=${1} max=${2}
-	local result= primelist=2 i p
+# Checks whether a number is a valid prime number for queue split
+is_prime() {
+	local number=${1} i
 
-	[[ ${min} -le 2 ]] && result="${result} 2"
+	if [[ ${number} -lt 7 ]]; then
+		# too small
+		return 1
+	fi
 
-	for ((i = 3; i <= max; i += 2))
+	if [[ $[number % 2] == 0 ]]; then
+		return 1
+	fi
+
+	# let i run up to the square root of number
+	for ((i = 3; i * i <= number; i += 2))
 	do
-		for p in ${primelist}
-		do
-			[[ $[i % p] == 0 || $[p * p] -gt ${i} ]] && \
-				break
-		done
-		if [[ $[i % p] != 0 ]]
-		then
-			primelist="${primelist} ${i}"
-			[[ ${i} -ge ${min} ]] && \
-				result="${result} ${i}"
+		if [[ $[number % i ] == 0 ]]; then
+			return 1
 		fi
 	done
 
-	echo ${result}
-}
-
-# @FUNCTION: is_prima
-# @USAGE: <number>
-# @DESCRIPTION:
-# Checks wether a number is a prime number
-is_prime() {
-	local number=${1} i
-	for i in $(primes ${number} ${number})
-	do
-		[[ ${i} == ${number} ]] && return 0
-	done
-	return 1
+	return 0
 }
 
 dospp() {
-	insinto "${QMAIL_HOME}"/plugins/
-	insopts -o root -g "${GROUP_ROOT}" -m 0755
-	newins $1 ${2:-$(basename $1)}
+	exeinto "${QMAIL_HOME}"/plugins/
+	newexe ${1} ${2:-${1##*/}}
 }
 
 # @FUNCTION: dosupervise
@@ -75,19 +68,16 @@ dospp() {
 dosupervise() {
 	local service=$1
 	local runfile=${2:-${service}} logfile=${3:-${service}-log}
-	[[ -z "${service}" ]] && die "no service given"
-
-	insopts -o root -g "${GROUP_ROOT}" -m 0755
-	diropts -o root -g "${GROUP_ROOT}" -m 0755
+	[[ -z ${service} ]] && die "no service given"
 
 	dodir ${SUPERVISE_DIR}/${service}{,/log}
 	fperms +t ${SUPERVISE_DIR}/${service}{,/log}
 
-	insinto ${SUPERVISE_DIR}/${service}
-	newins ${runfile} run
+	exeinto ${SUPERVISE_DIR}/${service}
+	newexe ${runfile} run
 
-	insinto ${SUPERVISE_DIR}/${service}/log
-	newins ${logfile} run
+	exeinto ${SUPERVISE_DIR}/${service}/log
+	newexe ${logfile} run
 }
 
 # @FUNCTION: qmail_set_cc
@@ -102,16 +92,21 @@ qmail_set_cc() {
 
 	echo "${cc} ${CFLAGS} ${CPPFLAGS}"  > ./conf-cc || die 'Patching conf-cc failed.'
 	echo "${ld} ${LDFLAGS}" > ./conf-ld || die 'Patching conf-ld failed.'
-	sed -e "s#'ar #'$(tc-getAR) #" -e "s#'ranlib #'$(tc-getRANLIB) #" -i make-makelib.sh
+
+	# This function is used also by sys-apps/ucspi-tcp and sys-process/daemontools-encore
+	# but they don't have make-makelib.sh script, see bugs #902009 and #902019
+	if [[ -f make-makelib.sh ]]; then
+		sed -e "s#'ar #'$(tc-getAR) #" -e "s#'ranlib #'$(tc-getRANLIB) #" -i make-makelib.sh || die
+	fi
 }
 
 genqmail_src_unpack() {
-	cd "${WORKDIR}"
+	cd "${WORKDIR}" || die
 	[[ -n ${GENQMAIL_PV} ]] && unpack "${GENQMAIL_F}"
 }
 
 qmail_spp_src_unpack() {
-	cd "${WORKDIR}"
+	cd "${WORKDIR}" || die
 	[[ -n ${QMAIL_SPP_PV} ]] && unpack "${QMAIL_SPP_F}"
 }
 
@@ -119,80 +114,76 @@ qmail_spp_src_unpack() {
 # @DESCRIPTION:
 # Unpack common config files, and set built configuration (CFLAGS, LDFLAGS, etc)
 qmail_src_postunpack() {
-	cd "${S}"
+	cd "${S}" || die
 
 	qmail_set_cc
 
 	mysplit=${QMAIL_CONF_SPLIT:-23}
 	is_prime ${mysplit} || die "QMAIL_CONF_SPLIT is not a prime number."
 	einfo "Using conf-split value of ${mysplit}."
-	echo -n ${mysplit} > "${S}"/conf-split
+	echo -n ${mysplit} > "${S}"/conf-split || die
 }
 
 qmail_src_compile() {
-	cd "${S}"
-	emake it man "$@" || die "make failed"
+	cd "${S}" || die
+	emake it man "$@"
 }
 
 qmail_spp_src_compile() {
-	cd "${GENQMAIL_S}"/spp/
-	emake || die "make spp failed"
+	cd "${GENQMAIL_S}"/spp/ || die
+	emake
 }
 
 qmail_base_install() {
+	# subshell to not leak the install options
+	(
 	einfo "Setting up basic directory hierarchy"
-	diropts -o root -g qmail -m 755
-	keepdir "${QMAIL_HOME}"/{,bin,control}
-	keepdir "${QMAIL_HOME}"/users
-	diropts -o alias -g qmail -m 755
+	diropts -o 0 -g qmail
+	dodir "${QMAIL_HOME}"/bin
+	keepdir "${QMAIL_HOME}"/{control,users}
+	diropts -o alias -g qmail
 	keepdir "${QMAIL_HOME}"/alias
 
 	einfo "Adding env.d entry for qmail"
 	doenvd "${GENQMAIL_S}"/conf/99qmail
 
 	einfo "Installing all qmail software"
-	insinto "${QMAIL_HOME}"/bin
+	exeinto "${QMAIL_HOME}"/bin
 
-	insopts -o root -g qmail -m 755
-	doins bouncesaying condredirect config-fast datemail except forward maildir2mbox \
+	exeopts -o 0 -g qmail
+	doexe bouncesaying condredirect config-fast datemail except forward maildir2mbox \
 		maildirmake mailsubj predate preline qbiff \
 		qmail-{inject,qmqpc,qmqpd,qmtpd,qread,qstat,smtpd,tcpok,tcpto,showctl} \
 		qreceipt sendmail tcp-env
 
 	# obsolete tools, install if they are still present
+	local i
 	for i in elq maildirwatch pinq qail qsmhook; do
-		[[ -x ${i} ]] && doins ${i}
+		[[ -x ${i} ]] && doexe ${i}
 	done
 
-	use pop3 && doins qmail-pop3d
+	use pop3 && doexe qmail-pop3d
 
-	insopts -o root -g qmail -m 711
-	doins qmail-{clean,getpw,local,pw2u,remote,rspawn,send} splogger
-	use pop3 && doins qmail-popup
+	exeopts -o 0 -g qmail -m 711
+	doexe qmail-{clean,getpw,local,pw2u,remote,rspawn,send} splogger
+	use pop3 && doexe qmail-popup
 
-	insopts -o root -g qmail -m 700
-	doins qmail-{lspawn,newmrh,newu,start}
+	exeopts -o 0 -g qmail -m 700
+	doexe qmail-{lspawn,newmrh,newu,start}
 
-	insopts -o qmailq -g qmail -m 4711
-	doins qmail-queue
-
-	declare -F qmail_base_install_hook >/dev/null && \
-		qmail_base_install_hook
+	exeopts -o qmailq -g qmail -m 4711
+	doexe qmail-queue
+	)
 }
 
 qmail_config_install() {
 	einfo "Installing stock configuration files"
 	insinto "${QMAIL_HOME}"/control
-	insopts -o root -g "${GROUP_ROOT}" -m 644
 	doins "${GENQMAIL_S}"/control/{conf-*,defaultdelivery}
 
 	einfo "Installing configuration sanity checker and launcher"
 	insinto "${QMAIL_HOME}"/bin
-	insopts -o root -g "${GROUP_ROOT}" -m 644
 	doins "${GENQMAIL_S}"/control/qmail-config-system
-
-	declare -F qmail_config_install_hook >/dev/null && \
-		qmail_config_install_hook
 }
 
 qmail_man_install() {
@@ -203,106 +194,95 @@ qmail_man_install() {
 	dodoc BLURB* INSTALL* PIC* README* REMOVE* \
 		SENDMAIL* TEST* THANKS* VERSION*
 	# notqmail converted the files to markdown
-	if [ -f CHANGES ]; then
+	if [[ -f CHANGES ]]; then
 		dodoc CHANGES FAQ SECURITY THOUGHTS UPGRADE
 	else
 		dodoc CHANGES.md FAQ.md SECURITY.md THOUGHTS.md UPGRADE.md
 	fi
-
-	declare -F qmail_man_install_hook >/dev/null && \
-		qmail_man_install_hook
 }
 
 qmail_sendmail_install() {
 	einfo "Installing sendmail replacement"
-	diropts -m 755
 	dodir /usr/sbin /usr/lib
 
 	dosym "${QMAIL_HOME}"/bin/sendmail /usr/sbin/sendmail
 	dosym "${QMAIL_HOME}"/bin/sendmail /usr/lib/sendmail
-
-	declare -F qmail_sendmail_install_hook >/dev/null && \
-		qmail_sendmail_install_hook
 }
 
 qmail_maildir_install() {
+	# subshell to not leak the install options
+	(
 	# use the correct maildirmake
 	# the courier-imap one has some extensions that are nicer
 	MAILDIRMAKE="${D}${QMAIL_HOME}/bin/maildirmake"
 	[[ -e /usr/bin/maildirmake ]] && \
 		MAILDIRMAKE="/usr/bin/maildirmake"
 
+	einfo "Setting up default maildirs in the account skeleton"
+	diropts -m 700
+	insinto /etc/skel
+	newins "${GENQMAIL_S}"/control/defaultdelivery .qmail.example
+	"${MAILDIRMAKE}" "${D}"/etc/skel/.maildir
+	keepdir /etc/skel/.maildir/{cur,new,tmp}
+
 	einfo "Setting up the default aliases"
 	diropts -o alias -g qmail -m 700
 	"${MAILDIRMAKE}" "${D}${QMAIL_HOME}"/alias/.maildir
 	keepdir "${QMAIL_HOME}"/alias/.maildir/{cur,new,tmp}
 
+	local i
 	for i in "${QMAIL_HOME}"/alias/.qmail-{mailer-daemon,postmaster,root}; do
-		if [[ ! -f "${ROOT}${i}" ]]; then
+		if [[ ! -f ${ROOT}${i} ]]; then
 			touch "${D}${i}"
 			fowners alias:qmail "${i}"
 		fi
 	done
-
-	einfo "Setting up default maildirs in the account skeleton"
-	diropts -o root -g "${GROUP_ROOT}" -m 755
-	insinto /etc/skel
-	insopts -o root -g "${GROUP_ROOT}" -m 644
-	newins "${GENQMAIL_S}"/control/defaultdelivery .qmail.sample
-	"${MAILDIRMAKE}" "${D}"/etc/skel/.maildir
-	keepdir /etc/skel/.maildir/{cur,new,tmp}
-
-	declare -F qmail_maildir_install_hook >/dev/null && \
-		qmail_maildir_install_hook
+	)
 }
 
 qmail_tcprules_install() {
 	dodir "${TCPRULES_DIR}"
 	insinto "${TCPRULES_DIR}"
-	insopts -o root -g "${GROUP_ROOT}" -m 0644
 	doins "${GENQMAIL_S}"/tcprules/Makefile.qmail
 	doins "${GENQMAIL_S}"/tcprules/tcp.qmail-*
-	use ssl && use pop3 || rm -f "${D}${TCPRULES_DIR}"/tcp.qmail-pop3sd
+	rm -f "${D}${TCPRULES_DIR}"/tcp.qmail-pop3sd || die
 }
 
 qmail_supervise_install_one() {
 	dosupervise ${1}
-	diropts -o qmaill -g "${GROUP_ROOT}" -m 755
+	# subshell to not leak the install options
+	(
+	diropts -o qmaill -g 0
 	keepdir /var/log/qmail/${1}
+	)
 }
 
 qmail_supervise_install() {
 	einfo "Installing supervise scripts"
 
-	cd "${GENQMAIL_S}"/supervise
+	cd "${GENQMAIL_S}"/supervise || die
 
+	local i
 	for i in qmail-{send,smtpd,qmtpd,qmqpd}; do
 		qmail_supervise_install_one ${i}
 	done
 
 	if use pop3; then
 		qmail_supervise_install_one qmail-pop3d
-		use ssl && qmail_supervise_install_one qmail-pop3sd
 	fi
-
-	declare -F qmail_supervise_install_hook >/dev/null && \
-		qmail_supervise_install_hook
 }
 
 qmail_spp_install() {
 	einfo "Installing qmail-spp configuration files"
 	insinto "${QMAIL_HOME}"/control/
-	insopts -o root -g "${GROUP_ROOT}" -m 0644
 	doins "${GENQMAIL_S}"/spp/smtpplugins
 
 	einfo "Installing qmail-spp plugins"
 	keepdir "${QMAIL_HOME}"/plugins/
+	local i
 	for i in authlog mfdnscheck ifauthnext tarpit; do
 		dospp "${GENQMAIL_S}"/spp/${i}
 	done
-
-	declare -F qmail_spp_install_hook >/dev/null && \
-		qmail_spp_install_hook
 }
 
 qmail_ssl_install() {
@@ -312,26 +292,19 @@ qmail_ssl_install() {
 
 	einfo "Installing SSL Certificate creation script"
 	insinto "${QMAIL_HOME}"/control
-	insopts -o root -g "${GROUP_ROOT}" -m 0644
 	doins "${GENQMAIL_S}"/ssl/servercert.cnf
 
-	insinto "${QMAIL_HOME}"/bin
-	insopts -o root -g "${GROUP_ROOT}" -m 0755
-	doins "${GENQMAIL_S}"/ssl/mkservercert
+	exeinto "${QMAIL_HOME}"/bin
+	doexe "${GENQMAIL_S}"/ssl/mkservercert
 
 	einfo "Installing RSA key generation cronjob"
-	insinto /etc/${CRON_FOLDER}
-	insopts -o root -g "${GROUP_ROOT}" -m 0755
-	doins "${GENQMAIL_S}"/ssl/qmail-genrsacert.sh
+	exeinto /etc/${CRON_FOLDER}
+	doexe "${GENQMAIL_S}"/ssl/qmail-genrsacert.sh
 
 	keepdir "${QMAIL_HOME}"/control/tlshosts
-
-	declare -F qmail_ssl_install_hook >/dev/null && \
-		qmail_ssl_install_hook
 }
 
 qmail_src_install() {
-	export GROUP_ROOT="$(id -gn root)"
 	qmail_base_install
 	qmail_config_install
 	qmail_man_install
@@ -364,7 +337,7 @@ qmail_queue_setup() {
 qmail_rootmail_fixup() {
 	local TMPCMD="ln -sf ${QMAIL_HOME}/alias/.maildir/ ${ROOT}/root/.maildir"
 
-	if [[ -d "${ROOT}"/root/.maildir && ! -L "${ROOT}"/root/.maildir ]] ; then
+	if [[ -d ${ROOT}/root/.maildir && ! -L ${ROOT}/root/.maildir ]] ; then
 		elog "Previously the qmail ebuilds created /root/.maildir/ but not"
 		elog "every mail was delivered there. If the directory does not"
 		elog "contain any mail, please delete it and run:"
@@ -376,36 +349,15 @@ qmail_rootmail_fixup() {
 	chown -R alias:qmail "${ROOT}${QMAIL_HOME}"/alias/.maildir 2>/dev/null
 }
 
-qmail_tcprules_fixup() {
-	mkdir -p "${TCPRULES_DIR}"
-	local POP_FILES=
-	use pop3 && POP_FILES="pop3 pop3.cdb"
-	for f in {smtp,qmtp,qmqp}{,.cdb} ${POP_FILES}; do
-		old="/etc/tcp.${f}"
-		new="${TCPRULES_DIR}/tcp.qmail-${f}"
-		fail=0
-		if [[ -f "${old}" && ! -f "${new}" ]]; then
-			einfo "Moving ${old} to ${new}"
-			cp "${old}" "${new}" || fail=1
-		else
-			fail=1
-		fi
-		if [[ "${fail}" = 1 && -f "${old}" ]]; then
-			eerror "Error moving ${old} to ${new}, be sure to check the"
-			eerror "configuration! You may have already moved the files,"
-			eerror "in which case you can delete ${old}"
-		fi
-	done
-}
-
 qmail_tcprules_build() {
-	for f in tcp.qmail-{smtp,qmtp,qmqp,pop3,pop3s}; do
+	local f
+	for f in tcp.qmail-{smtp,qmtp,qmqp,pop3}; do
 		# please note that we don't check if it exists
 		# as we want it to make the cdb files anyway!
-		src="${ROOT}${TCPRULES_DIR}/${f}"
-		cdb="${ROOT}${TCPRULES_DIR}/${f}.cdb"
-		tmp="${ROOT}${TCPRULES_DIR}/.${f}.tmp"
-		[[ -e "${src}" ]] && tcprules "${cdb}" "${tmp}" < "${src}"
+		local src="${ROOT}${TCPRULES_DIR}/${f}"
+		local cdb="${ROOT}${TCPRULES_DIR}/${f}.cdb"
+		local tmp="${ROOT}${TCPRULES_DIR}/.${f}.tmp"
+		[[ -e ${src} ]] && tcprules "${cdb}" "${tmp}" < "${src}"
 	done
 }
 
@@ -426,11 +378,6 @@ qmail_supervise_config_notice() {
 		elog "To start the pop3 server as well, create the following link:"
 		elog "ln -s ${SUPERVISE_DIR}/qmail-pop3d /service/qmail-pop3d"
 		elog
-		if use ssl; then
-			elog "To start the pop3s server as well, create the following link:"
-			elog "ln -s ${SUPERVISE_DIR}/qmail-pop3sd /service/qmail-pop3sd"
-			elog
-		fi
 	fi
 	elog "Additionally, the QMTP and QMQP protocols are supported, "
 	elog "and can be started as:"
@@ -443,10 +390,10 @@ qmail_supervise_config_notice() {
 }
 
 qmail_config_fast() {
-	if [[ ${ROOT} = / ]]; then
+	if [[ -z ${ROOT} ]]; then
 		local host=$(hostname --fqdn)
 
-		if [[ -z "${host}" ]]; then
+		if [[ -z ${host} ]]; then
 			eerror
 			eerror "Cannot determine your fully-qualified hostname"
 			eerror "Please setup your /etc/hosts as described in"
@@ -455,7 +402,7 @@ qmail_config_fast() {
 			die "cannot determine FQDN"
 		fi
 
-		if [[ ! -f "${ROOT}${QMAIL_HOME}"/control/me ]]; then
+		if [[ ! -f ${ROOT}${QMAIL_HOME}/control/me ]]; then
 			"${ROOT}${QMAIL_HOME}"/bin/config-fast ${host}
 		fi
 	else
@@ -464,7 +411,7 @@ qmail_config_fast() {
 }
 
 qmail_tcprules_config() {
-	local localips ip tcpstring line proto f
+	local localips ip tcpstring proto f
 
 	einfo "Accepting relaying by default from all ips configured on this machine."
 
@@ -480,10 +427,9 @@ qmail_tcprules_config() {
 	tcpstring=':allow,RELAYCLIENT="",RBLSMTPD=""'
 
 	for ip in ${localips}; do
-		line="${ip}${tcpstring}"
 		for proto in smtp qmtp qmqp; do
 			f="${EROOT}${TCPRULES_DIR}/tcp.qmail-${proto}"
-			egrep -qs "${line}" "${f}" || echo "${line}" >> "${f}"
+			grep -qs "^${ip}:" "${f}" || echo "${ip}${tcpstring}" >> "${f}"
 		done
 	done
 }
@@ -509,3 +455,5 @@ qmail_ssl_generate() {
 	einfo "Send req.pem to your CA to obtain signed_req.pem, and do:"
 	einfo "cat signed_req.pem >> ${QMAIL_HOME}/control/servercert.pem"
 }
+
+fi

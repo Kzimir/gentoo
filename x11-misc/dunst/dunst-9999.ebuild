@@ -1,50 +1,90 @@
-# Copyright 1999-2020 Gentoo Authors
+# Copyright 1999-2025 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
-EAPI=7
-inherit git-r3 toolchain-funcs
+EAPI=8
 
-DESCRIPTION="Customizable and lightweight notification-daemon"
+inherit git-r3 systemd toolchain-funcs
+
+EGIT_REPO_URI="https://github.com/dunst-project/dunst"
+
+DESCRIPTION="Lightweight replacement for common notification daemons"
 HOMEPAGE="https://dunst-project.org/ https://github.com/dunst-project/dunst"
-EGIT_REPO_URI="https://github.com/${PN}-project/${PN}"
 
 LICENSE="BSD"
 SLOT="0"
-KEYWORDS=""
+IUSE="+completions +dunstify wayland +X +xdg"
 
 DEPEND="
 	dev-libs/glib:2
 	sys-apps/dbus
-	x11-libs/cairo[X,glib]
-	x11-libs/gdk-pixbuf
-	x11-libs/libX11
-	x11-libs/libXScrnSaver
-	x11-libs/libXinerama
-	x11-libs/libXrandr
-	x11-libs/libnotify
-	x11-libs/pango[X]
+	x11-libs/cairo[X?,glib]
+	x11-libs/gdk-pixbuf:2
+	x11-libs/pango[X?]
+	dunstify? ( x11-libs/libnotify )
+	wayland? ( dev-libs/wayland )
+	X? (
+		x11-libs/libX11
+		x11-libs/libXext
+		x11-libs/libXScrnSaver
+		x11-libs/libXinerama
+		x11-libs/libXrandr
+	)
+	xdg? ( x11-misc/xdg-utils )
 "
+
+RDEPEND="${DEPEND}"
+
 BDEPEND="
 	dev-lang/perl
 	virtual/pkgconfig
+	wayland? ( dev-libs/wayland-protocols )
 "
-RDEPEND="
-	${DEPEND}
-"
+
+REQUIRED_USE="|| ( wayland X )"
 
 src_prepare() {
-	sed -i -e "/^CFLAGS/ { s:-g::;s:-O.:: }" config.mk || die
-
 	default
+
+	# Respect users CFLAGS
+	sed -e 's/-Os//' -i config.mk || die
+
+	# Use correct path for dbus and system unit
+	sed -e "s|##PREFIX##|${EPREFIX}/usr|" -i dunst.systemd.service.in || die
+	sed -e "s|##PREFIX##|${EPREFIX}/usr|" -i org.knopwob.dunst.service.in || die
 }
 
 src_configure() {
 	tc-export CC PKG_CONFIG
+
 	default
 }
 
-src_install() {
-	emake DESTDIR="${D}" PREFIX="/usr" install
+src_compile() {
+	local myemakeargs=(
+		DUNSTIFY="$(usex dunstify 1 0)"
+		SYSCONFDIR="${EPREFIX}/etc/xdg"
+		SYSTEMD="0"
+		WAYLAND="$(usex wayland 1 0)"
+		X11="$(usex X 1 0)"
+	)
 
-	dodoc AUTHORS CHANGELOG.md README.md RELEASE_NOTES
+	emake "${myemakeargs[@]}"
+}
+
+src_install() {
+	local myemakeargs=(
+		COMPLETIONS="$(usex completions 1 0)"
+		DUNSTIFY="$(usex dunstify 1 0)"
+		PREFIX="${ED}/usr"
+		SYSCONFDIR="${ED}/etc/xdg"
+		SYSTEMD="0"
+		WAYLAND="$(usex wayland 1 0)"
+		X11="$(usex X 1 0)"
+	)
+
+	emake "${myemakeargs[@]}" install
+
+	exeinto /etc/user/init.d
+	newexe "${FILESDIR}/dunst.initd" dunst
+	systemd_newuserunit dunst.systemd.service.in dunst.service
 }

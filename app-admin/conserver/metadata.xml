@@ -1,15 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE pkgmetadata SYSTEM "http://www.gentoo.org/dtd/metadata.dtd">
+<!DOCTYPE pkgmetadata SYSTEM "https://www.gentoo.org/dtd/metadata.dtd">
 <pkgmetadata>
-	<maintainer type="person">
+	<maintainer type="person" proxied="yes">
 		<email>dan@danweeks.net</email>
 		<name>Dan Weeks</name>
 	</maintainer>
-	<maintainer type="person">
-		<email>gyakovlev@gentoo.org</email>
-		<name>Georgy Yakovlev</name>
-	</maintainer>
-	<maintainer type="project">
+	<maintainer type="project" proxied="proxy">
 		<email>proxy-maint@gentoo.org</email>
 		<name>Proxy Maintainers</name>
 	</maintainer>
@@ -27,6 +23,9 @@
 		of the equipment from home or wherever.
 	</longdescription>
 	<use>
-		<flag name="freeipmi">Compile in FreeIPMI support via sys-libs/freeipmi</flag>
+		<flag name="freeipmi">Compile in FreeIPMI support via <pkg>sys-libs/freeipmi</pkg></flag>
 	</use>
+	<upstream>
+		<remote-id type="github">conserver/conserver</remote-id>
+	</upstream>
 </pkgmetadata>

@@ -1,8 +1,8 @@
-# Copyright 2020 Gentoo Authors
+# Copyright 2020-2024 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
 EAPI="7"
-LUA_COMPAT=(lua{5-1,5-2,5-3,5-4})
+LUA_COMPAT=( lua5-{3..4} )
 
 inherit cmake lua-single
 
@@ -11,24 +11,19 @@ if [[ "${PV}" == "99999999999999" ]]; then
 
 	EGIT_REPO_URI="https://github.com/hchunhui/librime-lua"
 else
-	LIBRIME_LUA_GIT_REVISION="d45a41af2f9d731e3c1516a191cc3160e3cb8377"
+	LIBRIME_LUA_GIT_REVISION=""
 fi
 
-DESCRIPTION="Lua support for RIME"
+DESCRIPTION="Lua module for RIME"
 HOMEPAGE="https://github.com/hchunhui/librime-lua"
-if [[ "${PV}" == "99999999999999" ]]; then
-	SRC_URI=""
-else
+if [[ "${PV}" != "99999999999999" ]]; then
 	SRC_URI="https://github.com/hchunhui/${PN}/archive/${LIBRIME_LUA_GIT_REVISION}.tar.gz -> ${P}.tar.gz"
 fi
 
 LICENSE="BSD MIT"
 SLOT="0"
-KEYWORDS=""
-IUSE=""
 REQUIRED_USE="${LUA_REQUIRED_USE}"
 
-BDEPEND=""
 RDEPEND=">=app-i18n/librime-1.6:0=
 	${LUA_DEPS}"
 DEPEND="${RDEPEND}

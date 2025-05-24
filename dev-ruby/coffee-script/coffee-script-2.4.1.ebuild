@@ -1,8 +1,8 @@
-# Copyright 1999-2020 Gentoo Authors
+# Copyright 1999-2025 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
-EAPI=5
-USE_RUBY="ruby23 ruby24 ruby25 ruby26 ruby27"
+EAPI=8
+USE_RUBY="ruby31 ruby32 ruby33 ruby34"
 
 RUBY_FAKEGEM_TASK_TEST=""
 RUBY_FAKEGEM_TASK_DOC=""
@@ -15,8 +15,6 @@ HOMEPAGE="https://github.com/rails/ruby-coffee-script https://github.com/rails/c
 
 LICENSE="MIT"
 SLOT="0"
-KEYWORDS="amd64 arm arm64 ppc ppc64 x86 ~amd64-linux ~x64-macos"
-
-IUSE=""
+KEYWORDS="amd64 arm arm64 ppc ppc64 ~riscv ~sparc x86 ~amd64-linux ~x64-macos"
 
 ruby_add_rdepend "dev-ruby/coffee-script-source dev-ruby/execjs:*"

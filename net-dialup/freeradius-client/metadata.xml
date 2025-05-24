@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE pkgmetadata SYSTEM "http://www.gentoo.org/dtd/metadata.dtd">
+<!DOCTYPE pkgmetadata SYSTEM "https://www.gentoo.org/dtd/metadata.dtd">
 <pkgmetadata>
-	<maintainer type="person">
+	<maintainer type="person" proxied="yes">
 		<email>alarig@swordarmor.fr</email>
 		<name>Alarig Le Lay</name>
 	</maintainer>
-	<maintainer type="project">
+	<maintainer type="project" proxied="proxy">
 		<email>proxy-maint@gentoo.org</email>
 		<name>Proxy Maintainers</name>
 	</maintainer>
@@ -17,6 +17,9 @@
 		shell scripts and a utility to query the status of a (Merit) RADIUS
 		server.
 	</longdescription>
+	<upstream>
+		<remote-id type="github">FreeRADIUS/freeradius-client</remote-id>
+	</upstream>
 	<use>
 		<flag name="scp">
 			Add service type hints derived from username prefix

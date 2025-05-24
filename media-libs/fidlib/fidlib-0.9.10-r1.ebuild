@@ -1,9 +1,9 @@
-# Copyright 1999-2019 Gentoo Authors
+# Copyright 1999-2022 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
-EAPI=5
+EAPI=8
 
-inherit toolchain-funcs flag-o-matic eutils multilib
+inherit edo toolchain-funcs
 
 DESCRIPTION="Run-time filter design and execution library"
 HOMEPAGE="http://uazu.net/fidlib/"
@@ -13,27 +13,18 @@ LICENSE="GPL-2 LGPL-2.1"
 SLOT="0"
 KEYWORDS="amd64 x86"
 
-doecho() {
-	echo "$@"
-	"$@" || die
-}
-
-src_prepare() {
-	epatch "${FILESDIR}"/${P}-extern.patch
-
-	# Avoid ICE under gcc-4.6, fixed in 4.6.3
-	if [[ $(gcc-version) == "4.6" && $(gcc-micro-version) -le 2 ]] ; then
-		replace-flags -O? -O0
-	fi
-}
+PATCHES=(
+	"${FILESDIR}"/${P}-extern.patch
+	"${FILESDIR}"/${PN}-0.9.10-Add-missing-unistd.h-include.patch
+)
 
 src_compile() {
 	# build library
-	doecho $(tc-getCC) ${CFLAGS} -DT_LINUX ${LDFLAGS} -Wl,-soname,libfidlib.so.${PV:0:1} \
+	edo $(tc-getCC) ${CFLAGS} -DT_LINUX ${LDFLAGS} -Wl,-soname,libfidlib.so.${PV:0:1} \
 		-fPIC -shared fidlib.c -lm -o libfidlib.so.${PV:0:1}
 
 	# build command-line tool
-	doecho $(tc-getCC) ${CFLAGS} ${LDFLAGS} firun.c -lm ./libfidlib.so.${PV:0:1} -o firun
+	edo $(tc-getCC) ${CFLAGS} ${LDFLAGS} firun.c -lm ./libfidlib.so.${PV:0:1} -o firun
 }
 
 src_install() {

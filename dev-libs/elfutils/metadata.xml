@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE pkgmetadata SYSTEM "http://www.gentoo.org/dtd/metadata.dtd">
+<!DOCTYPE pkgmetadata SYSTEM "https://www.gentoo.org/dtd/metadata.dtd">
 <pkgmetadata>
 	<maintainer type="project">
 		<email>toolchain@gentoo.org</email>
@@ -7,9 +7,13 @@
 	</maintainer>
 	<use>
 		<flag name="lzma">Support automatic decompression of LZMA-compressed files and kernel images</flag>
-		<flag name="threads">Build the libraries with thread safe support</flag>
+		<flag name="stacktrace">
+			Build experimental eu-stacktrace tool. Relies on integration with dev-util/sysprof.
+
+			See https://developers.redhat.com/articles/2024/06/11/get-system-wide-profiles-binaries-without-frame-pointers.
+		</flag>
 		<flag name="utils">Install command-line utilities (all the eu-* programs)</flag>
-		<flag name="valgrind">Add support for memory debugging using <pkg>dev-util/valgrind</pkg></flag>
+		<flag name="debuginfod">Enable debuginfod support, both the debuginfod server and the libdebuginfod client library</flag>
 	</use>
 	<upstream>
 		<remote-id type="cpe">cpe:/a:elfutils_project:elfutils</remote-id>

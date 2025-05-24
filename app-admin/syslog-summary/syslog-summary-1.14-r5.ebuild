@@ -1,31 +1,28 @@
-# Copyright 1999-2020 Gentoo Authors
+# Copyright 1999-2025 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
-EAPI=7
+EAPI=8
 
-PYTHON_COMPAT=( python3_{7,8,9} )
+PYTHON_COMPAT=( python3_{10..13} )
 
 inherit python-single-r1
 
 DESCRIPTION="Summarizes the contents of a syslog log file"
 HOMEPAGE="https://github.com/dpaleino/syslog-summary"
-SRC_URI="https://github.com/downloads/dpaleino/${PN}/${P}.tar.gz"
+SRC_URI="https://github.com/dpaleino/syslog-summary/archive/refs/tags/${PV}.tar.gz -> ${P}.gh.tar.gz"
 
 LICENSE="GPL-3+"
 SLOT="0"
 KEYWORDS="amd64 ~sparc x86"
-IUSE=""
-
 REQUIRED_USE="${PYTHON_REQUIRED_USE}"
 
-DEPEND=""
 RDEPEND="${PYTHON_DEPS}"
 
-PATCHES=( \
-	"${FILESDIR}/${P}-fix-ignore-code.patch" \
-	"${FILESDIR}/${P}-remove-file-magic.patch" \
-	"${FILESDIR}/${P}-py3.patch" \
-	)
+PATCHES=(
+	"${FILESDIR}/${P}-fix-ignore-code.patch"
+	"${FILESDIR}/${P}-remove-file-magic.patch"
+	"${FILESDIR}/${P}-py3.patch"
+)
 
 src_prepare() {
 	python_fix_shebang -f syslog-summary

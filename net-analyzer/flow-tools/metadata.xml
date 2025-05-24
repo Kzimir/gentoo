@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE pkgmetadata SYSTEM "http://www.gentoo.org/dtd/metadata.dtd">
+<!DOCTYPE pkgmetadata SYSTEM "https://www.gentoo.org/dtd/metadata.dtd">
 <pkgmetadata>
 	<maintainer type="project">
 		<email>netmon@gentoo.org</email>
@@ -14,5 +14,6 @@
 		interface have been contributed and are included in the distribution.</longdescription>
 	<upstream>
 		<remote-id type="google-code">flow-tools</remote-id>
+		<remote-id type="github">5u623l20/flow-tools</remote-id>
 	</upstream>
 </pkgmetadata>

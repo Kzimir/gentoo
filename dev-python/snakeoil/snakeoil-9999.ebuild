@@ -1,17 +1,20 @@
-# Copyright 1999-2020 Gentoo Authors
+# Copyright 1999-2025 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
-EAPI=6
-PYTHON_COMPAT=( python3_{8..9} )
+EAPI=8
+
+DISTUTILS_USE_PEP517=flit
+PYTHON_COMPAT=( python3_{10..13} pypy3 pypy3_11 )
 PYTHON_REQ_USE="threads(+)"
 inherit distutils-r1
 
 if [[ ${PV} == *9999 ]] ; then
-	EGIT_REPO_URI="https://github.com/pkgcore/snakeoil.git"
+	EGIT_REPO_URI="https://anongit.gentoo.org/git/proj/pkgcore/snakeoil.git
+		https://github.com/pkgcore/snakeoil.git"
 	inherit git-r3
 else
-	KEYWORDS="~alpha ~amd64 ~arm ~arm64 ~hppa ~ia64 ~m68k ~mips ~ppc ~ppc64 ~riscv ~s390 ~sparc ~x86 ~x64-macos"
-	SRC_URI="mirror://pypi/${PN:0:1}/${PN}/${P}.tar.gz"
+	KEYWORDS="~alpha ~amd64 ~arm ~arm64 ~hppa ~loong ~m68k ~mips ~ppc ~ppc64 ~riscv ~s390 ~sparc ~x86 ~x64-macos"
+	inherit pypi
 fi
 
 DESCRIPTION="misc common functionality and useful optimizations"
@@ -19,14 +22,12 @@ HOMEPAGE="https://github.com/pkgcore/snakeoil"
 
 LICENSE="BSD BSD-2 MIT"
 SLOT="0"
-IUSE="test"
-RESTRICT="!test? ( test )"
 
-DEPEND="dev-python/setuptools[${PYTHON_USEDEP}]
-	test? ( dev-python/pytest[${PYTHON_USEDEP}] )
+RDEPEND="
+	dev-python/lazy-object-proxy[${PYTHON_USEDEP}]
 "
-[[ ${PV} == 9999 ]] && DEPEND+=" dev-python/cython[${PYTHON_USEDEP}]"
+BDEPEND="
+	>=dev-python/flit-core-3.8[${PYTHON_USEDEP}]
+"
 
-python_test() {
-	esetup.py test
-}
+distutils_enable_tests pytest

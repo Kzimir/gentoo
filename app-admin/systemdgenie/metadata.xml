@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE pkgmetadata SYSTEM "http://www.gentoo.org/dtd/metadata.dtd">
+<!DOCTYPE pkgmetadata SYSTEM "https://www.gentoo.org/dtd/metadata.dtd">
 <pkgmetadata>
 	<maintainer type="project">
 		<email>kde@gentoo.org</email>
@@ -13,5 +13,6 @@
 			<email>rthomsen6@gmail.com</email>
 			<name>Ragnar Thomsen</name>
 		</maintainer>
+		<remote-id type="kde-invent">system/systemdgenie</remote-id>
 	</upstream>
 </pkgmetadata>

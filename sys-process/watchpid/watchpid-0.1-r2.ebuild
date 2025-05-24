@@ -1,28 +1,28 @@
-# Copyright 1999-2016 Gentoo Foundation
+# Copyright 1999-2024 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
-EAPI=6
+EAPI=8
 
-inherit multilib-minimal
+inherit multilib-minimal toolchain-funcs autotools
 
 DESCRIPTION="Watches a process for termination"
-SRC_URI="mirror://gentoo/${PN}_${PV}.tar.gz"
 HOMEPAGE="http://www.codepark.org/"
+SRC_URI="mirror://gentoo/${PN}_${PV}.tar.gz"
+
+LICENSE="GPL-2"
+SLOT="0"
 KEYWORDS="amd64 ppc x86"
 
-SLOT="0"
-LICENSE="GPL-2"
+PATCHES=(
+	"${FILESDIR}"/${P}-cflags.patch
+)
 
-DOCS=( README AUTHORS )
+src_prepare() {
+	default
+	eautoreconf
+}
 
 multilib_src_configure() {
+	tc-export CC
 	ECONF_SOURCE="${S}" econf
-}
-
-src_compile() {
-	multilib-minimal_src_compile
-}
-
-src_install() {
-	multilib-minimal_src_install
 }

@@ -1,76 +1,63 @@
-# Copyright 1999-2021 Gentoo Authors
+# Copyright 1999-2024 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
-EAPI=7
+EAPI=8
 
-PYTHON_COMPAT=( python3_{6..9} )
+inherit autotools libtool bash-completion-r1
 
-inherit autotools bash-completion-r1 multilib python-r1
+DESCRIPTION="Library and tools for managing linux kernel modules"
+HOMEPAGE="https://git.kernel.org/pub/scm/utils/kernel/kmod/kmod.git"
 
 if [[ ${PV} == 9999* ]]; then
 	EGIT_REPO_URI="https://git.kernel.org/pub/scm/utils/kernel/${PN}/${PN}.git"
 	inherit git-r3
 else
-	SRC_URI="https://www.kernel.org/pub/linux/utils/kernel/kmod/${P}.tar.xz"
-	KEYWORDS="~alpha ~amd64 ~arm ~arm64 ~hppa ~ia64 ~m68k ~mips ~ppc ~ppc64 ~riscv ~s390 ~sparc ~x86"
-	#inherit libtool
+	SRC_URI="https://mirrors.edge.kernel.org/pub/linux/utils/kernel/kmod/${P}.tar.xz"
+	KEYWORDS="~alpha ~amd64 ~arm ~arm64 ~hppa ~loong ~m68k ~mips ~ppc ~ppc64 ~riscv ~s390 ~sparc ~x86"
 fi
-
-DESCRIPTION="library and tools for managing linux kernel modules"
-HOMEPAGE="https://git.kernel.org/?p=utils/kernel/kmod/kmod.git"
 
 LICENSE="LGPL-2"
 SLOT="0"
-IUSE="debug doc libressl +lzma pkcs7 python static-libs +tools +zlib zstd"
+IUSE="debug doc +lzma pkcs7 static-libs +tools +zlib +zstd"
 
 # Upstream does not support running the test suite with custom configure flags.
 # I was also told that the test suite is intended for kmod developers.
 # So we have to restrict it.
 # See bug #408915.
-RESTRICT="test"
+#RESTRICT="test"
 
-# >=zlib-1.2.6 required because of bug #427130
-# Block systemd below 217 for -static-nodes-indicate-that-creation-of-static-nodes-.patch
-RDEPEND="!sys-apps/module-init-tools
+# - >=zlib-1.2.6 required because of bug #427130
+# - Block systemd below 217 for -static-nodes-indicate-that-creation-of-static-nodes-.patch
+# - >=zstd-1.5.2-r1 required for bug #771078
+RDEPEND="
+	!sys-apps/module-init-tools
 	!sys-apps/modutils
 	!<sys-apps/openrc-0.13.8
 	!<sys-apps/systemd-216-r3
 	lzma? ( >=app-arch/xz-utils-5.0.4-r1 )
-	python? ( ${PYTHON_DEPS} )
-	pkcs7? (
-		!libressl? ( >=dev-libs/openssl-1.1.0:0= )
-		libressl? ( dev-libs/libressl:0= )
-	)
+	pkcs7? ( >=dev-libs/openssl-1.1.0:= )
 	zlib? ( >=sys-libs/zlib-1.2.6 )
-	zstd? ( >=app-arch/zstd-1.4.4 )"
+	zstd? ( >=app-arch/zstd-1.5.2-r1:= )
+"
 DEPEND="${RDEPEND}"
 BDEPEND="
 	doc? (
 		dev-util/gtk-doc
-		dev-util/gtk-doc-am
+		dev-build/gtk-doc-am
 	)
 	lzma? ( virtual/pkgconfig )
-	python? (
-		dev-python/cython[${PYTHON_USEDEP}]
-		virtual/pkgconfig
-		)
 	zlib? ( virtual/pkgconfig )
 "
 if [[ ${PV} == 9999* ]]; then
-	BDEPEND="${BDEPEND}
-		dev-libs/libxslt"
+	BDEPEND+=" app-text/scdoc"
 fi
-
-REQUIRED_USE="python? ( ${PYTHON_REQUIRED_USE} )"
-
-DOCS=( NEWS README TODO )
 
 src_prepare() {
 	default
 
 	if [[ ! -e configure ]] || use doc ; then
 		if use doc; then
-			cp "${EROOT}"/usr/share/aclocal/gtk-doc.m4 m4 || die
+			cp "${BROOT}"/usr/share/aclocal/gtk-doc.m4 m4 || die
 			gtkdocize --copy --docdir libkmod/docs || die
 		else
 			touch libkmod/docs/gtk-doc.make
@@ -80,20 +67,22 @@ src_prepare() {
 		elibtoolize
 	fi
 
-	# Restore possibility of running --enable-static wrt #472608
+	# Restore possibility of running --enable-static, bug #472608
 	sed -i \
 		-e '/--enable-static is not supported by kmod/s:as_fn_error:echo:' \
 		configure || die
 }
 
 src_configure() {
+	# TODO: >=33 enables decompressing without libraries being built in
+	# as kmod defers to the kernel. How should the ebuild be adapted?
 	local myeconfargs=(
 		--bindir="${EPREFIX}/bin"
+		--sbindir="${EPREFIX}/sbin"
 		--enable-shared
 		--with-bashcompletiondir="$(get_bashcompdir)"
-		--with-rootlibdir="${EPREFIX}/$(get_libdir)"
 		$(use_enable debug)
-		$(usex doc '--enable-gtk-doc' '')
+		$(usev doc '--enable-gtk-doc')
 		$(use_enable static-libs static)
 		$(use_enable tools)
 		$(use_with lzma xz)
@@ -102,55 +91,20 @@ src_configure() {
 		$(use_with zstd)
 	)
 
-	local ECONF_SOURCE="${S}"
-
-	kmod_configure() {
-		mkdir -p "${BUILD_DIR}" || die
-		run_in_build_dir econf "${myeconfargs[@]}" "$@"
-	}
-
-	BUILD_DIR="${WORKDIR}/build"
-	kmod_configure --disable-python
-
-	if use python; then
-		python_foreach_impl kmod_configure --enable-python
+	if [[ ${PV} != 9999 ]] ; then
+		# See src_install
+		myeconfargs+=( --disable-manpages )
 	fi
-}
 
-src_compile() {
-	emake -C "${BUILD_DIR}"
-
-	if use python; then
-		local native_builddir=${BUILD_DIR}
-
-		python_compile() {
-			emake -C "${BUILD_DIR}" -f Makefile -f - python \
-				VPATH="${native_builddir}:${S}" \
-				native_builddir="${native_builddir}" \
-				libkmod_python_kmod_{kmod,list,module,_util}_la_LIBADD='$(PYTHON_LIBS) $(native_builddir)/libkmod/libkmod.la' \
-				<<< 'python: $(pkgpyexec_LTLIBRARIES)'
-		}
-
-		python_foreach_impl python_compile
-	fi
+	econf "${myeconfargs[@]}"
 }
 
 src_install() {
-	emake -C "${BUILD_DIR}" DESTDIR="${D}" install
-	einstalldocs
+	default
 
-	if use python; then
-		local native_builddir=${BUILD_DIR}
-
-		python_install() {
-			emake -C "${BUILD_DIR}" DESTDIR="${D}" \
-				VPATH="${native_builddir}:${S}" \
-				install-pkgpyexecLTLIBRARIES \
-				install-dist_pkgpyexecPYTHON
-			python_optimize
-		}
-
-		python_foreach_impl python_install
+	if [[ ${PV} != 9999 ]] ; then
+		# The dist logic is broken but the files are in there (bug #937942)
+		emake -C man DESTDIR="${D}" install
 	fi
 
 	find "${ED}" -type f -name "*.la" -delete || die
@@ -158,12 +112,8 @@ src_install() {
 	if use tools; then
 		local cmd
 		for cmd in depmod insmod modprobe rmmod; do
+			rm "${ED}"/bin/${cmd} || die
 			dosym ../bin/kmod /sbin/${cmd}
-		done
-
-		# These are also usable as normal user
-		for cmd in lsmod modinfo; do
-			dosym kmod /bin/${cmd}
 		done
 	fi
 
@@ -173,7 +123,8 @@ src_install() {
 	EOF
 
 	insinto /lib/modprobe.d
-	doins "${T}"/usb-load-ehci-first.conf #260139
+	# bug #260139
+	doins "${T}"/usb-load-ehci-first.conf
 
 	newinitd "${FILESDIR}"/kmod-static-nodes-r1 kmod-static-nodes
 }

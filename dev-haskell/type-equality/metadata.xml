@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE pkgmetadata SYSTEM "http://www.gentoo.org/dtd/metadata.dtd">
+<!DOCTYPE pkgmetadata SYSTEM "https://www.gentoo.org/dtd/metadata.dtd">
 <pkgmetadata>
 	<maintainer type="project">
 		<email>haskell@gentoo.org</email>
@@ -15,4 +15,7 @@
 		producing equality proofs, providing some form of
 		decidable equality on types.
 	</longdescription>
+	<upstream>
+		<remote-id type="github">hesselink/type-equality</remote-id>
+	</upstream>
 </pkgmetadata>

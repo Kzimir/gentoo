@@ -1,4 +1,4 @@
-# Copyright 1999-2019 Gentoo Authors
+# Copyright 1999-2024 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
 # @ECLASS: pax-utils.eclass
@@ -7,6 +7,7 @@
 # @AUTHOR:
 # Author: Kevin F. Quinn <kevquinn@gentoo.org>
 # Author: Anthony G. Basile <blueness@gentoo.org>
+# @SUPPORTED_EAPIS: 7 8
 # @BLURB: functions to provide PaX markings for hardened kernels
 # @DESCRIPTION:
 #
@@ -23,7 +24,12 @@
 if [[ -z ${_PAX_UTILS_ECLASS} ]]; then
 _PAX_UTILS_ECLASS=1
 
-# @ECLASS-VARIABLE: PAX_MARKINGS
+case ${EAPI} in
+	7|8) ;;
+	*) die "${ECLASS}: EAPI ${EAPI:-0} not supported" ;;
+esac
+
+# @ECLASS_VARIABLE: PAX_MARKINGS
 # @DESCRIPTION:
 # Control which markings are made:
 # PT = PT_PAX markings, XT = XATTR_PAX markings
@@ -176,6 +182,10 @@ host-is-pax() {
 # them elsewhere as they are not supported (i.e. they may be removed
 # or their function may change arbitrarily).
 
+# @FUNCTION: _pax_list_files
+# @INTERNAL
+# @USAGE: <command to display items> [items]
+# @DESCRIPTION:
 # Display a list of things, one per line, indented a bit, using the
 # display command in $1.
 _pax_list_files() {

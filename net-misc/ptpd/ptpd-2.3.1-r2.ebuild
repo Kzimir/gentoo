@@ -1,13 +1,14 @@
-# Copyright 1999-2018 Gentoo Foundation
+# Copyright 1999-2023 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
-EAPI=6
+EAPI=8
 
 inherit autotools flag-o-matic systemd
 
 DESCRIPTION="Precision Time Protocol daemon"
 HOMEPAGE="https://github.com/ptpd/ptpd"
 SRC_URI="https://github.com/ptpd/ptpd/archive/${P}.tar.gz"
+S="${WORKDIR}/ptpd-${P}"
 
 KEYWORDS="~amd64 ~arm ~x86"
 LICENSE="BSD"
@@ -23,14 +24,10 @@ RDEPEND="${RDEPEND}
 
 PATCHES=(
 	"${FILESDIR}"/${PN}-2.3.1-fix-snmp.patch
-	"${FILESDIR}"/${PN}-2.3.1-fix-libressl-compatibility.patch
 )
-
-S=${WORKDIR}/ptpd-${P}
 
 src_prepare() {
 	default
-
 	eautoreconf
 }
 
@@ -62,5 +59,5 @@ src_install() {
 
 pkg_postinst() {
 	elog "Do not forget to setup correct network interface."
-	elog "Change the config file ${EROOT}etc/ptpd2.conf to suit your needs."
+	elog "Change the config file ${EROOT}/etc/ptpd2.conf to suit your needs."
 }

@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE pkgmetadata SYSTEM "http://www.gentoo.org/dtd/metadata.dtd">
+<!DOCTYPE pkgmetadata SYSTEM "https://www.gentoo.org/dtd/metadata.dtd">
 <pkgmetadata>
   <maintainer type="project">
     <email>perl@gentoo.org</email>
@@ -14,5 +14,6 @@
     <remote-id type="cpan-module">XML::LibXSLT</remote-id>
     <remote-id type="cpan-module">XML::LibXSLT::Security</remote-id>
     <remote-id type="cpan-module">XML::LibXSLT::StylesheetWrapper</remote-id>
+    <remote-id type="github">shlomif/perl-XML-LibXSLT</remote-id>
   </upstream>
 </pkgmetadata>

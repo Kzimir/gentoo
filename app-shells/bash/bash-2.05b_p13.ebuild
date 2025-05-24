@@ -1,9 +1,13 @@
-# Copyright 1999-2020 Gentoo Authors
+# Copyright 1999-2024 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
 EAPI=7
 
 inherit flag-o-matic toolchain-funcs
+
+# Uncomment if we have a patchset
+GENTOO_PATCH_DEV="sam"
+GENTOO_PATCH_VER="${PV}"
 
 # Official patchlevel
 # See ftp://ftp.cwru.edu/pub/bash/bash-2.05b-patches/
@@ -28,12 +32,16 @@ patches() {
 }
 
 DESCRIPTION="The standard GNU Bourne again shell"
-HOMEPAGE="http://tiswww.case.edu/php/chet/bash/bashtop.html"
+HOMEPAGE="https://tiswww.case.edu/php/chet/bash/bashtop.html"
 SRC_URI="mirror://gnu/bash/${MY_P}.tar.gz $(patches)"
+
+if [[ -n ${GENTOO_PATCH_VER} ]] ; then
+	SRC_URI+=" https://dev.gentoo.org/~${GENTOO_PATCH_DEV}/distfiles/${CATEGORY}/${PN}/${PN}-${GENTOO_PATCH_VER}-patches.tar.xz"
+fi
 
 LICENSE="GPL-2"
 SLOT="${MY_PV}"
-KEYWORDS="~alpha amd64 arm arm64 hppa ~ia64 ~m68k ~mips ppc ppc64 s390 sparc x86"
+KEYWORDS="~alpha amd64 arm arm64 hppa ~m68k ~mips ppc ppc64 ~s390 sparc x86"
 IUSE="afs +net nls +readline static"
 
 LIB_DEPEND=">=sys-libs/ncurses-5.2-r2[static-libs(+)]
@@ -46,19 +54,20 @@ DEPEND="${RDEPEND}
 S="${WORKDIR}/${MY_P}"
 
 PATCHES=(
-	"${FILESDIR}"/${PN}-2.05b-destdir.patch
-	"${FILESDIR}"/autoconf-mktime-2.53.patch #220040
-	"${FILESDIR}"/${PN}-2.05b-protos.patch
-	"${FILESDIR}"/${PN}-2.05b-empty-herestring.patch
-	"${FILESDIR}"/${PN}-2.05b-rbash.patch #26854
-	"${FILESDIR}"/${PN}-2.05b-parallel-build.patch #41002
-	"${FILESDIR}"/${PN}-2.05b-jobs.patch
-	"${FILESDIR}"/${PN}-2.05b-fix-job-warning.patch
-	"${FILESDIR}"/${PN}-3.1-dev-fd-buffer-overflow.patch #431850
+	"${WORKDIR}"/${PN}-${GENTOO_PATCH_VER}-patches/${PN}-2.05b-destdir.patch
+	"${WORKDIR}"/${PN}-${GENTOO_PATCH_VER}-patches/autoconf-mktime-2.53.patch # bug #220040
+	"${WORKDIR}"/${PN}-${GENTOO_PATCH_VER}-patches/${PN}-2.05b-protos.patch
+	"${WORKDIR}"/${PN}-${GENTOO_PATCH_VER}-patches/${PN}-2.05b-empty-herestring.patch
+	"${WORKDIR}"/${PN}-${GENTOO_PATCH_VER}-patches/${PN}-2.05b-rbash.patch # bug #26854
+	"${WORKDIR}"/${PN}-${GENTOO_PATCH_VER}-patches/${PN}-2.05b-parallel-build.patch # bug #41002
+	"${WORKDIR}"/${PN}-${GENTOO_PATCH_VER}-patches/${PN}-2.05b-jobs.patch
+	"${WORKDIR}"/${PN}-${GENTOO_PATCH_VER}-patches/${PN}-2.05b-fix-job-warning.patch
+	"${WORKDIR}"/${PN}-${GENTOO_PATCH_VER}-patches/${PN}-3.1-dev-fd-buffer-overflow.patch # bug #431850
 )
 
 pkg_setup() {
-	if is-flag -malign-double ; then #7332
+	# bug #7332
+	if is-flag -malign-double ; then
 		eerror "Detected bad CFLAGS '-malign-double'.  Do not use this"
 		eerror "as it breaks LFS (struct stat64) on x86."
 		die "remove -malign-double from your CFLAGS mr ricer"
@@ -67,6 +76,10 @@ pkg_setup() {
 
 src_unpack() {
 	unpack ${MY_P}.tar.gz
+
+	if [[ -n ${GENTOO_PATCH_VER} ]] ; then
+		unpack ${PN}-${GENTOO_PATCH_VER}-patches.tar.xz
+	fi
 }
 
 src_prepare() {
@@ -82,9 +95,25 @@ src_prepare() {
 }
 
 src_configure() {
+	#/var/tmp/portage/app-shells/bash-3.2_p57/temp/ccW7JJDK.ltrans2.ltrans.o: in function `shell_execve':
+	# <artificial>:(.text+0x8b30): undefined reference to `__setostype'
+	#
+	# It works fine in bash 4+. Backporting may not be worth it.
+	filter-lto
+
+	# bash 5.3 drops unprototyped functions, earlier versions are
+	# incompatible with C23.
+	append-cflags $(test-flags-CC -std=gnu17)
+
 	local myconf=(
 		--with-installed-readline=.
+
+		# Force linking with system curses ... the bundled termcap lib
+		# sucks bad compared to ncurses.  For the most part, ncurses
+		# is here because readline needs it.  But bash itself calls
+		# ncurses in one or two small places :(.
 		--with-curses
+
 		$(use_with afs)
 		$(use_enable net net-redirections)
 		--disable-profiling
@@ -121,16 +150,13 @@ src_configure() {
 	# is at least what's in the DEPEND up above.
 	export ac_cv_rl_version=6.2
 
-	# Force linking with system curses ... the bundled termcap lib
-	# sucks bad compared to ncurses.  For the most part, ncurses
-	# is here because readline needs it.  But bash itself calls
-	# ncurses in one or two small places :(.
+	# bug #444070
+	tc-export AR
 
-	tc-export AR #444070
 	# This old autoconf script does not re-exec itself properly and fails when
 	# /bin/sh is not bash.  Rather than try to regen everything, just force the
 	# use of bash directly.
-	CONFIG_SHELL="/bin/bash" econf "${myconf[@]}"
+	CONFIG_SHELL="${BROOT}/bin/bash" econf "${myconf[@]}"
 }
 
 src_install() {

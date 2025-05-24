@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE pkgmetadata SYSTEM "http://www.gentoo.org/dtd/metadata.dtd">
+<!DOCTYPE pkgmetadata SYSTEM "https://www.gentoo.org/dtd/metadata.dtd">
 <pkgmetadata>
 	<!-- maintainer-needed -->
 	<longdescription lang="en">
@@ -19,7 +19,7 @@
 		que se pueden adoptar medidas de control de forma periódica.
 	</longdescription>
 	<use>
-		<flag name="tools">Installs app-admin/mktwpol, providing scripts
+		<flag name="tools">Installs <pkg>app-admin/mktwpol</pkg>, providing scripts
 		for the installation/setup of tripwire, including generating the
 		tripwire policy file and maintenance of the tripwire database</flag>
 		<flag name="ssl">Adds support for Secure Socket Layer connections</flag>

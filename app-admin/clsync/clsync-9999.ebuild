@@ -1,4 +1,4 @@
-# Copyright 1999-2020 Gentoo Authors
+# Copyright 1999-2024 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
 EAPI=7
@@ -6,7 +6,6 @@ EAPI=7
 if [[ ${PV} == "9999" ]] ; then
 	EGIT_REPO_URI="https://github.com/clsync/clsync.git"
 	inherit git-r3
-	KEYWORDS=""
 else
 	SRC_URI="https://github.com/clsync/${PN}/archive/v${PV}.tar.gz -> ${P}.tar.gz"
 	KEYWORDS="~amd64 ~x86"
@@ -20,7 +19,7 @@ LICENSE="GPL-3+"
 SLOT="0"
 IUSE="apidoc +caps +clsync cluster control-socket cgroups doc debug
 examples extra-debug extra-hardened gio +hardened +highload-locks
-+inotify +lto mhash namespaces seccomp socket-library static-libs"
++inotify mhash namespaces seccomp socket-library static-libs"
 
 REQUIRED_USE="
 	|| ( clsync socket-library )
@@ -30,7 +29,7 @@ REQUIRED_USE="
 "
 BDEPEND="
 	virtual/pkgconfig
-	apidoc? ( app-doc/doxygen[dot] )
+	apidoc? ( app-text/doxygen[dot] )
 "
 DEPEND="
 	caps? ( sys-libs/libcap )
@@ -66,7 +65,9 @@ src_configure() {
 	use debug && debug_level=1
 	use extra-debug && debug_level=2
 
+	# --enable-lto just appends -flto
 	econf \
+		--disable-lto \
 		--enable-debug=${debug_level} \
 		--enable-paranoid=${harden_level} \
 		--without-bsm \
@@ -76,7 +77,6 @@ src_configure() {
 		$(use_enable cluster) \
 		$(use_enable control-socket socket) \
 		$(use_enable highload-locks) \
-		$(use_enable lto) \
 		$(use_enable namespaces unshare) \
 		$(use_enable seccomp) \
 		$(use_enable socket-library) \

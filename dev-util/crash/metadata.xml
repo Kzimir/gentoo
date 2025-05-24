@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE pkgmetadata SYSTEM "http://www.gentoo.org/dtd/metadata.dtd">
+<!DOCTYPE pkgmetadata SYSTEM "https://www.gentoo.org/dtd/metadata.dtd">
 <pkgmetadata>
 	<maintainer type="person">
 		<email>dlan@gentoo.org</email>
@@ -12,4 +12,7 @@
 		combines the kernel-specific nature of the traditional UNIX crash
 		utility with the source code level debugging capabilities of gdb. 
 	</longdescription>
+	<upstream>
+		<remote-id type="github">crash-utility/crash</remote-id>
+	</upstream>
 </pkgmetadata>

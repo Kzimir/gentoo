@@ -1,123 +1,91 @@
-# Copyright 1999-2020 Gentoo Authors
+# Copyright 1999-2024 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
-EAPI=7
+EAPI=8
 
-MY_PV=${PV//./_}
-inherit autotools desktop qmake-utils
+CMAKE_IN_SOURCE_BUILD=1
+inherit cmake desktop xdg
+
+MY_PV="${PV//./_}"
+MY_P="${PN}_${MY_PV}"
 
 DESCRIPTION="GPS waypoints, tracks and routes converter"
 HOMEPAGE="https://www.gpsbabel.org/ https://github.com/gpsbabel/gpsbabel"
-LICENSE="GPL-2"
 
-if [[ ${PV} == 9999 ]] ; then
+if [[ ${PV} == *9999* ]]; then
 	inherit git-r3
 	EGIT_REPO_URI="https://github.com/gpsbabel/gpsbabel.git"
-	SRC_URI="doc? ( https://www.gpsbabel.org/style3.css -> gpsbabel.org-style3.css )"
 else
-	SRC_URI="
-		https://github.com/gpsbabel/gpsbabel/archive/gpsbabel_${MY_PV}.tar.gz
-		doc? ( https://www.gpsbabel.org/style3.css -> gpsbabel.org-style3.css )
-	"
-	KEYWORDS="~amd64 ~ppc ~x86"
+	SRC_URI="https://github.com/gpsbabel/gpsbabel/archive/gpsbabel_${MY_PV}.tar.gz"
+	KEYWORDS="~amd64 ~arm64"
 	S="${WORKDIR}/gpsbabel-gpsbabel_${MY_PV}"
 fi
 
+LICENSE="GPL-2"
 SLOT="0"
-IUSE="doc +gui"
+IUSE="doc"
 
 BDEPEND="
+	dev-qt/qttools:6[linguist]
+	virtual/pkgconfig
 	doc? (
 		app-text/docbook-xml-dtd:4.1.2
 		dev-lang/perl
 		dev-libs/libxslt
 	)
-	gui? ( dev-qt/linguist-tools:5 )
 "
 RDEPEND="
 	dev-libs/expat
-	dev-qt/qtcore:5
+	dev-qt/qt5compat:6
+	dev-qt/qtbase:6[gui,network,widgets,xml]
+	dev-qt/qtserialport:6
+	dev-qt/qtwebchannel:6
+	dev-qt/qtwebengine:6[widgets]
 	sci-libs/shapelib:=
-	sys-libs/zlib[minizip]
-	virtual/libusb:0
-	gui? (
-		dev-qt/qtgui:5
-		dev-qt/qtnetwork:5
-		dev-qt/qtwebchannel:5
-		dev-qt/qtwebengine:5[widgets]
-		dev-qt/qtwidgets:5
-		dev-qt/qtxml:5
-	)
+	sys-libs/zlib:=[minizip]
+	virtual/libusb:1
 "
 DEPEND="${RDEPEND}"
 
-DOCS=( AUTHORS README.{contrib,igc,mapconverter,md,xmapwpt} )
+DOCS=( AUTHORS NEWS README.{contrib,igc,md} gui/README.gui )
 
-PATCHES=(
-	"${FILESDIR}"/${PN}-1.5.4-disable_statistic_uploading.patch
-	"${FILESDIR}"/${PN}-1.6.0-disable_update_check.patch
-	"${FILESDIR}"/${PN}-1.5.4-disable_version_check.patch
-	"${FILESDIR}"/${PN}-9999-use_system_shapelib.patch
-	"${FILESDIR}"/${PN}-9999-xmldoc.patch
-)
-
-RESTRICT="test" # bug 421699
+PATCHES=( "${FILESDIR}/${PN}-1.8.0-no-automagic-qt5-qt6.patch" )
 
 src_prepare() {
-	default
+	cmake_src_prepare
 
-	# remove bundled libs and cleanup
-	rm -r shapelib || die
-
-	if use doc; then
-		cp "${DISTDIR}/gpsbabel.org-style3.css" . || die
-	fi
-
-	eautoreconf
+	# ensure bundled libs are not used
+	rm -r shapelib zlib || die
 }
 
 src_configure() {
-	local myeconfargs=(
-		$(use_with doc doc doc/manual)
-		LRELEASE=$(qt5_get_bindir)/lrelease
-		LUPDATE=$(qt5_get_bindir)/lupdate
-		QMAKE=$(qt5_get_bindir)/qmake
-		--with-zlib=system
+	local mycmakeargs=(
+		-DGPSBABEL_WITH_LIBUSB=pkgconfig
+		-DGPSBABEL_WITH_SHAPELIB=pkgconfig
+		-DGPSBABEL_WITH_ZLIB=pkgconfig
+		-DGPSBABEL_MAPPREVIEW=ON
+		-DGPSBABEL_EMBED_MAP=ON
+		-DGPSBABEL_EMBED_TRANSLATIONS=ON
+		-DUSE_QT6=ON
 	)
-	econf "${myeconfargs[@]}"
 
-	if use gui; then
-		pushd gui > /dev/null || die
-		$(qt5_get_bindir)/lrelease *.ts || die
-		eqmake5
-		popd > /dev/null
-	fi
+	cmake_src_configure
 }
 
-src_compile() {
-	default
-	if use gui; then
-		pushd gui > /dev/null || die
-		emake
-		popd > /dev/null
-	fi
-
-	if use doc; then
-		perl xmldoc/makedoc || die
-		emake gpsbabel.html
-	fi
+cmake_src_compile() {
+	cmake_build gpsbabel
+	cmake_build gpsbabelfe
+	use doc && cmake_build gpsbabel.html
 }
 
 src_install() {
-	use doc && local HTML_DOCS=( ${PN}.html ${PN}.org-style3.css )
+	use doc && dodoc gpsbabel.html
+	einstalldocs
 
-	default
-
-	if use gui; then
-		dobin gui/objects/gpsbabelfe
-		insinto /usr/share/${PN}/translations/
-		doins gui/gpsbabel*_*.qm
-		newicon gui/images/appicon.png ${PN}.png
-		make_desktop_entry gpsbabelfe ${PN} ${PN} "Science;Geoscience"
-	fi
+	dobin gpsbabel
+	dobin gui/GPSBabelFE/gpsbabelfe
+	insinto /usr/share/${PN}/translations/
+	doins gui/gpsbabel*_*.qm
+	newicon gui/images/appicon.png ${PN}.png
+	domenu gui/gpsbabel.desktop
 }

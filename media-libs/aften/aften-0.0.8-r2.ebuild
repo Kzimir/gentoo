@@ -1,18 +1,20 @@
-# Copyright 1999-2020 Gentoo Authors
+# Copyright 1999-2024 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
-EAPI=6
+EAPI=7
 
-inherit cmake-utils
+inherit cmake
 
-DESCRIPTION="An A/52 (AC-3) audio encoder"
-HOMEPAGE="http://aften.sourceforge.net/"
-SRC_URI="mirror://sourceforge/${PN}/${P}.tar.bz2"
+DESCRIPTION="A/52 (AC-3) audio encoder"
+HOMEPAGE="https://aften.sourceforge.net/"
+SRC_URI="https://downloads.sourceforge.net/${PN}/${P}.tar.bz2"
 
 LICENSE="LGPL-2.1 BSD"
 SLOT="0"
 KEYWORDS="amd64 ppc x86"
 IUSE="cxx"
+
+DOCS=( README Changelog )
 
 PATCHES=(
 	"${FILESDIR}/${P}-multilib.patch"
@@ -25,12 +27,11 @@ src_configure() {
 		-DSHARED=1
 		-DBINDINGS_CXX=$(usex cxx)
 	)
-	cmake-utils_src_configure
+	cmake_src_configure
 }
 
 src_install() {
-	cmake-utils_src_install
-	dodoc README Changelog
+	cmake_src_install
 	# File collision with media-sound/wavbreaker, upstream informed
 	mv "${ED}"/usr/bin/wavinfo{,-aften} || die
 }

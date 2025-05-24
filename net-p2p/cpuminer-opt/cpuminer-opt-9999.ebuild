@@ -1,22 +1,20 @@
-# Copyright 1999-2018 Gentoo Authors
+# Copyright 1999-2023 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
-EAPI=7
+EAPI=8
 
 inherit autotools flag-o-matic systemd
 
 DESCRIPTION="Optimized multi algo CPU miner"
 HOMEPAGE="https://github.com/JayDDee/cpuminer-opt"
-IUSE="cpu_flags_x86_sse2 curl libressl"
+IUSE="cpu_flags_x86_sse2 curl"
 LICENSE="GPL-2"
 SLOT="0"
 REQUIRED_USE="cpu_flags_x86_sse2"
 DEPEND="
-	dev-libs/gmp:0
-	dev-libs/jansson
+	dev-libs/gmp:=
+	dev-libs/jansson:=
 	>=net-misc/curl-7.15[ssl]
-	!libressl? ( dev-libs/openssl:0= )
-	libressl? ( dev-libs/libressl:0= )
 "
 RDEPEND="${DEPEND}"
 if [[ ${PV} == "9999" ]] ; then
@@ -42,7 +40,7 @@ src_install() {
 	default
 	systemd_dounit "${FILESDIR}"/${PN}.service
 	insinto "/etc/${PN}"
-	doins cpuminer-conf.json
+	newins config-template.json cpuminer-conf.json
 }
 
 src_test() {

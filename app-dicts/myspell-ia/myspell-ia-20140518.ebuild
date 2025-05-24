@@ -1,7 +1,7 @@
-# Copyright 1999-2020 Gentoo Authors
+# Copyright 1999-2024 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
-EAPI=6
+EAPI=7
 
 MY_PV=${PV::4}-${PV:4:2}-${PV:6}
 
@@ -14,16 +14,12 @@ MYSPELL_HYPH=(
 	"ia-hyph.dic"
 )
 
-MYSPELL_THES=(
-)
-
 inherit myspell-r2
 
 DESCRIPTION="Interlingua dictionaries for myspell/hunspell"
 LICENSE="GPL-3"
 HOMEPAGE="https://extensions.openoffice.org/en/project/interlingua-dictionario-orthographic-e-regulas-de-division-de-parolas"
-SRC_URI="mirror://sourceforge/aoo-extensions/dict-ia-${MY_PV}.oxt -> ${P}.oxt"
+SRC_URI="https://downloads.sourceforge.net/aoo-extensions/dict-ia-${MY_PV}.oxt -> ${P}.oxt"
 
 SLOT="0"
-KEYWORDS="~alpha amd64 arm arm64 ~hppa ~ia64 ~mips ppc ppc64 ~riscv sparc x86"
-IUSE=""
+KEYWORDS="~alpha amd64 arm arm64 ~hppa ~loong ~mips ppc ppc64 ~riscv sparc x86"

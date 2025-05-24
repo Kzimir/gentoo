@@ -1,34 +1,42 @@
-# Copyright 1999-2020 Gentoo Authors
+# Copyright 1999-2025 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
-EAPI=7
+EAPI=8
 
 LUA_COMPAT=( luajit )
 LUA_REQ_USE="lua52compat"
 
-WX_GTK_VER=3.0-gtk3
-PLOCALES="ar be bg ca cs da de el es eu fa fi fr_FR gl hu id it ja ko nl pl pt_BR pt_PT ru sr_RS sr_RS@latin uk_UA vi zh_CN zh_TW"
+WX_GTK_VER=3.2-gtk3
+PLOCALES="ar be bg ca cs da de el es eu fa fi fr_FR gl hu id it ja ko nl pl pt_BR pt_PT ru sr_RS sr_RS@latin tr uk_UA vi zh_CN zh_TW"
 
-inherit autotools l10n lua-single wxwidgets xdg-utils git-r3
+inherit meson flag-o-matic lua-single plocale wxwidgets xdg-utils vcs-snapshot toolchain-funcs
 
 DESCRIPTION="Advanced subtitle editor"
-HOMEPAGE="http://www.aegisub.org/ https://github.com/Aegisub/Aegisub"
-EGIT_REPO_URI="https://github.com/${PN^}/${PN^}.git"
-# Submodules are used to pull bundled libraries.
-EGIT_SUBMODULES=()
+HOMEPAGE="http://www.aegisub.org/ https://github.com/TypesettingTools/Aegisub"
 
+if [[ ${PV} == *9999 ]]; then
+	EGIT_REPO_URI="https://github.com/TypesettingTools/${PN^}.git"
+	# Submodules are used to pull bundled libraries.
+	EGIT_SUBMODULES=()
+	inherit git-r3
+else
+	SRC_URI="https://github.com/TypesettingTools/Aegisub/archive/v${PV}.tar.gz -> ${P}.tar.gz"
+	KEYWORDS="~amd64 ~x86"
+fi
 LICENSE="BSD MIT"
 SLOT="0"
-KEYWORDS=""
-IUSE="+alsa debug +fftw openal oss portaudio pulseaudio spell +uchardet"
+IUSE="+alsa debug +fftw openal portaudio pulseaudio spell test +uchardet"
+REQUIRED_USE="
+	${LUA_REQUIRED_USE}
+	|| ( alsa openal portaudio pulseaudio )"
 RESTRICT="test"
 
 # aegisub bundles luabins (https://github.com/agladysh/luabins).
 # Unfortunately, luabins upstream is practically dead since 2010.
 # Thus unbundling luabins isn't worth the effort.
 RDEPEND="${LUA_DEPS}
-	x11-libs/wxGTK:${WX_GTK_VER}[X,opengl,debug?]
-	dev-libs/boost:=[icu,nls,threads]
+	x11-libs/wxGTK:${WX_GTK_VER}=[X,opengl,debug?]
+	dev-libs/boost:=[icu,nls]
 	dev-libs/icu:=
 	media-libs/ffmpegsource:=
 	media-libs/fontconfig
@@ -41,24 +49,46 @@ RDEPEND="${LUA_DEPS}
 	fftw? ( >=sci-libs/fftw-3.3:= )
 	openal? ( media-libs/openal )
 	portaudio? ( =media-libs/portaudio-19* )
-	pulseaudio? ( media-sound/pulseaudio )
+	pulseaudio? ( media-libs/libpulse )
 	spell? ( app-text/hunspell:= )
 	uchardet? ( app-i18n/uchardet )
 "
 DEPEND="${RDEPEND}"
+# luarocks is only used as a command-line tool so there is no need to enforce
+# LUA_SINGLE_USEDEP on it. On the other hand, this means we must use version
+# bounds in order to make sure we use a version migrated to Lua eclasses.
 BDEPEND="dev-util/intltool
 	sys-devel/gettext
 	virtual/pkgconfig
+	test? (
+		${RDEPEND}
+		>=dev-cpp/gtest-1.8.1
+		>=dev-lua/luarocks-3.4.0-r100
+		$(lua_gen_cond_dep '
+			dev-lua/busted[${LUA_USEDEP}]
+		')
+	)
 "
 
-REQUIRED_USE="${LUA_REQUIRED_USE}
-	|| ( alsa openal oss portaudio pulseaudio )"
-
 PATCHES=(
-	"${FILESDIR}/${P}-git.patch"
+	"${FILESDIR}"/3.4.0/Fix-build-without-pch.patch
+	"${FILESDIR}"/3.4.0/Use-generated-git-version.patch
 )
 
+BUILD_DIR="${WORKDIR}/${P}-build"
+
+aegisub_check_compiler() {
+	if [[ ${MERGE_TYPE} != "binary" ]] && ! test-flag-CXX -std=c++20; then
+		die "Your compiler lacks C++20 support."
+	fi
+}
+
+pkg_pretend() {
+	aegisub_check_compiler
+}
+
 pkg_setup() {
+	aegisub_check_compiler
 	lua-single_pkg_setup
 }
 
@@ -69,49 +99,40 @@ src_prepare() {
 	rm automation/tests/modules/lfs.moon || die
 
 	remove_locale() {
+	        sed -i -e "s/^${1}\(@latin\)\?//g" po/LINGUAS || die
 		rm "po/${1}.po" || die
 	}
 
-	l10n_find_plocales_changes 'po' '' '.po'
-	l10n_for_each_disabled_locale_do remove_locale
+	plocale_find_changes 'po' '' '.po'
+	plocale_for_each_disabled_locale remove_locale
 
-	# See http://devel.aegisub.org/ticket/1914
-	config_rpath_update "${S}"/config.rpath
+	use test || sed -i "s|subdir('tests')||g" "${S}"/meson.build || die
 
-	eautoreconf
+	mkdir "${BUILD_DIR}" || die
+	cp "${FILESDIR}/${PV}"/git_version.h "${BUILD_DIR}"/git_version.h || die
 }
 
 src_configure() {
-	# Prevent access violations from OpenAL detection. See Gentoo bug 508184.
-	use openal && export agi_cv_with_openal="yes"
-
+	tc-export PKG_CONFIG
+	use debug && EMESON_BUILDTYPE=debug
 	setup-wxwidgets
-	local myeconfargs=(
-		--disable-update-checker
-		--with-ffms2
-		--with-system-luajit
-		$(use_enable debug)
-		$(use_with alsa)
-		$(use_with fftw fftw3)
-		$(use_with openal)
-		$(use_with oss)
-		$(use_with portaudio)
-		$(use_with pulseaudio libpulse)
-		$(use_with spell hunspell)
-		$(use_with uchardet)
-		--disable-compiler-flags
+	local emesonargs=(
+	        -Denable_update_checker=false
+		-Dffms2=enabled
+		-Dsystem_luajit=true
+		$(meson_feature alsa)
+		$(meson_feature fftw fftw3)
+		$(meson_feature openal)
+		$(meson_feature portaudio)
+		$(meson_feature pulseaudio libpulse)
+		$(meson_feature spell hunspell)
+		$(meson_feature uchardet)
 	)
-	econf "${myeconfargs[@]}"
-}
-
-src_compile() {
-	# Concurrent builds seem to break the build process.
-	emake -j1
+	meson_src_configure
 }
 
 src_test() {
-	emake test-automation
-	emake test-libaegisub
+	meson_src_test test-libaegisub
 }
 
 pkg_postinst() {

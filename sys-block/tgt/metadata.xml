@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE pkgmetadata SYSTEM "http://www.gentoo.org/dtd/metadata.dtd">
+<!DOCTYPE pkgmetadata SYSTEM "https://www.gentoo.org/dtd/metadata.dtd">
 <pkgmetadata>
 	<maintainer type="person">
 		<email>prometheanfire@gentoo.org</email>
@@ -10,9 +10,6 @@
 		<name>Gentoo Cluster Project</name>
 	</maintainer>
 	<use>
-		<flag name="ibmvio">Add support for IBM Virtual I/O</flag>
-		<flag name="fcp">Add support for new FC protocol</flag>
-		<flag name="fcoe">Add support for FCoE protocol</flag>
 		<flag name="rbd">Add support for ceph block devices</flag>
 	</use>
 	<upstream>

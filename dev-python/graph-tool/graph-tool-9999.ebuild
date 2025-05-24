@@ -1,9 +1,9 @@
-# Copyright 1999-2020 Gentoo Authors
+# Copyright 1999-2024 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
-EAPI=7
+EAPI=8
 
-PYTHON_COMPAT=( python3_{6..9} )
+PYTHON_COMPAT=( python3_{10..12} )
 
 inherit check-reqs python-r1 toolchain-funcs
 
@@ -11,30 +11,31 @@ if [[ ${PV} == *9999 ]]; then
 	EGIT_REPO_URI="https://git.skewed.de/count0/graph-tool.git"
 	inherit autotools git-r3
 else
-	SRC_URI="https://downloads.skewed.de/${PN}/${P}.tar.bz2"
+	SRC_URI="https://downloads.skewed.de/${PN}/${P}.tar.xz"
 	KEYWORDS="~amd64"
 fi
 
 DESCRIPTION="An efficient python module for manipulation and statistical analysis of graphs"
 HOMEPAGE="https://graph-tool.skewed.de/"
 
-LICENSE="GPL-3"
+LICENSE="LGPL-3"
 SLOT="0"
 IUSE="+cairo openmp"
 REQUIRED_USE="${PYTHON_REQUIRED_USE}"
 
 RDEPEND="
 	${PYTHON_DEPS}
-	>=dev-libs/boost-1.70:=[context,python,${PYTHON_USEDEP}]
-	dev-libs/expat:=
+	dev-libs/boost:=[context,python,${PYTHON_USEDEP}]
+	dev-libs/expat
 	dev-python/numpy[${PYTHON_USEDEP}]
 	dev-python/scipy[${PYTHON_USEDEP}]
 	sci-mathematics/cgal:=
+	dev-python/matplotlib[${PYTHON_USEDEP}]
 	cairo? (
-		dev-cpp/cairomm
+		dev-cpp/cairomm:0
 		dev-python/pycairo[${PYTHON_USEDEP}]
-	)
-	dev-python/matplotlib[${PYTHON_USEDEP}]"
+		x11-libs/cairo[X]
+	)"
 DEPEND="${RDEPEND}
 	dev-cpp/sparsehash"
 BDEPEND="virtual/pkgconfig"
@@ -58,27 +59,26 @@ src_prepare() {
 }
 
 src_configure() {
-	configure() {
+	my_configure() {
 		econf \
 			--disable-static \
 			$(use_enable openmp) \
 			$(use_enable cairo) \
 			--with-boost-python="boost_${EPYTHON/./}"
 	}
-	python_foreach_impl run_in_build_dir configure
+	python_foreach_impl run_in_build_dir my_configure
 }
 
 src_compile() {
-	# most machines don't have enough ram for parallel builds
-	python_foreach_impl run_in_build_dir default
+	python_foreach_impl run_in_build_dir emake
 }
 
 src_install() {
-	python_install() {
+	my_python_install() {
 		default
 		python_optimize
 	}
-	python_foreach_impl run_in_build_dir python_install
+	python_foreach_impl run_in_build_dir my_python_install
 
 	find "${ED}" -name '*.la' -delete || die
 }

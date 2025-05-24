@@ -1,7 +1,7 @@
-# Copyright 1999-2020 Gentoo Authors
+# Copyright 1999-2023 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
-EAPI=7
+EAPI=8
 
 if [[ ${PV} == 9999 ]]; then
 	GITHUB_USER=RexOps
@@ -21,6 +21,7 @@ fi
 inherit bash-completion-r1 perl-module ${VCS_ECLASS}
 
 DESCRIPTION="(R)?ex, the friendly automation framework"
+HOMEPAGE="https://metacpan.org/dist/Rex https://www.rexify.org"
 
 SLOT="0"
 IUSE="minimal test"
@@ -43,10 +44,13 @@ DZIL_DEPENDS="
 "
 RDEPEND="
 	!minimal? (
+		app-admin/augeas
 		dev-perl/DBI
 		dev-perl/Expect
 		dev-perl/IPC-Shareable
+		dev-perl/Parallel-ForkManager
 		dev-perl/XML-LibXML
+		net-misc/rsync
 	)
 	virtual/perl-Carp
 	virtual/perl-Data-Dumper
@@ -59,14 +63,12 @@ RDEPEND="
 	dev-perl/HTTP-Message
 	dev-perl/Hash-Merge
 	virtual/perl-IO
-	dev-perl/IO-String
 	dev-perl/IO-Tty
 	dev-perl/JSON-MaybeXS
 	virtual/perl-MIME-Base64
 	dev-perl/Net-OpenSSH
 	dev-perl/Net-SFTP-Foreign
 	>=virtual/perl-Scalar-List-Utils-1.450.0
-	dev-perl/Parallel-ForkManager
 	dev-perl/Sort-Naturally
 	dev-perl/String-Escape
 	virtual/perl-Storable
@@ -80,6 +82,7 @@ RDEPEND="
 	dev-perl/libwww-perl
 	dev-perl/YAML
 	virtual/perl-version
+	virtual/perl-Term-ANSIColor
 "
 # NB: would add test? !minimal? Test-mysqld, but I can't get that to work
 BDEPEND="
@@ -90,20 +93,26 @@ BDEPEND="
 	virtual/perl-Module-Metadata
 	test? (
 		!minimal? (
-			dev-perl/File-LibMagic
+			app-admin/augeas
+			|| ( dev-perl/File-LibMagic sys-apps/file )
+			dev-vcs/git
 		)
 		virtual/perl-File-Temp
+		dev-perl/Sub-Override
 		dev-perl/Test-Deep
+		dev-perl/Test-Exception
 		dev-perl/Test-Output
 		dev-perl/Test-UseAllModules
+		dev-perl/Test-Warnings
 		virtual/perl-autodie
+		virtual/perl-Module-Load-Conditional
 	)
 "
 
 [[ ${PV} == 9999 ]] && BDEPEND+=" ${DZIL_DEPENDS}"
 
 src_unpack() {
-	if [[ $PV == 9999 ]]; then
+	if [[ ${PV} == 9999 ]]; then
 		"${VCS_ECLASS}"_src_unpack
 		mkdir -p "${S}" || die "Can't make ${S}"
 	else
@@ -134,7 +143,7 @@ dzil_src_prep() {
 		-e '/^\[Test::MinimumVersion\]/{N;d}' \
 		-i dist.ini || die "Can't patch dist.ini"
 
-	# Removals/additons have to be tracked by git or dzil build fails
+	# Removals/additions have to be tracked by git or dzil build fails
 	# Spurious warning during src_prepare
 	git rm -f xt/author/critic-progressive.t || die "Can't rm author/critic-progressive.t"
 	# Spurious warning during src_prepare

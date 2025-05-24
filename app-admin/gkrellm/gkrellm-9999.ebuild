@@ -1,24 +1,24 @@
-# Copyright 1999-2020 Gentoo Authors
+# Copyright 1999-2023 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
-EAPI=7
+EAPI=8
 
-inherit desktop multilib systemd toolchain-funcs
-
-MY_P="${P/_/-}"
+PLOCALES="bg cs da de es fr it ja nl pl po pt pt_BR ru sl sv uk"
+PLOCALE_BACKUP="en"
+inherit desktop plocale systemd toolchain-funcs
 
 DESCRIPTION="Single process stack of various system monitors"
-HOMEPAGE="http://www.gkrellm.net/"
+HOMEPAGE="http://gkrellm.srcbox.net/"
 if [[ "${PV}" == 9999 ]] ; then
 	inherit git-r3
 	EGIT_REPO_URI="https://git.srcbox.net/gkrellm/gkrellm.git"
 else
-	SRC_URI="http://gkrellm.srcbox.net/${MY_P}.tar.bz2"
-	KEYWORDS="~alpha ~amd64 ~arm ~arm64 ~hppa ~ia64 ~mips ~ppc ~ppc64 ~sparc ~x86 ~amd64-linux ~x86-linux"
+	SRC_URI="http://gkrellm.srcbox.net/releases/${P}.tar.bz2"
+	KEYWORDS="~alpha ~amd64 ~arm ~arm64 ~hppa ~mips ~ppc ~ppc64 ~riscv ~sparc ~x86 ~amd64-linux ~x86-linux"
 fi
-LICENSE="GPL-3"
+LICENSE="GPL-3+"
 SLOT="2"
-IUSE="gnutls hddtemp libressl lm-sensors nls ntlm ssl kernel_FreeBSD X"
+IUSE="gnutls hddtemp lm-sensors nls ntlm ssl X"
 
 RDEPEND="
 	acct-group/gkrellmd
@@ -28,8 +28,7 @@ RDEPEND="
 	ssl? (
 		gnutls? ( net-libs/gnutls )
 		!gnutls? (
-			!libressl? ( dev-libs/openssl:0= )
-			libressl? ( dev-libs/libressl:0= )
+			dev-libs/openssl:0=
 		)
 	)
 	lm-sensors? ( sys-apps/lm-sensors:= )
@@ -42,21 +41,22 @@ RDEPEND="
 		x11-libs/libSM
 		x11-libs/libX11
 		x11-libs/pango
-		)"
-DEPEND="${RDEPEND}
-	nls? ( sys-devel/gettext )"
-
-BDEPEND="
-	virtual/pkgconfig
+		)
+"
+DEPEND="
+	${RDEPEND}
+	x11-base/xorg-proto
+	nls? ( sys-devel/gettext )
 "
 
-PATCHES=(
-	"${FILESDIR}"/${PN}-2.3.5-config.patch
-	"${FILESDIR}"/${PN}-2.3.5-width.patch
-	"${FILESDIR}"/${PN}-2.3.5-sansfont.patch
-)
+BDEPEND="virtual/pkgconfig"
 
-S="${WORKDIR}/${MY_P}"
+PATCHES=(
+	"${FILESDIR}/${PN}-2.3.5-config.patch"
+	"${FILESDIR}/${PN}-2.3.5-width.patch"
+	"${FILESDIR}/${PN}-2.3.5-sansfont.patch"
+	"${FILESDIR}/${PN}-2.3.11-clang16.patch"
+)
 
 DOCS=( Changelog CREDITS README )
 
@@ -65,11 +65,6 @@ pkg_pretend() {
 		ewarn "You have enabled the \"gnutls\" USE flag but not the \"ssl\" USE flag."
 		ewarn "No ssl backend will be built!"
 	fi
-}
-
-pkg_setup() {
-	TARGET=
-	use kernel_FreeBSD && TARGET="freebsd"
 }
 
 src_prepare() {
@@ -82,10 +77,19 @@ src_prepare() {
 		-e "s:/usr/local/lib:${EPREFIX}/usr/local/$(get_libdir):" \
 		-i src/${PN}.h || die "sed ${PN}.h failed"
 
+	delete_locale() {
+		local locale=${1}
+		rm -f po/${locale}{.po,.mo} || die
+	}
+
+	plocale_for_each_disabled_locale delete_locale
+
 	default
 }
 
 src_compile() {
+	TARGET=
+
 	if use X ; then
 		emake \
 			${TARGET} \

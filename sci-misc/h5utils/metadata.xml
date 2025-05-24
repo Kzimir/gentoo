@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE pkgmetadata SYSTEM "http://www.gentoo.org/dtd/metadata.dtd">
+<!DOCTYPE pkgmetadata SYSTEM "https://www.gentoo.org/dtd/metadata.dtd">
 <pkgmetadata>
 <maintainer type="project">
   <email>sci@gentoo.org</email>
@@ -13,6 +13,9 @@
   formats required by other free visualization software (e.g. plain
   text, Vis5d, and VTK).
 </longdescription>
+<upstream>
+  <remote-id type="github">NanoComp/h5utils</remote-id>
+</upstream>
 <use>
   <flag name="octave">Build Octave plugins</flag>
   <flag name="hdf">Build hdf to hdf5 (and vice-versa) converter</flag>

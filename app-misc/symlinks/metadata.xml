@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE pkgmetadata SYSTEM "http://www.gentoo.org/dtd/metadata.dtd">
+<!DOCTYPE pkgmetadata SYSTEM "https://www.gentoo.org/dtd/metadata.dtd">
 <pkgmetadata>
 	<maintainer type="project">
 		<email>shell-tools@gentoo.org</email>
@@ -10,6 +10,9 @@
 		Each link is prefixed with a classification of relative, absolute,
 		dangling, messy, lengthy or other_fs. Symlinks can also convert
 		absolute links (within the same filesystem) to relative links and can
-		delete messy and dangling links. 
+		delete messy and dangling links.
 	</longdescription>
+	<upstream>
+		<remote-id type="github">brandt/symlinks</remote-id>
+	</upstream>
 </pkgmetadata>

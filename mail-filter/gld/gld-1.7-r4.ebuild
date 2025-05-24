@@ -1,25 +1,28 @@
-# Copyright 1999-2020 Gentoo Authors
+# Copyright 1999-2025 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
 EAPI="7"
 
-inherit toolchain-funcs
+inherit eapi9-ver toolchain-funcs
 
-DESCRIPTION="A standalone anti-spam greylisting algorithm on top of Postfix"
-HOMEPAGE="http://www.gasmi.net/gld.html"
-SRC_URI="http://www.gasmi.net/down/${P}.tgz"
+DESCRIPTION="Standalone anti-spam greylisting algorithm on top of Postfix"
+HOMEPAGE="https://www.gasmi.net/gld.html"
+SRC_URI="https://www.gasmi.net/down/${P}.tgz"
 
 LICENSE="GPL-2"
 SLOT="0"
-KEYWORDS="amd64 ppc x86"
-IUSE="libressl postgres"
+KEYWORDS="amd64 ~ppc x86"
+IUSE="postgres"
 # Not adding a mysql USE flag. The package defaults to it, so we will too.
 DEPEND="sys-libs/zlib
-	!libressl? ( dev-libs/openssl:0= )
-	libressl? ( dev-libs/libressl )
+	dev-libs/openssl:0=
 	!postgres? ( dev-db/mysql-connector-c:0= )
 	postgres? ( dev-db/postgresql:*[server] )"
 RDEPEND="${DEPEND}"
+
+PATCHES=(
+	"${FILESDIR}"/${PN}-1.7-configure-strict-prototypes.patch
+)
 
 src_prepare() {
 	sed -i gld.conf \
@@ -71,12 +74,9 @@ pkg_preinst() {
 	elog "details on how to setup gld."
 	elog
 	elog "The sql files have been installed to /usr/share/${PN}/sql."
-	local old_ver
-	for old_ver in ${REPLACING_VERSIONS} ; do
-		if ver_test ${old_ver} -eq "1.7-r1" ; then
-			elog "You might want to use the ALTER_TABLE command to change the"
-			elog "ip field width to 39 chars to accomodate ipv6 addresses."
-			elog "Please see your sql server documentation."
-		fi
-	done
+	if ver_replacing -eq "1.7-r1" ; then
+		elog "You might want to use the ALTER_TABLE command to change the"
+		elog "ip field width to 39 chars to accomodate ipv6 addresses."
+		elog "Please see your sql server documentation."
+	fi
 }

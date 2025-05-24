@@ -1,54 +1,45 @@
-# Copyright 1999-2020 Gentoo Authors
+# Copyright 1999-2024 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
-EAPI=7
+EAPI=8
 
-EGIT_REPO_URI="https://git.code.sf.net/p/qsampler/code"
-inherit qmake-utils xdg autotools git-r3
+inherit cmake xdg
+
+if [[ ${PV} == *9999* ]]; then
+	EGIT_REPO_URI="https://git.code.sf.net/p/qsampler/code"
+	inherit git-r3
+else
+	SRC_URI="https://downloads.sourceforge.net/${PN}/${PV}/${P}.tar.gz"
+	KEYWORDS="~amd64 ~x86"
+fi
 
 DESCRIPTION="Graphical frontend to the LinuxSampler engine"
 HOMEPAGE="https://qsampler.sourceforge.io/ https://www.linuxsampler.org/"
 
 LICENSE="GPL-2"
 SLOT="0"
-KEYWORDS=""
 IUSE="debug +libgig"
 
 DEPEND="
-	dev-qt/qtcore:5
-	dev-qt/qtgui:5
-	dev-qt/qtnetwork:5
-	dev-qt/qtwidgets:5
-	dev-qt/qtx11extras:5
+	dev-qt/qtbase:6[gui,network,widgets]
+	dev-qt/qtsvg:6
 	media-libs/alsa-lib
-	>=media-libs/liblscp-0.5.6:=
+	media-libs/liblscp:=
 	x11-libs/libX11
-	libgig? ( >=media-libs/libgig-3.3.0:= )
+	libgig? ( media-libs/libgig:= )
 "
 RDEPEND="${DEPEND}
-	>=media-sound/linuxsampler-0.5
+	media-sound/linuxsampler
 "
-BDEPEND="dev-qt/linguist-tools:5"
+BDEPEND="dev-qt/qttools:6[linguist]"
 
-DOCS=( AUTHORS ChangeLog README TODO TRANSLATORS )
-
-PATCHES=( "${FILESDIR}"/${P}-Makefile.patch )
-
-src_prepare() {
-	default
-
-	emake -f Makefile.git
-	eautoreconf
-}
+DOCS=( ChangeLog README TRANSLATORS )
 
 src_configure() {
-	local myeconfargs=(
-		$(use_enable debug)
-		$(use_enable libgig)
+	local mycmakeargs=(
+		-DCONFIG_DEBUG=$(usex debug 1 0)
+		-DCONFIG_LIBGIG=$(usex libgig 1 0)
+		-DCONFIG_QT6=1
 	)
-	ac_qmake="$(qt5_get_bindir)/qmake" \
-		econf "${myeconfargs[@]}"
-
-	cd src || die
-	eqmake5 src.pro -o Makefile
+	cmake_src_configure
 }
